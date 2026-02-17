@@ -1,0 +1,19 @@
+# ambienti virtuali
+.venv/
+venv/
+
+# python cache
+__pycache__/
+*.pyc
+
+# output locali
+output/
+
+# VS Code
+.vscode/
+
+# mac
+.DS_Store
+
+# windows
+Thumbs.db
