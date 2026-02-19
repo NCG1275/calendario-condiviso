@@ -44,7 +44,7 @@
           },
           "Ven": {
             "shift": "8-20",
-            "dest": "ORL+gpo",
+            "dest": "ORL+ZORCOLO",
             "flagged": false
           },
           "Sab": {
@@ -65,22 +65,22 @@
             "flagged": false
           },
           "Mar": {
-            "shift": "14-20**",
-            "dest": "gpo",
-            "flagged": true
+            "shift": "14-20",
+            "dest": "GPO",
+            "flagged": false
           },
           "Mer": {
-            "shift": "8-20",
-            "dest": "g",
+            "shift": "M",
+            "dest": "",
             "flagged": false
           },
           "Gio": {
-            "shift": "20-24",
+            "shift": "M",
             "dest": "",
             "flagged": false
           },
           "Ven": {
-            "shift": "0-8",
+            "shift": "M",
             "dest": "",
             "flagged": false
           },
@@ -112,13 +112,13 @@
             "flagged": false
           },
           "Gio": {
-            "shift": "8-14",
-            "dest": "ds",
+            "shift": "20-24",
+            "dest": "",
             "flagged": false
           },
           "Ven": {
-            "shift": "14-20",
-            "dest": "zorcolo",
+            "shift": "0-8",
+            "dest": "",
             "flagged": false
           },
           "Sab": {
@@ -187,7 +187,7 @@
           },
           "Gio": {
             "shift": "8-14",
-            "dest": "sg",
+            "dest": "DS",
             "flagged": false
           },
           "Ven": {
@@ -229,7 +229,7 @@
           },
           "Ven": {
             "shift": "14-20**",
-            "dest": "opoli",
+            "dest": "OCUL.POL",
             "flagged": true
           },
           "Sab": {
@@ -636,8 +636,8 @@
       },
       "night_counts": {
         "Aru": 1,
-        "Cabianca": 1,
-        "Casula": 0,
+        "Cabianca": 0,
+        "Casula": 1,
         "Corda": 0,
         "Del Rio": 0,
         "Desogus": 1,
@@ -654,7 +654,7 @@
       },
       "flagged_hours": {
         "Aru": 6,
-        "Cabianca": 6,
+        "Cabianca": 0,
         "Casula": 0,
         "Corda": 0,
         "Del Rio": 0,
@@ -672,6 +672,1310 @@
       }
     },
     "2026-W09": {
+      "cells": {
+        "Aru": {
+          "Lun": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Cabianca": {
+          "Lun": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Casula": {
+          "Lun": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "14-20",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "PISANU+G",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Corda": {
+          "Lun": {
+            "shift": "PT",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-16",
+            "dest": "END",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-16",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-16",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Del Rio": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Desogus": {
+          "Lun": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "14-20**",
+            "dest": "GPO",
+            "flagged": true
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Masillo": {
+          "Lun": {
+            "shift": "8-15",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-15",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-15",
+            "dest": "END",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-15",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "CS",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Mattana": {
+          "Lun": {
+            "shift": "CS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "CS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "8-20",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pili": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "PISANU+GPO",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "ORL+GPO",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "14-20",
+            "dest": "OPOLI",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Piras D": {
+          "Lun": {
+            "shift": "14-20",
+            "dest": "VASC",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "14-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14**",
+            "dest": "PISANU",
+            "flagged": true
+          },
+          "Gio": {
+            "shift": "8-20**",
+            "dest": "G",
+            "flagged": true
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Piras F": {
+          "Lun": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "14-20**",
+            "dest": "ORTO",
+            "flagged": true
+          },
+          "Ven": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "8-20",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pistincu": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "14-20",
+            "dest": "GPO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "14-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pitzalis": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-20",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Puddu": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Sanna": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "14-20**",
+            "dest": "ORTO",
+            "flagged": true
+          },
+          "Gio": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Tolu": {
+          "Lun": {
+            "shift": "RO",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "G",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-20",
+            "dest": "END+GPO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        }
+      },
+      "extra_rows": {
+        "rep. giorno": {
+          "Lun": "",
+          "Mar": "",
+          "Mer": "",
+          "Gio": "",
+          "Ven": "",
+          "Sab": "PILI",
+          "Dom": "MATTANA"
+        },
+        "rep. notte": {
+          "Lun": "PITZALIS",
+          "Mar": "PISTINCU",
+          "Mer": "CASULA",
+          "Gio": "PILI",
+          "Ven": "SANNA",
+          "Sab": "MATTANA",
+          "Dom": "PIRAS"
+        }
+      },
+      "night_counts": {
+        "Aru": 0,
+        "Cabianca": 0,
+        "Casula": 1,
+        "Corda": 0,
+        "Del Rio": 0,
+        "Desogus": 0,
+        "Masillo": 0,
+        "Mattana": 2,
+        "Pili": 1,
+        "Piras D": 0,
+        "Piras F": 1,
+        "Pistincu": 0,
+        "Pitzalis": 1,
+        "Puddu": 0,
+        "Sanna": 1,
+        "Tolu": 0
+      },
+      "flagged_hours": {
+        "Aru": 0,
+        "Cabianca": 0,
+        "Casula": 0,
+        "Corda": 0,
+        "Del Rio": 0,
+        "Desogus": 6,
+        "Masillo": 0,
+        "Mattana": 0,
+        "Pili": 0,
+        "Piras D": 18,
+        "Piras F": 6,
+        "Pistincu": 0,
+        "Pitzalis": 0,
+        "Puddu": 0,
+        "Sanna": 6,
+        "Tolu": 0
+      }
+    },
+    "2026-W07": {
+      "cells": {
+        "Aru": {
+          "Lun": {
+            "shift": "14-20**",
+            "dest": "G",
+            "flagged": true
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "14-20**",
+            "dest": "G",
+            "flagged": true
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Cabianca": {
+          "Lun": {
+            "shift": "14-20**",
+            "dest": "GPO",
+            "flagged": true
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "PISANU+GPO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Casula": {
+          "Lun": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Corda": {
+          "Lun": {
+            "shift": "PT",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-16",
+            "dest": "END",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-16",
+            "dest": "PLASTICA",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-16",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Del Rio": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "END",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "G",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Desogus": {
+          "Lun": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Masillo": {
+          "Lun": {
+            "shift": "8-15",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-15",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-15",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-15",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-15",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Mattana": {
+          "Lun": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "14-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "14-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "14-20**",
+            "dest": "GPO",
+            "flagged": true
+          },
+          "Sab": {
+            "shift": "8-20",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pili": {
+          "Lun": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "14-20",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-20",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Piras D": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "RO",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Piras F": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "VASC",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "14-20**",
+            "dest": "GPO",
+            "flagged": true
+          },
+          "Ven": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "8-20",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pistincu": {
+          "Lun": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "14-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pitzalis": {
+          "Lun": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "14-20",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "14-20",
+            "dest": "GPO",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-20",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Puddu": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "END",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Sanna": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "14-20**",
+            "dest": "ZORCOLO",
+            "flagged": true
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Tolu": {
+          "Lun": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14**",
+            "dest": "ORTO",
+            "flagged": true
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        }
+      },
+      "extra_rows": {
+        "rep. giorno": {
+          "Lun": "",
+          "Mar": "",
+          "Mer": "",
+          "Gio": "",
+          "Ven": "",
+          "Sab": "ARU",
+          "Dom": "MATTANA"
+        },
+        "rep. notte": {
+          "Lun": "PILI",
+          "Mar": "SANNA",
+          "Mer": "CABIANCA",
+          "Gio": "PITZALIS",
+          "Ven": "PIRAS D.",
+          "Sab": "PITZALIS",
+          "Dom": "PIRAS F."
+        }
+      },
+      "night_counts": {
+        "Aru": 1,
+        "Cabianca": 1,
+        "Casula": 0,
+        "Corda": 0,
+        "Del Rio": 0,
+        "Desogus": 0,
+        "Masillo": 0,
+        "Mattana": 1,
+        "Pili": 0,
+        "Piras D": 0,
+        "Piras F": 1,
+        "Pistincu": 0,
+        "Pitzalis": 1,
+        "Puddu": 0,
+        "Sanna": 1,
+        "Tolu": 1
+      },
+      "flagged_hours": {
+        "Aru": 12,
+        "Cabianca": 6,
+        "Casula": 0,
+        "Corda": 0,
+        "Del Rio": 0,
+        "Desogus": 0,
+        "Masillo": 0,
+        "Mattana": 6,
+        "Pili": 0,
+        "Piras D": 0,
+        "Piras F": 6,
+        "Pistincu": 0,
+        "Pitzalis": 0,
+        "Puddu": 0,
+        "Sanna": 6,
+        "Tolu": 6
+      }
+    },
+    "2026-W10": {
       "cells": {
         "Aru": {
           "Lun": {
@@ -859,6 +2163,80 @@
           }
         },
         "Desogus": {
+          "Lun": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Masillo": {
+          "Lun": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Mattana": {
           "Lun": {
             "shift": "0-8",
             "dest": "",
@@ -895,80 +2273,6 @@
             "flagged": false
           }
         },
-        "Masillo": {
-          "Lun": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          },
-          "Mar": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          },
-          "Mer": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          },
-          "Gio": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          },
-          "Ven": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          },
-          "Sab": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          },
-          "Dom": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          }
-        },
-        "Mattana": {
-          "Lun": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          },
-          "Mar": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          },
-          "Mer": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          },
-          "Gio": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          },
-          "Ven": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          },
-          "Sab": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          },
-          "Dom": {
-            "shift": "",
-            "dest": "",
-            "flagged": false
-          }
-        },
         "Pili": {
           "Lun": {
             "shift": "",
@@ -1323,7 +2627,1966 @@
         "Tolu": 0
       }
     },
-    "2026-W07": {
+    "2026-W11": {
+      "cells": {}
+    },
+    "2026-W06": {
+      "cells": {
+        "Aru": {
+          "Lun": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "14-20**",
+            "dest": "ORL",
+            "flagged": true
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "EMO+PISANU",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "14-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Cabianca": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14**",
+            "dest": "END",
+            "flagged": true
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Casula": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Corda": {
+          "Lun": {
+            "shift": "PT",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Del Rio": {
+          "Lun": {
+            "shift": "CS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Desogus": {
+          "Lun": {
+            "shift": "14-20",
+            "dest": "VASC",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "END",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Masillo": {
+          "Lun": {
+            "shift": "8-15",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-15",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-15",
+            "dest": "PLASTICA",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-15",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-15",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Mattana": {
+          "Lun": {
+            "shift": "14-20",
+            "dest": "GPO",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "14-20",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "CS",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pili": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "14-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "ORL.PED",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Piras D": {
+          "Lun": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Piras F": {
+          "Lun": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "14-20",
+            "dest": "GPO",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "14-20**",
+            "dest": "GPO",
+            "flagged": true
+          },
+          "Ven": {
+            "shift": "14-20",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "8-20",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pistincu": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "14-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pitzalis": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "VASC",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "14-20**",
+            "dest": "OCUL.POL",
+            "flagged": true
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Puddu": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Sanna": {
+          "Lun": {
+            "shift": "14-20**",
+            "dest": "G",
+            "flagged": true
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "END+GPO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Tolu": {
+          "Lun": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14**",
+            "dest": "G",
+            "flagged": true
+          },
+          "Mer": {
+            "shift": "RO",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-20",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "PISANU+GPO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "8-20",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        }
+      },
+      "extra_rows": {
+        "rep. giorno": {
+          "Lun": "",
+          "Mar": "",
+          "Mer": "",
+          "Gio": "",
+          "Ven": "",
+          "Sab": "PISTINCU",
+          "Dom": "TOLU"
+        },
+        "rep. notte": {
+          "Lun": "CABIANCA",
+          "Mar": "SANNA",
+          "Mer": "ARU",
+          "Gio": "PIRAS F.",
+          "Ven": "CASULA",
+          "Sab": "DESOGUS",
+          "Dom": "PIRAS F."
+        }
+      },
+      "night_counts": {
+        "Aru": 0,
+        "Cabianca": 1,
+        "Casula": 1,
+        "Corda": 0,
+        "Del Rio": 0,
+        "Desogus": 1,
+        "Masillo": 0,
+        "Mattana": 0,
+        "Pili": 1,
+        "Piras D": 0,
+        "Piras F": 1,
+        "Pistincu": 1,
+        "Pitzalis": 0,
+        "Puddu": 0,
+        "Sanna": 1,
+        "Tolu": 0
+      },
+      "flagged_hours": {
+        "Aru": 6,
+        "Cabianca": 6,
+        "Casula": 0,
+        "Corda": 0,
+        "Del Rio": 0,
+        "Desogus": 0,
+        "Masillo": 0,
+        "Mattana": 0,
+        "Pili": 0,
+        "Piras D": 0,
+        "Piras F": 6,
+        "Pistincu": 0,
+        "Pitzalis": 6,
+        "Puddu": 0,
+        "Sanna": 6,
+        "Tolu": 6
+      }
+    },
+    "2026-W05": {
+      "cells": {
+        "Aru": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "14-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "14-20",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Cabianca": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14**",
+            "dest": "CALÒ",
+            "flagged": true
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Casula": {
+          "Lun": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Corda": {
+          "Lun": {
+            "shift": "PT",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-16",
+            "dest": "END",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-16",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-16",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Del Rio": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Desogus": {
+          "Lun": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "14-20",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "14-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "AGGP",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Masillo": {
+          "Lun": {
+            "shift": "8-15",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-15",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-15",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-15",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Mattana": {
+          "Lun": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "14-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "8-20",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pili": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "ORL.PED",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "END",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "OCUL.PED",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Piras D": {
+          "Lun": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Piras F": {
+          "Lun": {
+            "shift": "14-20",
+            "dest": "VASC",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "14-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-20",
+            "dest": "G+ORL",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "14-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pistincu": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "14-20",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "END+G",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pitzalis": {
+          "Lun": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Puddu": {
+          "Lun": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Sanna": {
+          "Lun": {
+            "shift": "8-14**",
+            "dest": "VASC",
+            "flagged": true
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Tolu": {
+          "Lun": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "CALÒ+G",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-20",
+            "dest": "PLAST+ZORCOLO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "14-20**",
+            "dest": "ORL",
+            "flagged": true
+          },
+          "Sab": {
+            "shift": "8-20",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        }
+      },
+      "extra_rows": {
+        "rep. giorno": {
+          "Lun": "",
+          "Mar": "",
+          "Mer": "",
+          "Gio": "",
+          "Ven": "",
+          "Sab": "PITZALIS",
+          "Dom": "CABIANCA"
+        },
+        "rep. notte": {
+          "Lun": "CABIANCA",
+          "Mar": "PIRAS F.",
+          "Mer": "PISTINCU",
+          "Gio": "PIRAS F.",
+          "Ven": "SANNA",
+          "Sab": "TOLU",
+          "Dom": "MATTANA"
+        }
+      },
+      "night_counts": {
+        "Aru": 1,
+        "Cabianca": 1,
+        "Casula": 1,
+        "Corda": 0,
+        "Del Rio": 0,
+        "Desogus": 0,
+        "Masillo": 0,
+        "Mattana": 1,
+        "Pili": 0,
+        "Piras D": 0,
+        "Piras F": 0,
+        "Pistincu": 1,
+        "Pitzalis": 1,
+        "Puddu": 0,
+        "Sanna": 1,
+        "Tolu": 0
+      },
+      "flagged_hours": {
+        "Aru": 0,
+        "Cabianca": 6,
+        "Casula": 0,
+        "Corda": 0,
+        "Del Rio": 0,
+        "Desogus": 0,
+        "Masillo": 0,
+        "Mattana": 0,
+        "Pili": 0,
+        "Piras D": 0,
+        "Piras F": 0,
+        "Pistincu": 0,
+        "Pitzalis": 0,
+        "Puddu": 0,
+        "Sanna": 6,
+        "Tolu": 6
+      }
+    },
+    "2026-W04": {
+      "cells": {
+        "Aru": {
+          "Lun": {
+            "shift": "8-14**",
+            "dest": "EMO",
+            "flagged": true
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-20",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Cabianca": {
+          "Lun": {
+            "shift": "14-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "14-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Casula": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Corda": {
+          "Lun": {
+            "shift": "PT",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-16",
+            "dest": "END",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-16",
+            "dest": "PLAST",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-16",
+            "dest": "END",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "END",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Del Rio": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-14",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Desogus": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "VASC",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "14-20**",
+            "dest": "SG",
+            "flagged": true
+          },
+          "Mer": {
+            "shift": "C",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-20",
+            "dest": "ZORCOLO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Masillo": {
+          "Lun": {
+            "shift": "8-15",
+            "dest": "SG",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "CS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-15",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-15",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-15",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Mattana": {
+          "Lun": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "CS",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "CS",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "CS",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pili": {
+          "Lun": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-14",
+            "dest": "ORL.PED",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "14-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "8-20",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Piras D": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "8-20",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "8-14",
+            "dest": "PISANU",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Piras F": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "DS",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "14-20**",
+            "dest": "G",
+            "flagged": true
+          },
+          "Ven": {
+            "shift": "14-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pistincu": {
+          "Lun": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "PISANU+G",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "14-20",
+            "dest": "CALÒ",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "14-20",
+            "dest": "ORTO",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "14-20",
+            "dest": "OCUL.POL",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Pitzalis": {
+          "Lun": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-14**",
+            "dest": "DS",
+            "flagged": true
+          },
+          "Mer": {
+            "shift": "8-20",
+            "dest": "END+PISANU",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "8-20",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Puddu": {
+          "Lun": {
+            "shift": "8-14",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "M",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Sanna": {
+          "Lun": {
+            "shift": "8-20",
+            "dest": "G",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "8-20",
+            "dest": "ORL",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "20-24",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "0-8",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "14-20**",
+            "dest": "CALÒ",
+            "flagged": true
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        },
+        "Tolu": {
+          "Lun": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mar": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Mer": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Gio": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Ven": {
+            "shift": "F",
+            "dest": "",
+            "flagged": false
+          },
+          "Sab": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          },
+          "Dom": {
+            "shift": "RS",
+            "dest": "",
+            "flagged": false
+          }
+        }
+      },
+      "extra_rows": {
+        "rep. giorno": {
+          "Lun": "",
+          "Mar": "",
+          "Mer": "",
+          "Gio": "",
+          "Ven": "",
+          "Sab": "PIRAS F.",
+          "Dom": "DESOGUS"
+        },
+        "rep. notte": {
+          "Lun": "DESOGUS",
+          "Mar": "PIRAS F.",
+          "Mer": "PISTINCU",
+          "Gio": "PIRAS F.",
+          "Ven": "CASULA",
+          "Sab": "ARU",
+          "Dom": "PITZALIS"
+        }
+      },
+      "night_counts": {
+        "Aru": 0,
+        "Cabianca": 1,
+        "Casula": 0,
+        "Corda": 0,
+        "Del Rio": 0,
+        "Desogus": 1,
+        "Masillo": 0,
+        "Mattana": 0,
+        "Pili": 1,
+        "Piras D": 1,
+        "Piras F": 1,
+        "Pistincu": 0,
+        "Pitzalis": 1,
+        "Puddu": 0,
+        "Sanna": 1,
+        "Tolu": 0
+      },
+      "flagged_hours": {
+        "Aru": 6,
+        "Cabianca": 0,
+        "Casula": 0,
+        "Corda": 0,
+        "Del Rio": 0,
+        "Desogus": 6,
+        "Masillo": 0,
+        "Mattana": 0,
+        "Pili": 0,
+        "Piras D": 0,
+        "Piras F": 6,
+        "Pistincu": 0,
+        "Pitzalis": 6,
+        "Puddu": 0,
+        "Sanna": 6,
+        "Tolu": 0
+      }
+    },
+    "2026-W03": {
       "cells": {
         "Aru": {
           "Lun": {
@@ -1352,12 +4615,12 @@
             "flagged": false
           },
           "Sab": {
-            "shift": "RS",
+            "shift": "",
             "dest": "",
             "flagged": false
           },
           "Dom": {
-            "shift": "RS",
+            "shift": "",
             "dest": "",
             "flagged": false
           }
@@ -1426,12 +4689,12 @@
             "flagged": false
           },
           "Sab": {
-            "shift": "RS",
+            "shift": "",
             "dest": "",
             "flagged": false
           },
           "Dom": {
-            "shift": "RS",
+            "shift": "",
             "dest": "",
             "flagged": false
           }
@@ -1616,7 +4879,7 @@
             "flagged": false
           },
           "Dom": {
-            "shift": "20-24",
+            "shift": "",
             "dest": "",
             "flagged": false
           }
@@ -1946,7 +5209,7 @@
         "Del Rio": 0,
         "Desogus": 0,
         "Masillo": 0,
-        "Mattana": 1,
+        "Mattana": 0,
         "Pili": 0,
         "Piras D": 0,
         "Piras F": 0,
@@ -1974,9 +5237,7 @@
         "Sanna": 0,
         "Tolu": 0
       }
-    },
-    "2026-W10": {
-      "cells": {}
     }
-  }
+  },
+  "last_selected_week": "2026-W03"
 }

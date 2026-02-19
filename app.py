@@ -1,6 +1,8 @@
 import sys
 import re
 import json
+import os
+import shutil
 from pathlib import Path
 from datetime import date, timedelta
 from typing import List, Tuple
@@ -11,6 +13,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QLabel,
     QMainWindow,
+    QMessageBox,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -46,32 +49,53 @@ SHIFT_HOURS = {
     "8-20": 12,
     "20-24": 4,
     "0-8": 8,
-    "8-16": 8,
+    "8-16": 8
 }
-ZERO_HOUR_LABELS = {"f", "rs", "c", "m", "PT"}
+SHIFT_SHORTCUTS = {
+    "14": "14-20",
+    "20": "20-24",
+}
+ZERO_HOUR_LABELS = {"f", "rs", "c", "m", "PT", "ro", "m"}
 ZERO_HOUR_LABELS_CASEFOLD = {label.casefold(): label for label in ZERO_HOUR_LABELS}
-SPECIAL_HOUR_LABELS = {"aggp": 7}
+SPECIAL_HOUR_LABELS = {"aggp": 7, "cs": 7, "c": 7, "f": 7.36, "m": 6}
 SPECIAL_HOUR_LABELS_CASEFOLD = {label.casefold(): label for label in SPECIAL_HOUR_LABELS}
 DEST_LABELS = {
-    "orto",
-    "vasc",
-    "calò",
-    "zorcolo",
-    "pisanu",
+    "ORTO",
+    "VASC",
+    "CALÒ",
+    "ZORCOLO",
+    "PISANU",
     "SG",
     "G",
-    "end",
-    "gpo",
+    "END",
+    "EMO",
+    "GPO",
     "DS",
     "ORL",
-    "plastica",
-    "opoli",
+    "ORL.PED",
+    "PLASTICA",
+    "PLAST",
+    "OCUL.PED",
+    "OCUL.POL",
 }  # TODO: incollare lista reale
 DEST_LABELS_CASEFOLD = {label.casefold(): label for label in DEST_LABELS}
+DEST_SHORTCUTS = {
+    "c": "CALÒ",
+    "e": "END",
+    "oc": "OCUL.POL",
+    "op": "OCUL.PED",
+    "o": "ORTO",
+    "p": "PISANU",
+    "pl": "PLAST",
+    "v": "VASC",
+    "z": "ZORCOLO",
+    "orlp": "ORL.PED",
+}
+DEST_SHORTCUTS_CASEFOLD = {alias.casefold(): target for alias, target in DEST_SHORTCUTS.items()}
 PINK_BG = QColor(255, 220, 220)
 ORANGE_BG = QColor(255, 235, 180)
 WHITE_BG = QColor(255, 255, 255)
-DEST_REQUIRED_ERROR = "Riga 2: destinazione obbligatoria"
+DEST_REQUIRED_ERROR = "Riga 2: manca destinazione"
 ERROR_CELL_ROLE = Qt.UserRole + 10
 DEST_REQUIRED_LINE2_ROLE = Qt.UserRole + 11
 
@@ -92,18 +116,90 @@ DEST_LINE2_COLORS = {
     "vasc": LINE2_AZZURRO,
     "pisanu": LINE2_CELESTE,
     "orl": LINE2_VIOLA,
+    "orl.ped": LINE2_VIOLA,
     "end": LINE2_ARANCIO,
     "zorcolo": LINE2_GRIGIO,
     "sg": LINE2_GRIGIO,
-    "opoli": LINE2_GRIGIO,
+    "ocul.ped": LINE2_GRIGIO,
+    "ocul.pol": LINE2_GRIGIO,
     "ds": LINE2_MARRONE,
     "calò": LINE2_ROSSO,
-    "calã²": LINE2_ROSSO,
 }
 
 # accetta: "8-14", "8 - 14", "8-14**", "8-14 **"
 SHIFT_RE = re.compile(r"^\s*(\d{1,2}\s*-\s*\d{1,2})\s*(\*\*)?\s*$")
 DATA_FILE = Path(__file__).resolve().parent / "planner_data.json"
+
+
+def _user_data_file_path() -> Path:
+    if sys.platform == "darwin":
+        base_dir = Path.home() / "Library" / "Application Support" / "PlannerTurni"
+    elif sys.platform.startswith("win"):
+        appdata = os.environ.get("APPDATA", "").strip()
+        if appdata:
+            base_dir = Path(appdata) / "PlannerTurni"
+        else:
+            base_dir = Path.home() / "AppData" / "Roaming" / "PlannerTurni"
+    else:
+        base_dir = Path.home() / ".local" / "share" / "planner_turni"
+    return base_dir / "planner_data.json"
+
+
+def _week_count_in_json(path: Path) -> int:
+    try:
+        if not path.exists() or not path.is_file():
+            return -1
+        raw = path.read_text(encoding="utf-8-sig")
+        data = json.loads(raw)
+        weeks = data.get("weeks", {})
+        if isinstance(weeks, dict):
+            return len(weeks)
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        pass
+    return -1
+
+
+def resolve_data_file() -> Path:
+    override = os.environ.get("PLANNER_DATA_FILE", "").strip()
+    if override:
+        return Path(override).expanduser()
+
+    user_path = _user_data_file_path()
+    candidate_paths = []
+    for candidate in (
+        DATA_FILE,
+        Path.cwd() / "planner_data.json",
+        Path(sys.argv[0]).resolve().parent / "planner_data.json" if sys.argv and sys.argv[0] else None,
+        Path(sys.executable).resolve().parent / "planner_data.json",
+        user_path,
+    ):
+        if candidate is None:
+            continue
+        if candidate not in candidate_paths:
+            candidate_paths.append(candidate)
+
+    best_existing = None
+    best_weeks = -1
+    for candidate in candidate_paths:
+        weeks = _week_count_in_json(candidate)
+        if weeks > best_weeks:
+            best_weeks = weeks
+            best_existing = candidate
+
+    if best_existing is not None and best_weeks >= 0:
+        if best_existing.exists() and os.access(best_existing, os.W_OK):
+            return best_existing
+        if (not best_existing.exists()) and os.access(best_existing.parent, os.W_OK):
+            return best_existing
+
+    fallback_path = user_path
+    if best_existing is not None and best_existing.exists() and best_existing != fallback_path and not fallback_path.exists():
+        try:
+            fallback_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(best_existing, fallback_path)
+        except OSError:
+            pass
+    return fallback_path
 
 
 def get_max_iso_weeks(year: int) -> int:
@@ -119,8 +215,78 @@ def get_week_dates_iso(year: int, week_index: int) -> List[date]:
     return [monday + timedelta(days=offset) for offset in range(7)]
 
 
+def parse_week_key(week_key: str) -> Tuple[int, int] | None:
+    m = re.match(r"^(\d{4})-W(\d{2})$", week_key)
+    if not m:
+        return None
+    year = int(m.group(1))
+    week_index = int(m.group(2))
+    try:
+        date.fromisocalendar(year, week_index, 1)
+    except ValueError:
+        return None
+    return year, week_index
+
+
+def count_filled_cells_in_week_payload(payload: dict) -> int:
+    if not isinstance(payload, dict):
+        return 0
+    cells = payload.get("cells", {})
+    if not isinstance(cells, dict):
+        return 0
+
+    filled = 0
+    for day_map in cells.values():
+        if not isinstance(day_map, dict):
+            continue
+        for day_payload in day_map.values():
+            if isinstance(day_payload, dict):
+                shift = str(day_payload.get("shift", "")).strip()
+                dest = str(day_payload.get("dest", "")).strip()
+                if shift or dest:
+                    filled += 1
+            elif str(day_payload).strip():
+                filled += 1
+    return filled
+
+
 def normalize_dest_label(value: str) -> str:
-    return DEST_LABELS_CASEFOLD.get(value.strip().casefold(), "")
+    token = value.strip()
+    if not token:
+        return ""
+    shortcut_expanded = DEST_SHORTCUTS_CASEFOLD.get(token.casefold(), token)
+    return DEST_LABELS_CASEFOLD.get(shortcut_expanded.casefold(), "")
+
+
+def autocomplete_dest_line(dest_line: str) -> str:
+    token = dest_line.strip()
+    if not token:
+        return ""
+    if "+" not in token:
+        return normalize_dest_label(token) or token.upper()
+
+    parts = [part.strip() for part in token.split("+")]
+    if not parts:
+        return token
+    completed = [normalize_dest_label(part) or part.upper() for part in parts]
+    return "+".join(completed)
+
+
+def autocomplete_shift_line(shift_line: str) -> str:
+    token = shift_line.strip()
+    if not token:
+        return ""
+    has_flag = token.endswith("**")
+    base = token[:-2].strip() if has_flag else token
+    completed = SHIFT_SHORTCUTS.get(base.casefold(), base)
+    if has_flag and completed in SHIFT_HOURS:
+        return f"{completed}**"
+    return completed
+
+
+def destination_shortcuts_legend_text() -> str:
+    lines = [f"{alias.upper()} = {target}" for alias, target in sorted(DEST_SHORTCUTS.items(), key=lambda it: it[0].casefold())]
+    return "\n".join(lines)
 
 
 def normalize_zero_hour_label(value: str) -> str:
@@ -251,7 +417,7 @@ class MultilineDelegate(QStyledItemDelegate):
             painter.fillRect(overlay_rect, color)
             painter.restore()
 
-        if bool(index.data(ERROR_CELL_ROLE)) and not bool(index.data(DEST_REQUIRED_LINE2_ROLE)):
+        if bool(index.data(ERROR_CELL_ROLE)):
             painter.save()
             pen = QPen(QColor(190, 30, 30))
             pen.setWidth(2)
@@ -277,10 +443,13 @@ class MainWindow(QMainWindow):
 
         today = date.today()
         iso_today = today.isocalendar()
-        self.current_year = iso_today.year
-        self.current_week_index = iso_today.week
         self._next_week_monday_shift_cache: dict[str, str] = {}
         self._prev_week_sunday_shift_cache: dict[str, str] = {}
+        self.data_file = resolve_data_file()
+        self.data_file_weeks = _week_count_in_json(self.data_file)
+        self.current_year, self.current_week_index = self._startup_week_from_data(
+            iso_today.year, iso_today.week
+        )
 
         container = QWidget(self)
         layout = QVBoxLayout(container)
@@ -303,6 +472,13 @@ class MainWindow(QMainWindow):
         controls.addWidget(self.week_spin)
         self.week_range_label = QLabel("")
         controls.addWidget(self.week_range_label)
+        self.dest_help_btn = QToolButton(self)
+        self.dest_help_btn.setText("?")
+        self.dest_help_btn.setToolTip(destination_shortcuts_legend_text())
+        self.dest_help_btn.setAutoRaise(True)
+        self.dest_help_btn.setFixedWidth(24)
+        self.dest_help_btn.clicked.connect(self.show_dest_shortcuts_popup)
+        controls.addWidget(self.dest_help_btn)
         controls.addStretch()
         layout.addLayout(controls)
 
@@ -362,10 +538,19 @@ class MainWindow(QMainWindow):
         self.stats_table = QTableWidget()
         self.stats_table.setColumnCount(3)
         self.stats_table.setRowCount(0)
-        self.stats_table.setHorizontalHeaderLabels(["Notti prog.", "Weekend lav. prog.", "** ore prog."])
+        self.stats_table.setHorizontalHeaderLabels(["GN", "GW", "P"])
+        gn_header = self.stats_table.horizontalHeaderItem(0)
+        gw_header = self.stats_table.horizontalHeaderItem(1)
+        p_header = self.stats_table.horizontalHeaderItem(2)
+        if gn_header:
+            gn_header.setToolTip("Guardie notturne")
+        if gw_header:
+            gw_header.setToolTip("Guardie weekend")
+        if p_header:
+            p_header.setToolTip("Turni a progetto")
         self.stats_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.stats_table.horizontalHeader().setStretchLastSection(False)
-        self.stats_table.verticalHeader().setVisible(False)
+        self.stats_table.verticalHeader().setVisible(True)
         self.stats_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.stats_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.stats_table.setFocusPolicy(Qt.NoFocus)
@@ -380,8 +565,15 @@ class MainWindow(QMainWindow):
             lbl.setFixedHeight(title_h)
             lbl.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.prev_panel.setVisible(False)
+        self.stats_panel.setVisible(False)
+        self.stats_toggle_btn.setArrowType(Qt.RightArrow)
+        self.stats_toggle_btn.setToolTip("Mostra statistiche")
 
         self.statusBar()
+        self.data_file_label = QLabel(f"Dati: {self.data_file} (weeks: {max(self.data_file_weeks, 0)})")
+        self.data_file_label.setToolTip(str(self.data_file))
+        self.statusBar().addPermanentWidget(self.data_file_label, 1)
+        self.statusBar().showMessage(f"File dati: {self.data_file}", 5000)
         self.autosave_timer = QTimer(self)
         self.autosave_timer.setSingleShot(True)
         self.autosave_timer.setInterval(1000)
@@ -477,6 +669,13 @@ class MainWindow(QMainWindow):
             self.prev_toggle_btn.setArrowType(Qt.LeftArrow)
             self.prev_toggle_btn.setToolTip("Mostra settimana precedente")
 
+    def show_dest_shortcuts_popup(self):
+        QMessageBox.information(
+            self,
+            "Legenda abbreviazioni destinazioni",
+            destination_shortcuts_legend_text(),
+        )
+
     def _setup_prev_table_rows(self, total_rows: int, row_height: int) -> None:
         for row in range(total_rows):
             self.prev_table.setRowHeight(row, row_height)
@@ -487,6 +686,7 @@ class MainWindow(QMainWindow):
                     item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                     item.setTextAlignment(Qt.AlignTop | Qt.AlignLeft)
                     self.prev_table.setItem(row, col, item)
+                item.setForeground(QColor(0, 0, 0))
                 if col == 0:
                     item.setTextAlignment(Qt.AlignCenter)
                 if row >= len(DOCTORS):
@@ -512,6 +712,10 @@ class MainWindow(QMainWindow):
                 item = self.prev_table.item(row, col)
                 if item:
                     item.setText("")
+                    if row >= len(DOCTORS):
+                        item.setBackground(QColor(245, 245, 245))
+                    else:
+                        item.setBackground(WHITE_BG)
 
     def _load_previous_week_preview(self, all_data: dict):
         current_monday = date.fromisocalendar(self.current_year, self.current_week_index, 1)
@@ -550,6 +754,7 @@ class MainWindow(QMainWindow):
                 item = self.prev_table.item(row, col)
                 if item:
                     item.setText(text)
+                    item.setBackground(self._get_line2_color(shift, dest, col) or WHITE_BG)
 
         extra_rows = week_data.get("extra_rows", {})
         if isinstance(extra_rows, dict):
@@ -576,6 +781,7 @@ class MainWindow(QMainWindow):
 
     def _setup_stats_table_rows(self, total_rows: int, row_height: int) -> None:
         self.stats_table.setRowCount(total_rows)
+        self.stats_table.setVerticalHeaderLabels(DOCTORS + ["", ""])
         self.stats_table.verticalHeader().setDefaultSectionSize(row_height)
         for row in range(total_rows):
             self.stats_table.setRowHeight(row, row_height)
@@ -587,6 +793,7 @@ class MainWindow(QMainWindow):
                     item.setTextAlignment(Qt.AlignCenter)
                     self.stats_table.setItem(row, col, item)
                 item.setText("" if row >= len(DOCTORS) else "0")
+                item.setForeground(QColor(0, 0, 0))
                 if row >= len(DOCTORS):
                     item.setBackground(QColor(245, 245, 245))
                 else:
@@ -1276,7 +1483,7 @@ class MainWindow(QMainWindow):
                                 col,
                                 line2_color or WHITE_BG,
                                 "\n".join(errors),
-                                is_error=False,
+                                is_error=True,
                                 dest_required_line2=True,
                             )
                         else:
@@ -1295,10 +1502,7 @@ class MainWindow(QMainWindow):
                 if h_item:
                     h_item.setBackground(WHITE_BG)
                     h_item.setForeground(QColor(0, 0, 0))
-                    if abs(hours - round(hours)) < 1e-9:
-                        h_item.setText(str(int(round(hours))))
-                    else:
-                        h_item.setText(f"{hours:.1f}")
+                    h_item.setText(str(int(round(hours))))
 
                 header_item = self.table.verticalHeaderItem(row)
                 if header_item:
@@ -1413,6 +1617,49 @@ class MainWindow(QMainWindow):
     def _default_all_data(self) -> dict:
         return {"version": 2, "doctors": DOCTORS, "weeks": {}}
 
+    def _startup_week_from_data(self, fallback_year: int, fallback_week: int) -> Tuple[int, int]:
+        all_data = self.load_all()
+        weeks = all_data.get("weeks", {})
+        if not isinstance(weeks, dict) or not weeks:
+            return fallback_year, fallback_week
+
+        last_selected_week = str(all_data.get("last_selected_week", "")).strip()
+        parsed_last = parse_week_key(last_selected_week) if last_selected_week else None
+        if parsed_last is not None and last_selected_week in weeks:
+            return parsed_last
+
+        best_key = ""
+        best_parsed: Tuple[int, int] | None = None
+        best_filled = -1
+        latest_parsed: Tuple[int, int] | None = None
+        for week_key, payload in weeks.items():
+            week_key = str(week_key)
+            parsed = parse_week_key(week_key)
+            if parsed is None:
+                continue
+            if latest_parsed is None or parsed > latest_parsed:
+                latest_parsed = parsed
+
+            filled = count_filled_cells_in_week_payload(payload)
+            if (
+                filled > best_filled
+                or (filled == best_filled and best_parsed is not None and parsed > best_parsed)
+                or (filled == best_filled and best_parsed is None)
+            ):
+                best_filled = filled
+                best_key = week_key
+                best_parsed = parsed
+
+        if best_parsed is not None and best_filled > 0:
+            return best_parsed
+        if latest_parsed is not None:
+            return latest_parsed
+        if parsed_last is not None:
+            return parsed_last
+        if best_parsed is None:
+            return fallback_year, fallback_week
+        return best_parsed
+
     def serialize_week(self) -> dict:
         cells = {}
         extra_rows = {}
@@ -1513,14 +1760,15 @@ class MainWindow(QMainWindow):
         self._dirty = False
 
     def save_all(self, data: dict) -> None:
-        DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        self.data_file.parent.mkdir(parents=True, exist_ok=True)
+        self.data_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def load_all(self) -> dict:
-        if not DATA_FILE.exists():
+        if not self.data_file.exists():
             return self._default_all_data()
 
         try:
-            raw = DATA_FILE.read_text(encoding="utf-8")
+            raw = self.data_file.read_text(encoding="utf-8-sig")
             data = json.loads(raw)
         except (OSError, json.JSONDecodeError):
             return self._default_all_data()
@@ -1553,6 +1801,7 @@ class MainWindow(QMainWindow):
             weeks = data.setdefault("weeks", {})
             week_payload = self.serialize_week()
             weeks[week_key] = week_payload
+            data["last_selected_week"] = week_key
 
             # Autofill cross-settimana: Dom 20-24 -> Lun 0-8 nella settimana successiva.
             current_monday = date.fromisocalendar(self.current_year, self.current_week_index, 1)
@@ -1629,7 +1878,11 @@ class MainWindow(QMainWindow):
         if item.column() == 0 or self._is_loading:
             return
 
-        normalized_text = (item.text() or "").upper()
+        current_text = item.text() or ""
+        shift_line, dest_line = self._split_cell_lines(current_text)
+        normalized_shift = autocomplete_shift_line(shift_line).upper()
+        normalized_dest = autocomplete_dest_line(dest_line)
+        normalized_text = normalized_shift if not normalized_dest else f"{normalized_shift}\n{normalized_dest}"
         if normalized_text != item.text():
             self.table.blockSignals(True)
             try:
