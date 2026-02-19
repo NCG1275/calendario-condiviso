@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import re
 import json
 import os
@@ -7,10 +7,12 @@ from pathlib import Path
 from datetime import date, timedelta
 from typing import List, Tuple
 
-from PySide6.QtCore import Qt, Signal, QTimer, QSignalBlocker
-from PySide6.QtGui import QColor, QPalette, QCloseEvent, QTextCursor, QPen
+from PySide6.QtCore import Qt, Signal, QTimer, QSignalBlocker, QSettings
+from PySide6.QtGui import QColor, QPalette, QCloseEvent, QTextCursor, QPen, QBrush
 from PySide6.QtWidgets import (
+    QAbstractItemDelegate,
     QApplication,
+    QFileDialog,
     QLabel,
     QMainWindow,
     QMessageBox,
@@ -26,11 +28,18 @@ from PySide6.QtWidgets import (
     QToolButton,
     QHeaderView,
     QWidget,
+    QSplitter,
 )
 
 # ----------------------------
 # Config dati
 # ----------------------------
+
+APP_NAME = "Planner Turni Medici"
+APP_VERSION = "v0.1 beta"
+APP_AUTHOR = "GN Aru"
+APP_SETTINGS_ORG = "PlannerTurni"
+APP_SETTINGS_APP = "PlannerTurniMedici"
 
 DAYS = ["h", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
 
@@ -39,7 +48,11 @@ DOCTORS = [
     "Mattana", "Pili", "Piras D", "Piras F", "Pistincu", "Pitzalis",
     "Puddu", "Sanna", "Tolu"
 ]
+NON_ANALYSIS_DOCTORS = ["Finco"]
 EXTRA_ROWS = ["rep. giorno", "rep. notte"]
+TABLE_DOCTORS = DOCTORS + NON_ANALYSIS_DOCTORS
+DOCTOR_ROWS_COUNT = len(TABLE_DOCTORS)
+EXTRA_START_ROW = DOCTOR_ROWS_COUNT
 
 # Turni ammessi e durata in ore
 SHIFT_HOURS = {
@@ -54,15 +67,19 @@ SHIFT_HOURS = {
 SHIFT_SHORTCUTS = {
     "14": "14-20",
     "20": "20-24",
+    "814": "8-14",
+    "815": "8-15",
+    "816": "8-16",
+    "820": "8-20",
 }
-ZERO_HOUR_LABELS = {"f", "rs", "c", "m", "PT", "ro", "m"}
+ZERO_HOUR_LABELS = {"rs", "PT", "ro", "RF"}
 ZERO_HOUR_LABELS_CASEFOLD = {label.casefold(): label for label in ZERO_HOUR_LABELS}
 SPECIAL_HOUR_LABELS = {"aggp": 7, "cs": 7, "c": 7, "f": 7.36, "m": 6}
 SPECIAL_HOUR_LABELS_CASEFOLD = {label.casefold(): label for label in SPECIAL_HOUR_LABELS}
 DEST_LABELS = {
     "ORTO",
     "VASC",
-    "CALÒ",
+    "CALÃ’",
     "ZORCOLO",
     "PISANU",
     "SG",
@@ -80,7 +97,7 @@ DEST_LABELS = {
 }  # TODO: incollare lista reale
 DEST_LABELS_CASEFOLD = {label.casefold(): label for label in DEST_LABELS}
 DEST_SHORTCUTS = {
-    "c": "CALÒ",
+    "c": "CALÃ’",
     "e": "END",
     "oc": "OCUL.POL",
     "op": "OCUL.PED",
@@ -95,6 +112,12 @@ DEST_SHORTCUTS_CASEFOLD = {alias.casefold(): target for alias, target in DEST_SH
 PINK_BG = QColor(255, 220, 220)
 ORANGE_BG = QColor(255, 235, 180)
 WHITE_BG = QColor(255, 255, 255)
+STATS_BLUE_BG = QColor(11, 79, 162)
+STATS_BLUE_BG_ALT = QColor(9, 61, 124)
+STATS_TEXT_FG = QColor(255, 255, 255)
+HEADER_BLUE_BG = QColor(11, 79, 162)
+HEADER_TEXT_FG = QColor(255, 255, 255)
+ZERO_HOUR_STRIPE_BRUSH = QBrush(QColor(225, 225, 225), Qt.BDiagPattern)
 DEST_REQUIRED_ERROR = "Riga 2: manca destinazione"
 ERROR_CELL_ROLE = Qt.UserRole + 10
 DEST_REQUIRED_LINE2_ROLE = Qt.UserRole + 11
@@ -123,7 +146,7 @@ DEST_LINE2_COLORS = {
     "ocul.ped": LINE2_GRIGIO,
     "ocul.pol": LINE2_GRIGIO,
     "ds": LINE2_MARRONE,
-    "calò": LINE2_ROSSO,
+    "calÃ²": LINE2_ROSSO,
 }
 
 # accetta: "8-14", "8 - 14", "8-14**", "8-14 **"
@@ -165,6 +188,9 @@ def resolve_data_file() -> Path:
         return Path(override).expanduser()
 
     user_path = _user_data_file_path()
+    # In eseguibile distribuito, salva sempre accanto al file .exe.
+    if bool(getattr(sys, "frozen", False)):
+        return Path(sys.executable).resolve().parent / "planner_data.json"
     candidate_paths = []
     for candidate in (
         DATA_FILE,
@@ -303,9 +329,11 @@ def normalize_special_hour_label(value: str) -> str:
 
 class TwoLineEdit(QPlainTextEdit):
     max_lines_reached = Signal()
+    commit_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._max_lines = 2
         palette = self.palette()
         palette.setColor(QPalette.Base, QColor(255, 255, 255))
         palette.setColor(QPalette.Text, QColor(0, 0, 0))
@@ -326,20 +354,69 @@ class TwoLineEdit(QPlainTextEdit):
         normalized = next_text.replace("\r\n", "\n").replace("\r", "\n")
         return normalized.count("\n") + 1
 
+    def set_max_lines(self, max_lines: int) -> None:
+        self._max_lines = max(1, int(max_lines))
+
     def _reject_third_line(self):
         QApplication.beep()
         self.max_lines_reached.emit()
 
+    def _first_line_is_zero_hour_label(self) -> bool:
+        lines = self.toPlainText().splitlines()
+        first_line = lines[0].strip() if lines else ""
+        if first_line.endswith("**"):
+            first_line = first_line[:-2].strip()
+        return bool(normalize_zero_hour_label(first_line))
+
+    def _first_line_is_special_hour_label(self) -> bool:
+        lines = self.toPlainText().splitlines()
+        first_line = lines[0].strip() if lines else ""
+        if first_line.endswith("**"):
+            first_line = first_line[:-2].strip()
+        return bool(normalize_special_hour_label(first_line))
+
+    def _first_line_is_single_line_shift(self) -> bool:
+        lines = self.toPlainText().splitlines()
+        first_line = lines[0].strip() if lines else ""
+        if not first_line:
+            return False
+        completed = autocomplete_shift_line(first_line)
+        base = completed[:-2].strip() if completed.endswith("**") else completed.strip()
+        m = SHIFT_RE.match(base)
+        if not m:
+            return False
+        shift = m.group(1).replace(" ", "")
+        return shift in {"20-24", "0-8"}
+
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key_Return, Qt.Key_Enter):
-            if self._line_count_after_insert("\n") > 2:
-                self._reject_third_line()
+            modifiers = event.modifiers()
+            if modifiers & Qt.ControlModifier:
+                self.commit_requested.emit()
                 return
+            if modifiers & Qt.ShiftModifier:
+                if self._line_count_after_insert("\n") > self._max_lines:
+                    self._reject_third_line()
+                    return
+                super().keyPressEvent(event)
+                return
+            if (
+                self._first_line_is_zero_hour_label()
+                or self._first_line_is_special_hour_label()
+                or self._first_line_is_single_line_shift()
+            ):
+                self.commit_requested.emit()
+                return
+            if self._line_count_after_insert("\n") <= self._max_lines:
+                super().keyPressEvent(event)
+                return
+            self.commit_requested.emit()
+            return
         super().keyPressEvent(event)
 
     def insertFromMimeData(self, source):
         text = source.text()
-        if text and self._line_count_after_insert(text) > 2:
+        if text and self._line_count_after_insert(text) > self._max_lines:
             self._reject_third_line()
             return
         super().insertFromMimeData(source)
@@ -391,10 +468,13 @@ class MultilineDelegate(QStyledItemDelegate):
 
     def createEditor(self, parent, option, index):
         editor = TwoLineEdit(parent)
+        if index.row() >= EXTRA_START_ROW:
+            editor.set_max_lines(1)
         editor.setTabChangesFocus(True)  # TAB cambia cella
         editor.setFixedHeight(option.rect.height())
         editor.textChanged.connect(lambda: self._on_text_changed(index, editor))
         editor.max_lines_reached.connect(self.max_lines_reached.emit)
+        editor.commit_requested.connect(lambda: self._commit_and_close(editor))
         return editor
 
     def setEditorData(self, editor, index):
@@ -428,6 +508,20 @@ class MultilineDelegate(QStyledItemDelegate):
     def _on_text_changed(self, index, editor):
         self.text_live_changed.emit(index.row(), index.column(), editor.toPlainText())
 
+    def _commit_and_close(self, editor):
+        self.commitData.emit(editor)
+        self.closeEditor.emit(editor, QAbstractItemDelegate.NoHint)
+
+
+class ShiftTableWidget(QTableWidget):
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter) and not self.state() == QAbstractItemView.EditingState:
+            current = self.currentItem()
+            if current and bool(current.flags() & Qt.ItemIsEditable):
+                self.editItem(current)
+                return
+        super().keyPressEvent(event)
+
 
 # ----------------------------
 # Main window
@@ -436,8 +530,16 @@ class MultilineDelegate(QStyledItemDelegate):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Planner Turni Medici")
+        self.setWindowTitle(f"{APP_NAME} {APP_VERSION} - by {APP_AUTHOR}")
         self.resize(1100, 650)
+        self._restored_prev_visible = False
+        self._restored_stats_visible = False
+        self._restored_splitter_sizes: List[int] = []
+        self._prev_panel_last_width = 0
+        self._stats_panel_last_width = 0
+        self._prev_panel_preferred_width = 420
+        self._stats_panel_preferred_width = 210
+        self._restore_window_size()
         self._is_loading = False
         self._dirty = False
 
@@ -479,12 +581,29 @@ class MainWindow(QMainWindow):
         self.dest_help_btn.setFixedWidth(24)
         self.dest_help_btn.clicked.connect(self.show_dest_shortcuts_popup)
         controls.addWidget(self.dest_help_btn)
+        self.export_doc_btn = QToolButton(self)
+        self.export_doc_btn.setText("Export DOC")
+        self.export_doc_btn.setToolTip("Esporta la settimana corrente in formato DOC (A4)")
+        self.export_doc_btn.clicked.connect(self.export_main_week_doc)
+        controls.addWidget(self.export_doc_btn)
         controls.addStretch()
         layout.addLayout(controls)
 
         content = QHBoxLayout()
         content.setContentsMargins(0, 0, 0, 0)
         content.setSpacing(8)
+        self.prev_toggle_btn = QToolButton(self)
+        self.prev_toggle_btn.setArrowType(Qt.LeftArrow)
+        self.prev_toggle_btn.setToolTip("Mostra settimana precedente")
+        self.prev_toggle_btn.setAutoRaise(True)
+        self.prev_toggle_btn.setFixedWidth(22)
+        self.prev_toggle_btn.clicked.connect(self.toggle_prev_panel)
+        content.addWidget(self.prev_toggle_btn)
+
+        self.main_splitter = QSplitter(Qt.Horizontal, self)
+        self.main_splitter.setChildrenCollapsible(True)
+        self.main_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        content.addWidget(self.main_splitter, stretch=1)
 
         prev_panel = QWidget(self)
         self.prev_panel = prev_panel
@@ -496,18 +615,11 @@ class MainWindow(QMainWindow):
         self.prev_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.prev_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.prev_table.setFocusPolicy(Qt.NoFocus)
-        self.prev_table.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.prev_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        prev_panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         prev_layout.addWidget(self.prev_title)
         prev_layout.addWidget(self.prev_table)
-        content.addWidget(prev_panel, stretch=3)
-
-        self.prev_toggle_btn = QToolButton(self)
-        self.prev_toggle_btn.setArrowType(Qt.LeftArrow)
-        self.prev_toggle_btn.setToolTip("Mostra settimana precedente")
-        self.prev_toggle_btn.setAutoRaise(True)
-        self.prev_toggle_btn.setFixedWidth(22)
-        self.prev_toggle_btn.clicked.connect(self.toggle_prev_panel)
-        content.addWidget(self.prev_toggle_btn)
+        self.main_splitter.addWidget(prev_panel)
 
         main_panel = QWidget(self)
         self.main_panel = main_panel
@@ -515,19 +627,11 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(6)
         self.main_title = QLabel("Settimana corrente")
-        self.table = QTableWidget()
+        self.table = ShiftTableWidget()
         self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         main_layout.addWidget(self.main_title)
         main_layout.addWidget(self.table)
-        content.addWidget(main_panel, stretch=4)
-
-        self.stats_toggle_btn = QToolButton(self)
-        self.stats_toggle_btn.setArrowType(Qt.LeftArrow)
-        self.stats_toggle_btn.setToolTip("Nascondi statistiche")
-        self.stats_toggle_btn.setAutoRaise(True)
-        self.stats_toggle_btn.setFixedWidth(22)
-        self.stats_toggle_btn.clicked.connect(self.toggle_stats_panel)
-        content.addWidget(self.stats_toggle_btn)
+        self.main_splitter.addWidget(main_panel)
 
         stats_panel = QWidget(self)
         self.stats_panel = stats_panel
@@ -554,20 +658,52 @@ class MainWindow(QMainWindow):
         self.stats_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.stats_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.stats_table.setFocusPolicy(Qt.NoFocus)
-        self.stats_table.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-        stats_panel.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Expanding)
+        self.stats_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.stats_table.setStyleSheet(
+            "QTableWidget {"
+            " background-color: #0B4FA2;"
+            " color: #FFFFFF;"
+            " gridline-color: #6FA8FF;"
+            " selection-background-color: #0A3D80;"
+            " selection-color: #FFFFFF;"
+            "}"
+            "QHeaderView::section {"
+            " background-color: #0A3D80;"
+            " color: #FFFFFF;"
+            " border: 1px solid #6FA8FF;"
+            " padding: 2px;"
+            "}"
+            "QTableCornerButton::section {"
+            " background-color: #0A3D80;"
+            " border: 1px solid #6FA8FF;"
+            "}"
+        )
+        stats_panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         stats_layout.addWidget(self.stats_title)
         stats_layout.addWidget(self.stats_table)
-        content.addWidget(stats_panel, stretch=0)
-        layout.addLayout(content)
+        self.main_splitter.addWidget(stats_panel)
+
+        self.main_splitter.setStretchFactor(0, 0)
+        self.main_splitter.setStretchFactor(1, 1)
+        self.main_splitter.setStretchFactor(2, 0)
+
+        self.stats_toggle_btn = QToolButton(self)
+        self.stats_toggle_btn.setArrowType(Qt.RightArrow)
+        self.stats_toggle_btn.setToolTip("Mostra statistiche")
+        self.stats_toggle_btn.setAutoRaise(True)
+        self.stats_toggle_btn.setFixedWidth(22)
+        self.stats_toggle_btn.clicked.connect(self.toggle_stats_panel)
+        content.addWidget(self.stats_toggle_btn)
+
+        layout.addLayout(content, 1)
         title_h = self.fontMetrics().height() + 6
         for lbl in (self.prev_title, self.main_title, self.stats_title):
             lbl.setFixedHeight(title_h)
             lbl.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.prev_panel.setVisible(False)
         self.stats_panel.setVisible(False)
-        self.stats_toggle_btn.setArrowType(Qt.RightArrow)
-        self.stats_toggle_btn.setToolTip("Mostra statistiche")
+        self.main_splitter.setSizes([0, 1000, 0])
+        self.main_splitter.splitterMoved.connect(self._on_main_splitter_moved)
 
         self.statusBar()
         self.data_file_label = QLabel(f"Dati: {self.data_file} (weeks: {max(self.data_file_weeks, 0)})")
@@ -583,9 +719,11 @@ class MainWindow(QMainWindow):
         self.year_spin.valueChanged.connect(self.on_week_selector_changed)
         self.week_spin.valueChanged.connect(self.on_week_selector_changed)
         self._load_selected_week(initial=True)
+        QTimer.singleShot(0, self._apply_restored_side_layout)
 
     def _setup_table(self):
-        total_rows = len(DOCTORS) + len(EXTRA_ROWS)
+        total_rows = DOCTOR_ROWS_COUNT + len(EXTRA_ROWS)
+        stats_rows = len(DOCTORS) + len(EXTRA_ROWS)
         self.table.setRowCount(total_rows)
         self.table.setColumnCount(len(DAYS))
         self.prev_table.setRowCount(total_rows)
@@ -596,9 +734,9 @@ class MainWindow(QMainWindow):
         self.table.setVerticalHeader(self.doctor_header)
 
         self.table.setHorizontalHeaderLabels(DAYS)
-        self.table.setVerticalHeaderLabels(DOCTORS + ["", ""])
+        self.table.setVerticalHeaderLabels(TABLE_DOCTORS + ["", ""])
         self.prev_table.setHorizontalHeaderLabels(DAYS)
-        self.prev_table.setVerticalHeaderLabels(DOCTORS + ["", ""])
+        self.prev_table.setVerticalHeaderLabels(TABLE_DOCTORS + ["", ""])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.prev_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         for c in range(1, len(DAYS)):
@@ -610,8 +748,9 @@ class MainWindow(QMainWindow):
         two_lines_height = self.table.fontMetrics().lineSpacing() * 2 + 6
         self.table.verticalHeader().setDefaultSectionSize(two_lines_height)
         self.prev_table.verticalHeader().setDefaultSectionSize(two_lines_height)
-        self._setup_stats_table_rows(total_rows, two_lines_height)
+        self._setup_stats_table_rows(stats_rows, two_lines_height)
         self._setup_prev_table_rows(total_rows, two_lines_height)
+        self._fit_prev_panel_width()
 
         # Crea celle
         for r in range(total_rows):
@@ -625,13 +764,13 @@ class MainWindow(QMainWindow):
                 if c == 0:
                     item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                     item.setTextAlignment(Qt.AlignCenter)
-                elif r >= len(DOCTORS):
+                elif r >= EXTRA_START_ROW:
                     item.setBackground(QColor(245, 245, 245))
 
-                if r >= len(DOCTORS):
+                if r >= EXTRA_START_ROW:
                     item.setBackground(QColor(245, 245, 245))
                     if c == 0:
-                        item.setText(EXTRA_ROWS[r - len(DOCTORS)])
+                        item.setText(EXTRA_ROWS[r - EXTRA_START_ROW])
                         item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
                 self.table.setItem(r, c, item)
@@ -648,10 +787,117 @@ class MainWindow(QMainWindow):
 
         # Inizializza ore
         self.revalidate_week()
+        self._set_doctor_headers_bold()
 
     def toggle_stats_panel(self):
-        visible = self.stats_panel.isVisible()
-        self.stats_panel.setVisible(not visible)
+        sizes = self._current_splitter_sizes()
+        if not self.stats_panel.isVisible():
+            self._fit_stats_panel_width()
+            stats_target = self._stats_panel_last_width or self._stats_panel_preferred_width
+            main_target = max(sizes[1], self.main_panel.width())
+            prev_target = sizes[0] if self.prev_panel.isVisible() else 0
+            self._resize_window_width(stats_target, anchor_left=False)
+            self.stats_panel.setVisible(True)
+            QTimer.singleShot(
+                0,
+                lambda p=prev_target, m=main_target, s=stats_target: self._set_splitter_sizes(p, m, s),
+            )
+        else:
+            stats_current = max(sizes[2], self.stats_panel.width())
+            if stats_current > 0:
+                self._stats_panel_last_width = stats_current
+            main_target = max(sizes[1], self.main_panel.width()) + stats_current
+            prev_target = sizes[0] if self.prev_panel.isVisible() else 0
+            self.stats_panel.setVisible(False)
+            self._resize_window_width(-stats_current, anchor_left=False)
+            QTimer.singleShot(
+                0,
+                lambda p=prev_target, m=main_target: self._set_splitter_sizes(p, m, 0),
+            )
+        self._sync_side_toggle_buttons()
+
+    def toggle_prev_panel(self):
+        sizes = self._current_splitter_sizes()
+        if not self.prev_panel.isVisible():
+            self._fit_prev_panel_width()
+            prev_target = self._prev_panel_last_width or self._prev_panel_preferred_width
+            main_target = max(sizes[1], self.main_panel.width())
+            stats_target = sizes[2] if self.stats_panel.isVisible() else 0
+            self._resize_window_width(prev_target, anchor_left=True)
+            self.prev_panel.setVisible(True)
+            QTimer.singleShot(
+                0,
+                lambda p=prev_target, m=main_target, s=stats_target: self._set_splitter_sizes(p, m, s),
+            )
+        else:
+            prev_current = max(sizes[0], self.prev_panel.width())
+            if prev_current > 0:
+                self._prev_panel_last_width = prev_current
+            main_target = max(sizes[1], self.main_panel.width()) + prev_current
+            stats_target = sizes[2] if self.stats_panel.isVisible() else 0
+            self.prev_panel.setVisible(False)
+            self._resize_window_width(-prev_current, anchor_left=True)
+            QTimer.singleShot(
+                0,
+                lambda m=main_target, s=stats_target: self._set_splitter_sizes(0, m, s),
+            )
+        self._sync_side_toggle_buttons()
+
+    def _current_splitter_sizes(self) -> List[int]:
+        sizes = [max(0, int(v)) for v in self.main_splitter.sizes()]
+        while len(sizes) < 3:
+            sizes.append(0)
+        return sizes[:3]
+
+    def _set_splitter_sizes(self, prev_w: int, main_w: int, stats_w: int) -> None:
+        prev = max(0, int(prev_w)) if self.prev_panel.isVisible() else 0
+        main = max(1, int(main_w))
+        stats = max(0, int(stats_w)) if self.stats_panel.isVisible() else 0
+        self.main_splitter.setSizes([prev, main, stats])
+
+    def _resize_window_width(self, delta_width: int, anchor_left: bool = False) -> None:
+        if delta_width == 0 or self.isMaximized() or self.isFullScreen():
+            return
+        geom = self.geometry()
+        old_width = geom.width()
+        new_width = max(self.minimumWidth(), old_width + int(delta_width))
+        screen = self.screen() or QApplication.primaryScreen()
+        if screen is not None:
+            avail = screen.availableGeometry()
+            if new_width > avail.width():
+                new_width = avail.width()
+        applied_delta = new_width - old_width
+        if applied_delta == 0:
+            return
+        new_x = geom.x()
+        if anchor_left:
+            new_x = geom.x() - applied_delta
+        if screen is not None:
+            avail = screen.availableGeometry()
+            min_x = avail.left()
+            max_x = avail.right() - new_width + 1
+            if max_x < min_x:
+                max_x = min_x
+            if new_x < min_x:
+                new_x = min_x
+            if new_x > max_x:
+                new_x = max_x
+        self.setGeometry(new_x, geom.y(), new_width, geom.height())
+
+    def _on_main_splitter_moved(self, _pos: int, _index: int) -> None:
+        sizes = self._current_splitter_sizes()
+        if self.prev_panel.isVisible() and sizes[0] > 0:
+            self._prev_panel_last_width = sizes[0]
+        if self.stats_panel.isVisible() and sizes[2] > 0:
+            self._stats_panel_last_width = sizes[2]
+
+    def _sync_side_toggle_buttons(self) -> None:
+        if self.prev_panel.isVisible():
+            self.prev_toggle_btn.setArrowType(Qt.RightArrow)
+            self.prev_toggle_btn.setToolTip("Nascondi settimana precedente")
+        else:
+            self.prev_toggle_btn.setArrowType(Qt.LeftArrow)
+            self.prev_toggle_btn.setToolTip("Mostra settimana precedente")
         if self.stats_panel.isVisible():
             self.stats_toggle_btn.setArrowType(Qt.LeftArrow)
             self.stats_toggle_btn.setToolTip("Nascondi statistiche")
@@ -659,15 +905,44 @@ class MainWindow(QMainWindow):
             self.stats_toggle_btn.setArrowType(Qt.RightArrow)
             self.stats_toggle_btn.setToolTip("Mostra statistiche")
 
-    def toggle_prev_panel(self):
-        visible = self.prev_panel.isVisible()
-        self.prev_panel.setVisible(not visible)
-        if self.prev_panel.isVisible():
-            self.prev_toggle_btn.setArrowType(Qt.RightArrow)
-            self.prev_toggle_btn.setToolTip("Nascondi settimana precedente")
-        else:
-            self.prev_toggle_btn.setArrowType(Qt.LeftArrow)
-            self.prev_toggle_btn.setToolTip("Mostra settimana precedente")
+    def _apply_restored_side_layout(self) -> None:
+        prev_visible = bool(self._restored_prev_visible)
+        stats_visible = bool(self._restored_stats_visible)
+        self.prev_panel.setVisible(prev_visible)
+        self.stats_panel.setVisible(stats_visible)
+        self._sync_side_toggle_buttons()
+
+        prev_w = self._prev_panel_last_width or self._prev_panel_preferred_width
+        stats_w = self._stats_panel_last_width or self._stats_panel_preferred_width
+        main_w = max(self.main_panel.width(), 600)
+        restored = self._restored_splitter_sizes
+        if len(restored) == 3:
+            prev_w = max(0, int(restored[0]))
+            main_w = max(1, int(restored[1]))
+            stats_w = max(0, int(restored[2]))
+        if not prev_visible:
+            prev_w = 0
+        if not stats_visible:
+            stats_w = 0
+        self._set_splitter_sizes(prev_w, main_w, stats_w)
+        self._restored_splitter_sizes = []
+
+    def _fit_prev_panel_width(self) -> None:
+        h_col_min = 52
+        day_col_min = 102
+        day_cols = len(DAYS) - 1
+        table_width = self.prev_table.frameWidth() * 2
+        if self.prev_table.verticalHeader().isVisible():
+            table_width += self.prev_table.verticalHeader().width()
+        table_width += h_col_min + day_cols * day_col_min
+        if self.prev_table.verticalScrollBar().isVisible():
+            table_width += self.prev_table.verticalScrollBar().sizeHint().width()
+        table_width += self.prev_table.contentsMargins().left() + self.prev_table.contentsMargins().right()
+        table_width = max(table_width, 1)
+        panel_width = max(table_width, self.prev_title.sizeHint().width())
+        self._prev_panel_preferred_width = panel_width
+        self.prev_panel.setMinimumWidth(220)
+        self.prev_table.setMinimumWidth(220)
 
     def show_dest_shortcuts_popup(self):
         QMessageBox.information(
@@ -675,6 +950,231 @@ class MainWindow(QMainWindow):
             "Legenda abbreviazioni destinazioni",
             destination_shortcuts_legend_text(),
         )
+
+    def export_main_week_doc(self) -> None:
+        week_key = get_week_key(self.current_year, self.current_week_index)
+        default_name = f"turni_{week_key}.doc"
+        default_path = Path.home() / default_name
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Esporta settimana principale in DOC",
+            str(default_path),
+            "Documento Word (*.doc);;Rich Text Format (*.rtf)",
+        )
+        if not file_path:
+            return
+
+        output_path = Path(file_path)
+        if output_path.suffix.lower() not in {".doc", ".rtf"}:
+            output_path = output_path.with_suffix(".doc")
+
+        try:
+            output_path.write_text(self._build_main_week_doc_rtf(), encoding="utf-8")
+        except OSError as exc:
+            QMessageBox.critical(
+                self,
+                "Export DOC",
+                f"Errore durante l'esportazione:\n{exc}",
+            )
+            return
+
+        self.statusBar().showMessage(f"Esportato: {output_path}", 4000)
+
+    def _build_main_week_doc_rtf(self) -> str:
+        week_dates = get_week_dates_iso(self.current_year, self.current_week_index)
+        week_key = get_week_key(self.current_year, self.current_week_index)
+        title = (
+            f"Settimana {week_key} "
+            f"({week_dates[0].strftime('%d/%m')} - {week_dates[-1].strftime('%d/%m')})"
+        )
+        generated_on = f"Generato il {date.today().strftime('%d/%m/%Y')}"
+        header_lines = [
+            "SERVIZIO SANITARIO REGIONE SARDEGNA",
+            "AZIENDA OSPEDALIERO - UNIVERSITARIA DI CAGLIARI",
+            "U.O.C. DI ANESTESIA RIANIMAZIONE TERAPIA ANTALGICA",
+            "Direttore Prof. Gabriele Finco",
+        ]
+        service_title = "ORARIO DI SERVIZIO"
+
+        headers = ["Medico"]
+        for col in range(len(DAYS)):
+            header_item = self.table.horizontalHeaderItem(col)
+            header_text = (header_item.text() if header_item else DAYS[col]).replace("\n", " ").strip()
+            headers.append(header_text)
+
+        rows: List[List[str]] = []
+        for row in range(self.table.rowCount()):
+            if row < DOCTOR_ROWS_COUNT:
+                row_label = TABLE_DOCTORS[row]
+            else:
+                row_label = EXTRA_ROWS[row - EXTRA_START_ROW]
+
+            row_values = [row_label]
+            for col in range(len(DAYS)):
+                item = self.table.item(row, col)
+                if row >= EXTRA_START_ROW and col == 0:
+                    cell_text = ""
+                else:
+                    cell_text = (item.text() if item else "").strip()
+                row_values.append(cell_text)
+            rows.append(row_values)
+
+        page_width_twips = 11907
+        page_height_twips = 16840
+        margin_left = 540
+        margin_right = 540
+        usable_page_twips = page_width_twips - margin_left - margin_right
+
+        day_cols_count = max(len(headers) - 2, 1)
+
+        def text_units(value: str) -> int:
+            lines = [line.strip() for line in value.splitlines() if line.strip()]
+            if not lines:
+                return 1
+            return max(len(line) for line in lines)
+
+        def max_units_for_col(col_idx: int) -> int:
+            header_units = text_units(headers[col_idx])
+            row_units = max((text_units(row[col_idx]) for row in rows), default=0)
+            return max(header_units, row_units, 1)
+
+        doctor_units = max_units_for_col(0)
+        h_units = max_units_for_col(1)
+        doctor_col = min(max(980 + doctor_units * 18, 1050), 1750)
+        h_col = min(max(260 + h_units * 30, 420), 640)
+
+        min_day_width = 360
+        min_required_for_days = day_cols_count * min_day_width
+        available_for_days = usable_page_twips - doctor_col - h_col
+        if available_for_days < min_required_for_days:
+            deficit = min_required_for_days - available_for_days
+            doctor_reducible = max(doctor_col - 900, 0)
+            reduce_doctor = min(deficit, doctor_reducible)
+            doctor_col -= reduce_doctor
+            deficit -= reduce_doctor
+            h_reducible = max(h_col - 320, 0)
+            reduce_h = min(deficit, h_reducible)
+            h_col -= reduce_h
+            available_for_days = usable_page_twips - doctor_col - h_col
+
+        day_units = [max(max_units_for_col(idx), 4) for idx in range(2, len(headers))]
+        day_units_sum = sum(day_units) or day_cols_count
+        day_widths: List[int] = []
+        for units in day_units:
+            proposed = (available_for_days * units) // day_units_sum
+            day_widths.append(max(min_day_width, proposed))
+
+        adjust = available_for_days - sum(day_widths)
+        if day_widths and adjust != 0:
+            order = sorted(range(len(day_widths)), key=lambda i: day_units[i], reverse=(adjust > 0))
+            step = 1 if adjust > 0 else -1
+            guard = 0
+            while adjust != 0 and guard < 20000:
+                idx = order[guard % len(order)]
+                if step < 0 and day_widths[idx] <= 300:
+                    guard += 1
+                    if guard >= len(order) * 3:
+                        break
+                    continue
+                day_widths[idx] += step
+                adjust -= step
+                guard += 1
+
+        col_widths = [doctor_col, h_col] + day_widths
+
+        def format_cell_rtf(col_idx: int, raw_value: str) -> str:
+            lines = [line.strip() for line in raw_value.splitlines()]
+            if col_idx < 2 or len(lines) <= 1:
+                return self._rtf_escape(raw_value)
+            first_line = self._rtf_escape(lines[0]) if lines else ""
+            destination_lines = [self._rtf_escape(line) for line in lines[1:] if line]
+            if not destination_lines:
+                return first_line
+            italic_part = r"\line ".join(rf"\i {line}\i0" for line in destination_lines)
+            if first_line:
+                return first_line + r"\line " + italic_part
+            return italic_part
+
+        def row_to_rtf(cells: List[str], bold_cols: set[int] | None = None) -> str:
+            if bold_cols is None:
+                bold_cols = set()
+            parts = [r"\trowd\trgaph70\trleft0\trrh420"]
+            running_x = 0
+            border = (
+                r"\clbrdrt\brdrs\brdrw10"
+                r"\clbrdrl\brdrs\brdrw10"
+                r"\clbrdrb\brdrs\brdrw10"
+                r"\clbrdrr\brdrs\brdrw10"
+                r"\clNoWrap"
+            )
+            for width in col_widths:
+                running_x += width
+                parts.append(f"{border}\\cellx{running_x}")
+            parts.append("\n")
+            for idx, value in enumerate(cells):
+                text = format_cell_rtf(idx, value)
+                if idx in bold_cols:
+                    parts.append(rf"\intbl\b {text}\b0\cell")
+                else:
+                    parts.append(rf"\intbl {text}\cell")
+            parts.append(r"\row")
+            parts.append("\n")
+            return "".join(parts)
+
+        header_bold_cols = {
+            idx for idx, label in enumerate(headers) if label.split(" ", 1)[0].strip() in DAYS[1:]
+        }
+        rep_row_start = EXTRA_START_ROW
+
+        doc_parts = [
+            r"{\rtf1\ansi\deff0",
+            r"{\fonttbl{\f0 Arial;}}",
+            rf"\paperw{page_width_twips}\paperh{page_height_twips}\margl{margin_left}\margr{margin_right}\margt720\margb720",
+            r"\fs18",
+        ]
+        for idx, line in enumerate(header_lines):
+            if idx < 3:
+                doc_parts.append(rf"\pard\qc\b {self._rtf_escape(line)}\b0\par")
+            else:
+                doc_parts.append(rf"\pard\qc {self._rtf_escape(line)}\par")
+        doc_parts.extend([
+            rf"\pard\qc\b {self._rtf_escape(service_title)}\b0\par\par",
+            rf"\pard\b {self._rtf_escape(title)}\b0\par",
+            rf"\pard {self._rtf_escape(generated_on)}\par\par",
+            row_to_rtf(headers, bold_cols=header_bold_cols),
+        ])
+        for row_idx, row_values in enumerate(rows):
+            bold_cols = {0}
+            if row_idx >= rep_row_start:
+                for col_idx, value in enumerate(row_values):
+                    if col_idx >= 2 and value.strip():
+                        bold_cols.add(col_idx)
+            doc_parts.append(row_to_rtf(row_values, bold_cols=bold_cols))
+        doc_parts.append("}")
+        return "\n".join(doc_parts)
+
+    def _rtf_escape(self, text: str) -> str:
+        escaped: List[str] = []
+        for ch in text:
+            if ch == "\\":
+                escaped.append(r"\\")
+                continue
+            if ch == "{":
+                escaped.append(r"\{")
+                continue
+            if ch == "}":
+                escaped.append(r"\}")
+                continue
+            if ch == "\n":
+                escaped.append(r"\line ")
+                continue
+            code = ord(ch)
+            if 32 <= code <= 126:
+                escaped.append(ch)
+            else:
+                signed = code if code <= 32767 else code - 65536
+                escaped.append(f"\\u{signed}?")
+        return "".join(escaped)
 
     def _setup_prev_table_rows(self, total_rows: int, row_height: int) -> None:
         for row in range(total_rows):
@@ -687,12 +1187,15 @@ class MainWindow(QMainWindow):
                     item.setTextAlignment(Qt.AlignTop | Qt.AlignLeft)
                     self.prev_table.setItem(row, col, item)
                 item.setForeground(QColor(0, 0, 0))
+                item_font = item.font()
+                item_font.setBold(False)
+                item.setFont(item_font)
                 if col == 0:
                     item.setTextAlignment(Qt.AlignCenter)
-                if row >= len(DOCTORS):
+                if row >= EXTRA_START_ROW:
                     item.setBackground(QColor(245, 245, 245))
                     if col == 0:
-                        item.setText(EXTRA_ROWS[row - len(DOCTORS)])
+                        item.setText(EXTRA_ROWS[row - EXTRA_START_ROW])
                         item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
                 else:
                     item.setBackground(WHITE_BG)
@@ -702,20 +1205,46 @@ class MainWindow(QMainWindow):
     def _set_prev_week_headers(self, week_dates: List[date], week_key: str):
         headers = ["h"] + [f"{day}\n{dt.strftime('%d/%m')}" for day, dt in zip(DAYS[1:], week_dates)]
         self.prev_table.setHorizontalHeaderLabels(headers)
+        self._style_date_headers(self.prev_table)
         self.prev_title.setText(
             f"Sett. precedente ({week_key}) {week_dates[0].strftime('%d/%m')}-{week_dates[-1].strftime('%d/%m')}"
         )
 
     def _clear_prev_week_cells(self):
         for row in range(self.prev_table.rowCount()):
+            h_item = self.prev_table.item(row, 0)
+            if h_item and row < DOCTOR_ROWS_COUNT:
+                h_item.setText("")
             for col in range(1, len(DAYS)):
                 item = self.prev_table.item(row, col)
                 if item:
                     item.setText("")
-                    if row >= len(DOCTORS):
+                    item_font = item.font()
+                    item_font.setBold(False)
+                    item.setFont(item_font)
+                    if row >= EXTRA_START_ROW:
                         item.setBackground(QColor(245, 245, 245))
                     else:
                         item.setBackground(WHITE_BG)
+
+    def _recalculate_prev_week_hours(self) -> None:
+        for row in range(DOCTOR_ROWS_COUNT):
+            hours = 0.0
+            for col in range(1, len(DAYS)):
+                item = self.prev_table.item(row, col)
+                text = item.text() if item else ""
+                shift_line, _ = self._split_cell_lines(text)
+                normalized_shift = self._normalize_shift(shift_line)
+                if normalized_shift:
+                    hours += SHIFT_HOURS.get(normalized_shift, 0)
+                    continue
+                normalized_special = normalize_special_hour_label(shift_line)
+                if normalized_special:
+                    hours += SPECIAL_HOUR_LABELS.get(normalized_special, 0)
+
+            h_item = self.prev_table.item(row, 0)
+            if h_item:
+                h_item.setText(str(int(hours)))
 
     def _load_previous_week_preview(self, all_data: dict):
         current_monday = date.fromisocalendar(self.current_year, self.current_week_index, 1)
@@ -734,7 +1263,7 @@ class MainWindow(QMainWindow):
         if not isinstance(cells, dict):
             return
 
-        doctor_to_row = {doctor: row for row, doctor in enumerate(DOCTORS)}
+        doctor_to_row = {doctor: row for row, doctor in enumerate(TABLE_DOCTORS)}
         day_to_col = {day: col for col, day in enumerate(DAYS[1:], start=1)}
 
         for doctor, day_data in cells.items():
@@ -754,11 +1283,14 @@ class MainWindow(QMainWindow):
                 item = self.prev_table.item(row, col)
                 if item:
                     item.setText(text)
-                    item.setBackground(self._get_line2_color(shift, dest, col) or WHITE_BG)
+                    item.setBackground(self._get_cell_background(shift, dest, col))
+                    item_font = item.font()
+                    item_font.setBold(shift.strip().endswith("**"))
+                    item.setFont(item_font)
 
         extra_rows = week_data.get("extra_rows", {})
         if isinstance(extra_rows, dict):
-            extra_to_row = {row_name: len(DOCTORS) + i for i, row_name in enumerate(EXTRA_ROWS)}
+            extra_to_row = {row_name: EXTRA_START_ROW + i for i, row_name in enumerate(EXTRA_ROWS)}
             day_to_col = {day: col for col, day in enumerate(DAYS[1:], start=1)}
             for row_name, day_data in extra_rows.items():
                 row = extra_to_row.get(row_name)
@@ -779,6 +1311,8 @@ class MainWindow(QMainWindow):
                         text = str(payload) if payload is not None else ""
                     item.setText(text)
 
+        self._recalculate_prev_week_hours()
+
     def _setup_stats_table_rows(self, total_rows: int, row_height: int) -> None:
         self.stats_table.setRowCount(total_rows)
         self.stats_table.setVerticalHeaderLabels(DOCTORS + ["", ""])
@@ -793,20 +1327,65 @@ class MainWindow(QMainWindow):
                     item.setTextAlignment(Qt.AlignCenter)
                     self.stats_table.setItem(row, col, item)
                 item.setText("" if row >= len(DOCTORS) else "0")
-                item.setForeground(QColor(0, 0, 0))
+                item.setForeground(STATS_TEXT_FG)
                 if row >= len(DOCTORS):
-                    item.setBackground(QColor(245, 245, 245))
+                    item.setBackground(STATS_BLUE_BG_ALT)
                 else:
-                    item.setBackground(WHITE_BG)
+                    item.setBackground(STATS_BLUE_BG)
+        self._set_doctor_headers_bold()
+        self._fit_stats_panel_width()
+
+    def _set_doctor_headers_bold(self) -> None:
+        for table in (self.table, self.prev_table, self.stats_table):
+            for row in range(table.rowCount()):
+                header_item = table.verticalHeaderItem(row)
+                if not header_item:
+                    continue
+                header_font = header_item.font()
+                if table is self.stats_table:
+                    header_font.setBold(row < len(DOCTORS))
+                else:
+                    header_font.setBold(row < DOCTOR_ROWS_COUNT)
+                    if row < DOCTOR_ROWS_COUNT:
+                        header_item.setBackground(HEADER_BLUE_BG)
+                        header_item.setForeground(HEADER_TEXT_FG)
+                header_item.setFont(header_font)
+
+    def _style_date_headers(self, table: QTableWidget) -> None:
+        for col in range(table.columnCount()):
+            header_item = table.horizontalHeaderItem(col)
+            if not header_item:
+                continue
+            header_font = header_item.font()
+            header_font.setBold(True)
+            header_item.setFont(header_font)
+            header_item.setBackground(HEADER_BLUE_BG)
+            header_item.setForeground(HEADER_TEXT_FG)
+
+    def _fit_stats_panel_width(self) -> None:
         self.stats_table.resizeColumnsToContents()
+        table_width = self.stats_table.frameWidth() * 2
+        if self.stats_table.verticalHeader().isVisible():
+            table_width += self.stats_table.verticalHeader().width()
+        for col in range(self.stats_table.columnCount()):
+            table_width += self.stats_table.columnWidth(col)
+        if self.stats_table.verticalScrollBar().isVisible():
+            table_width += self.stats_table.verticalScrollBar().sizeHint().width()
+        table_width += self.stats_table.contentsMargins().left() + self.stats_table.contentsMargins().right()
+        table_width = max(table_width, 1)
+        panel_width = max(table_width, self.stats_title.sizeHint().width())
+        self._stats_panel_preferred_width = panel_width
+        self.stats_panel.setMinimumWidth(170)
+        self.stats_table.setMinimumWidth(170)
 
     def _set_week_headers(self, week_dates: List[date]):
         headers = ["h"] + [f"{day}\n{dt.strftime('%d/%m')}" for day, dt in zip(DAYS[1:], week_dates)]
         self.table.setHorizontalHeaderLabels(headers)
+        self._style_date_headers(self.table)
         self.main_title.setText(
             f"Settimana corrente {week_dates[0].strftime('%d/%m')}-{week_dates[-1].strftime('%d/%m')}"
         )
-        self.week_range_label.setText(f"{week_dates[0].strftime('%d/%m')}–{week_dates[-1].strftime('%d/%m')}")
+        self.week_range_label.setText(f"{week_dates[0].strftime('%d/%m')}â€“{week_dates[-1].strftime('%d/%m')}")
 
     def _normalize_week_for_year(self):
         year = self.year_spin.value()
@@ -848,7 +1427,7 @@ class MainWindow(QMainWindow):
         if old_key != new_key:
             self.autosave_timer.stop()
 
-        # Aggiorna subito il contesto settimana, così la validazione cross-settimana
+        # Aggiorna subito il contesto settimana, cosÃ¬ la validazione cross-settimana
         # durante load_week/revalidate_week usa l'anno/settimana corretti.
         self.current_year = year
         self.current_week_index = week_index
@@ -1035,7 +1614,7 @@ class MainWindow(QMainWindow):
                 return segments, errors, shift
             normalized_dest = normalize_dest_label(dest_line)
             if not normalized_dest:
-                errors.append(f"Riga 2: destinazione non valida ({dest_line!r})")
+                errors.append(f"Riga 2: destinazione non ricosciuta ({dest_line!r})")
                 return segments, errors, shift
             if shift == "8-14":
                 segments.append((8, 14, normalized_dest))
@@ -1060,7 +1639,7 @@ class MainWindow(QMainWindow):
                     return segments, errors, shift
                 normalized_parts = [normalize_dest_label(part) for part in parts]
                 if any(not part for part in normalized_parts):
-                    errors.append(f"Riga 2: destinazione non valida ({dest_line!r})")
+                    errors.append(f"Riga 2: destinazione non ricosciuta ({dest_line!r})")
                     return segments, errors, shift
                 segments.append((8, 14, normalized_parts[0]))
                 segments.append((14, 20, normalized_parts[1]))
@@ -1068,7 +1647,7 @@ class MainWindow(QMainWindow):
 
             normalized_dest = normalize_dest_label(dest_line)
             if not normalized_dest:
-                errors.append(f"Riga 2: destinazione non valida ({dest_line!r})")
+                errors.append(f"Riga 2: destinazione non ricosciuta ({dest_line!r})")
                 return segments, errors, shift
             segments.append((8, 14, normalized_dest))
             segments.append((14, 20, normalized_dest))
@@ -1119,7 +1698,7 @@ class MainWindow(QMainWindow):
                 next_shift = self._get_next_week_monday_shift_for_doctor(row)
             if next_shift != "0-8":
                 if col == len(DAYS) - 1:
-                    errors.append("Notte incompleta: manca 0-8 il lunedì della settimana successiva")
+                    errors.append("Notte incompleta: manca 0-8 il lunedÃ¬ della settimana successiva")
                 else:
                     errors.append("Notte incompleta: manca 0-8 il giorno successivo")
 
@@ -1140,6 +1719,26 @@ class MainWindow(QMainWindow):
         if token.endswith("**"):
             token = token[:-2].strip()
         return normalize_zero_hour_label(token) == "rs"
+
+    def _is_zero_hour_shift(self, shift_line: str) -> bool:
+        token = shift_line.strip()
+        if token.endswith("**"):
+            token = token[:-2].strip()
+        return bool(normalize_zero_hour_label(token))
+
+    def _is_special_hour_shift(self, shift_line: str) -> bool:
+        token = shift_line.strip()
+        if token.endswith("**"):
+            token = token[:-2].strip()
+        return bool(normalize_special_hour_label(token))
+
+    def _get_cell_background(self, shift: str, dest: str, col: int) -> QColor | QBrush:
+        line2_color = self._get_line2_color(shift, dest, col)
+        if line2_color is not None:
+            return line2_color
+        if self._is_zero_hour_shift(shift) or self._is_special_hour_shift(shift):
+            return ZERO_HOUR_STRIPE_BRUSH
+        return WHITE_BG
 
     def _dest_has_guard_g(self, dest_line: str) -> bool:
         parts = [part.strip() for part in dest_line.split("+")]
@@ -1427,12 +2026,13 @@ class MainWindow(QMainWindow):
                 item = self.stats_table.item(row, col)
                 if item:
                     item.setText("")
+        self._fit_stats_panel_width()
 
     def _set_cell_style(
         self,
         row: int,
         col: int,
-        bg: QColor,
+        bg: QColor | QBrush,
         tooltip: str,
         is_error: bool = False,
         dest_required_line2: bool = False,
@@ -1445,6 +2045,33 @@ class MainWindow(QMainWindow):
         item.setToolTip(tooltip)
         item.setData(ERROR_CELL_ROLE, is_error)
         item.setData(DEST_REQUIRED_LINE2_ROLE, dest_required_line2)
+        shift_line, _ = self._split_cell_lines(item.text() if item else "")
+        item_font = item.font()
+        item_font.setBold(shift_line.strip().endswith("**"))
+        item.setFont(item_font)
+
+    def _revalidate_non_analysis_rows(self) -> None:
+        for row in range(len(DOCTORS), DOCTOR_ROWS_COUNT):
+            hours = 0.0
+            for col in range(1, len(DAYS)):
+                item = self.table.item(row, col)
+                text = item.text() if item else ""
+                _, _, shift = self.segments_for_cell(text, col)
+                _, dest_line = self._split_cell_lines(text)
+                hours += SHIFT_HOURS.get(shift, 0)
+                hours += SPECIAL_HOUR_LABELS.get(shift, 0)
+                self._set_cell_style(row, col, self._get_cell_background(shift, dest_line, col), "")
+
+            h_item = self.table.item(row, 0)
+            if h_item:
+                h_item.setBackground(WHITE_BG)
+                h_item.setForeground(QColor(0, 0, 0))
+                h_item.setText(str(int(hours)))
+            header_item = self.table.verticalHeaderItem(row)
+            if header_item:
+                header_item.setBackground(HEADER_BLUE_BG)
+                header_item.setForeground(HEADER_TEXT_FG)
+                header_item.setToolTip("")
 
     def revalidate_week(self):
         self._is_loading = True
@@ -1472,7 +2099,7 @@ class MainWindow(QMainWindow):
                     segments, _, shift = self.segments_for_cell(text, col)
                     cell_hours, errors = self.validate_cell_text(row, col, text)
                     _, dest_line = self._split_cell_lines(text)
-                    line2_color = self._get_line2_color(shift, dest_line, col)
+                    cell_bg = self._get_cell_background(shift, dest_line, col)
                     hours += cell_hours
 
                     if errors:
@@ -1481,7 +2108,7 @@ class MainWindow(QMainWindow):
                             self._set_cell_style(
                                 row,
                                 col,
-                                line2_color or WHITE_BG,
+                                cell_bg,
                                 "\n".join(errors),
                                 is_error=True,
                                 dest_required_line2=True,
@@ -1489,7 +2116,7 @@ class MainWindow(QMainWindow):
                         else:
                             self._set_cell_style(row, col, PINK_BG, "\n".join(errors), is_error=True)
                     else:
-                        self._set_cell_style(row, col, line2_color or WHITE_BG, "")
+                        self._set_cell_style(row, col, cell_bg, "")
                         if shift in {"20-24", "0-8"}:
                             night_assignments[col][shift].append(row)
                         for start, end, label in segments:
@@ -1502,7 +2129,7 @@ class MainWindow(QMainWindow):
                 if h_item:
                     h_item.setBackground(WHITE_BG)
                     h_item.setForeground(QColor(0, 0, 0))
-                    h_item.setText(str(int(round(hours))))
+                    h_item.setText(str(int(hours)))
 
                 header_item = self.table.verticalHeaderItem(row)
                 if header_item:
@@ -1512,8 +2139,8 @@ class MainWindow(QMainWindow):
                         header_item.setForeground(QColor(0, 0, 0))
                         header_item.setToolTip("Errore: manca almeno un giorno RS nella settimana")
                     else:
-                        header_item.setBackground(WHITE_BG)
-                        header_item.setForeground(QColor(0, 0, 0))
+                        header_item.setBackground(HEADER_BLUE_BG)
+                        header_item.setForeground(HEADER_TEXT_FG)
                         header_item.setToolTip("")
 
             for col in range(1, len(DAYS)):
@@ -1575,8 +2202,8 @@ class MainWindow(QMainWindow):
                     day_header_item.setForeground(QColor(0, 0, 0))
                     day_header_item.setToolTip(header_tooltip)
                 else:
-                    day_header_item.setBackground(WHITE_BG)
-                    day_header_item.setForeground(QColor(0, 0, 0))
+                    day_header_item.setBackground(HEADER_BLUE_BG)
+                    day_header_item.setForeground(HEADER_TEXT_FG)
                     day_header_item.setToolTip("")
 
             for col in range(1, len(DAYS)):
@@ -1589,7 +2216,7 @@ class MainWindow(QMainWindow):
                             continue
                         others = [DOCTORS[r] for r in rows if r != row]
                         other_name = ", ".join(others)
-                        tooltip = f"Conflitto: {label} già assegnata a {other_name} ({start}-{end})"
+                        tooltip = f"Conflitto: {label} giÃ  assegnata a {other_name} ({start}-{end})"
                         self._set_cell_style(row, col, PINK_BG, tooltip, is_error=True)
 
                 for night_shift in ("20-24", "0-8"):
@@ -1602,8 +2229,9 @@ class MainWindow(QMainWindow):
                             continue
                         others = [DOCTORS[r] for r in rows if r != row]
                         other_name = ", ".join(others)
-                        tooltip = f"Conflitto: turno {night_shift} già assegnato a {other_name}"
+                        tooltip = f"Conflitto: turno {night_shift} giÃ  assegnato a {other_name}"
                         self._set_cell_style(row, col, PINK_BG, tooltip, is_error=True)
+            self._revalidate_non_analysis_rows()
             self.doctor_header.set_error_rows(rs_error_rows)
             self.day_header.set_error_cols(day_20_24_error_cols)
         finally:
@@ -1665,7 +2293,7 @@ class MainWindow(QMainWindow):
         extra_rows = {}
         day_names = DAYS[1:]
 
-        for row, doctor in enumerate(DOCTORS):
+        for row, doctor in enumerate(TABLE_DOCTORS):
             doctor_cells = {}
             for col, day in enumerate(day_names, start=1):
                 item = self.table.item(row, col)
@@ -1679,7 +2307,7 @@ class MainWindow(QMainWindow):
             cells[doctor] = doctor_cells
 
         for offset, row_name in enumerate(EXTRA_ROWS):
-            row = len(DOCTORS) + offset
+            row = EXTRA_START_ROW + offset
             row_cells = {}
             for col, day in enumerate(day_names, start=1):
                 item = self.table.item(row, col)
@@ -1706,8 +2334,8 @@ class MainWindow(QMainWindow):
             return
 
         self._clear_week_cells()
-        doctor_to_row = {doctor: row for row, doctor in enumerate(DOCTORS)}
-        extra_to_row = {row_name: len(DOCTORS) + i for i, row_name in enumerate(EXTRA_ROWS)}
+        doctor_to_row = {doctor: row for row, doctor in enumerate(TABLE_DOCTORS)}
+        extra_to_row = {row_name: EXTRA_START_ROW + i for i, row_name in enumerate(EXTRA_ROWS)}
         day_to_col = {day: col for col, day in enumerate(DAYS[1:], start=1)}
 
         self._is_loading = True
@@ -1821,6 +2449,8 @@ class MainWindow(QMainWindow):
             current_cells = week_payload.get("cells", {})
             if isinstance(current_cells, dict):
                 for doctor, day_map in current_cells.items():
+                    if doctor not in DOCTORS:
+                        continue
                     if not isinstance(day_map, dict):
                         continue
                     sunday_payload = day_map.get("Dom")
@@ -1861,7 +2491,11 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent):
         self.autosave_timer.stop()
         self.save_current_week(show_message=False)
+        self._save_window_size()
         super().closeEvent(event)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
 
     # ----------------------------
     # Eventi
@@ -1896,10 +2530,46 @@ class MainWindow(QMainWindow):
                 self._auto_assign_next_0_8(item.row(), item.column())
             self.revalidate_week()
             self.refresh_night_stats()
+        elif item.row() < DOCTOR_ROWS_COUNT:
+            self.revalidate_week()
         self.schedule_autosave()
 
     def on_max_lines_reached(self):
         self.statusBar().showMessage("Max 2 righe per cella", 2000)
+
+    def _restore_window_size(self) -> None:
+        settings = QSettings(APP_SETTINGS_ORG, APP_SETTINGS_APP)
+        width = settings.value("window/width", 0, int)
+        height = settings.value("window/height", 0, int)
+        if width > 0 and height > 0:
+            self.resize(width, height)
+        self._restored_prev_visible = bool(settings.value("layout/prev_visible", False, bool))
+        self._restored_stats_visible = bool(settings.value("layout/stats_visible", False, bool))
+        self._prev_panel_last_width = settings.value("layout/prev_last_width", 0, int)
+        self._stats_panel_last_width = settings.value("layout/stats_last_width", 0, int)
+        raw_sizes = settings.value("layout/splitter_sizes", "", str) or ""
+        restored_sizes: List[int] = []
+        if raw_sizes:
+            try:
+                parsed = json.loads(raw_sizes)
+                if isinstance(parsed, list):
+                    restored_sizes = [max(0, int(v)) for v in parsed[:3]]
+            except (TypeError, ValueError, json.JSONDecodeError):
+                restored_sizes = []
+        self._restored_splitter_sizes = restored_sizes
+
+    def _save_window_size(self) -> None:
+        settings = QSettings(APP_SETTINGS_ORG, APP_SETTINGS_APP)
+        settings.setValue("window/width", self.width())
+        settings.setValue("window/height", self.height())
+        settings.setValue("layout/prev_visible", self.prev_panel.isVisible())
+        settings.setValue("layout/stats_visible", self.stats_panel.isVisible())
+        sizes = self._current_splitter_sizes()
+        prev_size = sizes[0] if self.prev_panel.isVisible() else self._prev_panel_last_width
+        stats_size = sizes[2] if self.stats_panel.isVisible() else self._stats_panel_last_width
+        settings.setValue("layout/prev_last_width", int(max(0, prev_size)))
+        settings.setValue("layout/stats_last_width", int(max(0, stats_size)))
+        settings.setValue("layout/splitter_sizes", json.dumps(sizes))
 
 
 def main():
@@ -1911,3 +2581,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
