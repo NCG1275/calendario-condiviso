@@ -115,8 +115,14 @@ WHITE_BG = QColor(255, 255, 255)
 STATS_BLUE_BG = QColor(11, 79, 162)
 STATS_BLUE_BG_ALT = QColor(9, 61, 124)
 STATS_TEXT_FG = QColor(255, 255, 255)
-HEADER_BLUE_BG = QColor(11, 79, 162)
-HEADER_TEXT_FG = QColor(255, 255, 255)
+# Su alcuni build Windows gli header possono non rispettare bene il paint del background:
+# usiamo una combinazione ad alto contrasto per evitare testo "invisibile".
+if sys.platform.startswith("win"):
+    HEADER_BLUE_BG = QColor(205, 225, 245)
+    HEADER_TEXT_FG = QColor(20, 20, 20)
+else:
+    HEADER_BLUE_BG = QColor(11, 79, 162)
+    HEADER_TEXT_FG = QColor(255, 255, 255)
 ZERO_HOUR_STRIPE_BRUSH = QBrush(QColor(225, 225, 225), Qt.BDiagPattern)
 DEST_REQUIRED_ERROR = "Riga 2: manca destinazione"
 ERROR_CELL_ROLE = Qt.UserRole + 10
@@ -2581,5 +2587,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
