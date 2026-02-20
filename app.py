@@ -1,13 +1,14 @@
-﻿import sys
+import sys
 import re
 import json
 import os
 import shutil
+import hashlib
 from pathlib import Path
 from datetime import date, timedelta
 from typing import List, Tuple
 
-from PySide6.QtCore import Qt, Signal, QTimer, QSignalBlocker, QSettings
+from PySide6.QtCore import Qt, Signal, QTimer, QSignalBlocker, QSettings, QLockFile
 from PySide6.QtGui import QColor, QPalette, QCloseEvent, QTextCursor, QPen, QBrush
 from PySide6.QtWidgets import (
     QAbstractItemDelegate,
@@ -36,7 +37,7 @@ from PySide6.QtWidgets import (
 # ----------------------------
 
 APP_NAME = "Planner Turni Medici"
-APP_VERSION = "v0.1 beta"
+APP_VERSION = "2b"
 APP_AUTHOR = "GN Aru"
 APP_SETTINGS_ORG = "PlannerTurni"
 APP_SETTINGS_APP = "PlannerTurniMedici"
@@ -157,7 +158,10 @@ DEST_LINE2_COLORS = {
 
 # accetta: "8-14", "8 - 14", "8-14**", "8-14 **"
 SHIFT_RE = re.compile(r"^\s*(\d{1,2}\s*-\s*\d{1,2})\s*(\*\*)?\s*$")
+SHIFT_WITH_DEST_RE = re.compile(r"^\s*(\d{1,2}\s*-\s*\d{1,2})\s*(\*\*)?(?:\s+(.+))?\s*$")
 DATA_FILE = Path(__file__).resolve().parent / "planner_data.json"
+
+_APP_INSTANCE_LOCK: QLockFile | None = None
 
 
 def _user_data_file_path() -> Path:
@@ -232,6 +236,27 @@ def resolve_data_file() -> Path:
         except OSError:
             pass
     return fallback_path
+
+
+def _instance_lock_path() -> Path:
+    base_dir = _user_data_file_path().parent
+    try:
+        base_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        base_dir = Path.home()
+
+    executable_identity = str(Path(sys.executable).resolve())
+    digest = hashlib.sha1(executable_identity.encode("utf-8")).hexdigest()[:12]
+    return base_dir / f"planner_turni_{digest}.lock"
+
+
+def acquire_single_instance_lock() -> bool:
+    global _APP_INSTANCE_LOCK
+    lock_file = QLockFile(str(_instance_lock_path()))
+    if not lock_file.tryLock(0):
+        return False
+    _APP_INSTANCE_LOCK = lock_file
+    return True
 
 
 def get_max_iso_weeks(year: int) -> int:
@@ -386,9 +411,7 @@ class TwoLineEdit(QPlainTextEdit):
         first_line = lines[0].strip() if lines else ""
         if not first_line:
             return False
-        completed = autocomplete_shift_line(first_line)
-        base = completed[:-2].strip() if completed.endswith("**") else completed.strip()
-        m = SHIFT_RE.match(base)
+        m = SHIFT_WITH_DEST_RE.match(first_line)
         if not m:
             return False
         shift = m.group(1).replace(" ", "")
@@ -551,8 +574,8 @@ class MainWindow(QMainWindow):
 
         today = date.today()
         iso_today = today.isocalendar()
-        self._next_week_monday_shift_cache: dict[str, str] = {}
-        self._prev_week_sunday_shift_cache: dict[str, str] = {}
+        self._next_week_monday_shift_cache: dict[str, List[str]] = {}
+        self._prev_week_sunday_shift_cache: dict[str, List[str]] = {}
         self.data_file = resolve_data_file()
         self.data_file_weeks = _week_count_in_json(self.data_file)
         self.current_year, self.current_week_index = self._startup_week_from_data(
@@ -1239,14 +1262,10 @@ class MainWindow(QMainWindow):
             for col in range(1, len(DAYS)):
                 item = self.prev_table.item(row, col)
                 text = item.text() if item else ""
-                shift_line, _ = self._split_cell_lines(text)
-                normalized_shift = self._normalize_shift(shift_line)
-                if normalized_shift:
-                    hours += SHIFT_HOURS.get(normalized_shift, 0)
-                    continue
-                normalized_special = normalize_special_hour_label(shift_line)
-                if normalized_special:
-                    hours += SPECIAL_HOUR_LABELS.get(normalized_special, 0)
+                _, _, shifts = self.segments_for_cell(text, col)
+                for shift in shifts:
+                    hours += SHIFT_HOURS.get(shift, 0)
+                    hours += SPECIAL_HOUR_LABELS.get(shift, 0)
 
             h_item = self.prev_table.item(row, 0)
             if h_item:
@@ -1291,7 +1310,7 @@ class MainWindow(QMainWindow):
                     item.setText(text)
                     item.setBackground(self._get_cell_background(shift, dest, col))
                     item_font = item.font()
-                    item_font.setBold(shift.strip().endswith("**"))
+                    item_font.setBold(self._line_has_project_flag(shift))
                     item.setFont(item_font)
 
         extra_rows = week_data.get("extra_rows", {})
@@ -1468,7 +1487,104 @@ class MainWindow(QMainWindow):
         shift = m.group(1).replace(" ", "")
         return shift if shift in SHIFT_HOURS else ""
 
-    def _get_next_week_monday_shift_for_doctor(self, row: int) -> str:
+    def _extract_flag_and_dest(self, value: str) -> Tuple[bool, str]:
+        token = value.strip()
+        if not token:
+            return False, ""
+        has_flag = False
+        cleaned_parts: List[str] = []
+        for part in token.split():
+            current = part.strip()
+            if not current:
+                continue
+            if current == "**":
+                has_flag = True
+                continue
+            if current.startswith("**"):
+                has_flag = True
+                current = current[2:]
+            if current.endswith("**"):
+                has_flag = True
+                current = current[:-2]
+            current = current.strip()
+            if current:
+                cleaned_parts.append(current)
+        return has_flag, " ".join(cleaned_parts).strip()
+
+    def _parse_shift_with_inline_dest(self, line: str) -> Tuple[str, str, bool]:
+        token = line.strip()
+        if not token:
+            return "", "", False
+        match = SHIFT_WITH_DEST_RE.match(token)
+        if not match:
+            return "", "", False
+        shift = match.group(1).replace(" ", "")
+        rest = (match.group(3) or "").strip()
+        rest_has_flag, dest = self._extract_flag_and_dest(rest)
+        has_flag = bool(match.group(2)) or rest_has_flag
+        return shift, dest, has_flag
+
+    def _line_has_project_flag(self, line: str) -> bool:
+        _, _, has_flag = self._parse_shift_with_inline_dest(line)
+        if has_flag:
+            return True
+        return "**" in line
+
+    def _shift_tokens_in_text(self, text: str) -> List[str]:
+        line1, line2 = self._split_cell_lines(text)
+        if not line1:
+            return []
+        shifts: List[str] = []
+        shift1, _, _ = self._parse_shift_with_inline_dest(line1)
+        if shift1 in SHIFT_HOURS:
+            shifts.append(shift1)
+        shift2, _, _ = self._parse_shift_with_inline_dest(line2)
+        if line2 and shift2 in SHIFT_HOURS:
+            shifts.append(shift2)
+        return shifts
+
+    def _payload_shift_tokens(self, payload: dict) -> List[str]:
+        if not isinstance(payload, dict):
+            return []
+        shift = str(payload.get("shift", "")).strip()
+        dest = str(payload.get("dest", "")).strip()
+        text = shift if not dest else f"{shift}\n{dest}"
+        return self._shift_tokens_in_text(text)
+
+    def _autocomplete_assignment_line(self, line: str) -> Tuple[str, bool]:
+        token = line.strip()
+        if not token:
+            return "", False
+
+        parts = token.split(None, 1)
+        first_token = parts[0].strip() if parts else ""
+        rest = parts[1].strip() if len(parts) > 1 else ""
+        completed_shift = autocomplete_shift_line(first_token).upper()
+        base_shift = completed_shift[:-2].strip() if completed_shift.endswith("**") else completed_shift
+        if self._normalize_shift(base_shift):
+            rest_has_flag, rest_dest = self._extract_flag_and_dest(rest)
+            has_flag = completed_shift.endswith("**") or rest_has_flag
+            if has_flag and not completed_shift.endswith("**"):
+                completed_shift = autocomplete_shift_line(f"{base_shift}**").upper()
+            completed_dest = autocomplete_dest_line(rest_dest)
+            if completed_dest:
+                return f"{completed_shift} {completed_dest}", True
+            return completed_shift, True
+
+        parsed_shift, parsed_dest, has_flag = self._parse_shift_with_inline_dest(token)
+        if parsed_shift:
+            shift_token = f"{parsed_shift}**" if has_flag else parsed_shift
+            completed_shift = autocomplete_shift_line(shift_token).upper()
+            base_shift = completed_shift[:-2].strip() if completed_shift.endswith("**") else completed_shift
+            if self._normalize_shift(base_shift):
+                completed_dest = autocomplete_dest_line(parsed_dest)
+                if completed_dest:
+                    return f"{completed_shift} {completed_dest}", True
+                return completed_shift, True
+
+        return autocomplete_dest_line(token), False
+
+    def _get_next_week_monday_shift_for_doctor(self, row: int) -> List[str]:
         doctor = DOCTORS[row]
         cached = self._next_week_monday_shift_cache.get(doctor)
         if cached is not None:
@@ -1479,7 +1595,7 @@ class MainWindow(QMainWindow):
         next_iso = next_monday.isocalendar()
         next_key = get_week_key(next_iso.year, next_iso.week)
 
-        shift = ""
+        shifts: List[str] = []
         week_data = self.load_all().get("weeks", {}).get(next_key, {})
         if isinstance(week_data, dict):
             cells = week_data.get("cells", {})
@@ -1488,13 +1604,12 @@ class MainWindow(QMainWindow):
                 if isinstance(doctor_data, dict):
                     monday_payload = doctor_data.get("Lun")
                     if isinstance(monday_payload, dict):
-                        raw_shift = str(monday_payload.get("shift", "")).strip()
-                        shift = self._normalize_shift(raw_shift)
+                        shifts = self._payload_shift_tokens(monday_payload)
 
-        self._next_week_monday_shift_cache[doctor] = shift
-        return shift
+        self._next_week_monday_shift_cache[doctor] = shifts
+        return shifts
 
-    def _get_prev_week_sunday_shift_for_doctor(self, row: int) -> str:
+    def _get_prev_week_sunday_shift_for_doctor(self, row: int) -> List[str]:
         doctor = DOCTORS[row]
         cached = self._prev_week_sunday_shift_cache.get(doctor)
         if cached is not None:
@@ -1505,7 +1620,7 @@ class MainWindow(QMainWindow):
         prev_iso = prev_sunday.isocalendar()
         prev_key = get_week_key(prev_iso.year, prev_iso.week)
 
-        shift = ""
+        shifts: List[str] = []
         week_data = self.load_all().get("weeks", {}).get(prev_key, {})
         if isinstance(week_data, dict):
             cells = week_data.get("cells", {})
@@ -1514,11 +1629,10 @@ class MainWindow(QMainWindow):
                 if isinstance(doctor_data, dict):
                     sunday_payload = doctor_data.get("Dom")
                     if isinstance(sunday_payload, dict):
-                        raw_shift = str(sunday_payload.get("shift", "")).strip()
-                        shift = self._normalize_shift(raw_shift)
+                        shifts = self._payload_shift_tokens(sunday_payload)
 
-        self._prev_week_sunday_shift_cache[doctor] = shift
-        return shift
+        self._prev_week_sunday_shift_cache[doctor] = shifts
+        return shifts
 
     def _set_next_week_monday_shift_for_doctor(self, row: int, shift_value: str) -> bool:
         doctor = DOCTORS[row]
@@ -1581,86 +1695,136 @@ class MainWindow(QMainWindow):
         shift_line, dest_line = self._split_cell_lines(text)
         is_weekend = col in (6, 7)
         if not shift_line:
-            return segments, errors, ""
+            return segments, errors, []
 
         zero_label = normalize_zero_hour_label(shift_line)
         if zero_label:
             if dest_line:
                 errors.append("Riga 2: deve essere vuota per questa etichetta")
-            return segments, errors, zero_label
+            return segments, errors, [zero_label]
 
         special_label = normalize_special_hour_label(shift_line)
         if special_label:
             if dest_line:
                 errors.append("Riga 2: deve essere vuota per questa etichetta")
-            return segments, errors, special_label
+            return segments, errors, [special_label]
 
-        match = SHIFT_RE.match(shift_line)
-        if not match:
+        shifts: List[str] = []
+        line1_shift, line1_inline_dest, _ = self._parse_shift_with_inline_dest(shift_line)
+        line2_shift, line2_inline_dest, _ = self._parse_shift_with_inline_dest(dest_line)
+        line2_is_shift = bool(dest_line and line2_shift)
+
+        if not line1_shift:
             errors.append(f"Riga 1: formato turno non valido ({shift_line!r})")
-            return segments, errors, ""
-        shift = match.group(1).replace(" ", "")
-        if shift not in SHIFT_HOURS:
-            errors.append(f"Riga 1: turno non ammesso ({shift})")
-            return segments, errors, ""
+            return segments, errors, shifts
 
-        if shift in {"20-24", "0-8"}:
+        assignments: List[dict] = []
+        if dest_line and not line2_is_shift:
+            assignments.append({"line_no": 1, "shift": line1_shift, "dest": dest_line})
+        else:
+            assignments.append({"line_no": 1, "shift": line1_shift, "dest": line1_inline_dest})
             if dest_line:
-                errors.append("Riga 2: deve essere vuota per il turno notturno")
-            gn_segment = (20, 24, "GN") if shift == "20-24" else (0, 8, "GN")
-            segments.append(gn_segment)
-            return segments, errors, shift
+                if not line2_is_shift:
+                    errors.append(f"Riga 2: formato turno non valido ({dest_line!r})")
+                else:
+                    assignments.append({"line_no": 2, "shift": line2_shift, "dest": line2_inline_dest})
 
-        if shift in {"8-14", "8-15", "14-20", "8-16"}:
-            if not dest_line:
-                errors.append(DEST_REQUIRED_ERROR)
-                return segments, errors, shift
-            if "+" in dest_line:
-                errors.append("Riga 2: turni di 6 ore non possono avere doppia destinazione")
-                return segments, errors, shift
-            normalized_dest = normalize_dest_label(dest_line)
-            if not normalized_dest:
-                errors.append(f"Riga 2: destinazione non ricosciuta ({dest_line!r})")
-                return segments, errors, shift
-            if shift == "8-14":
+        if len(assignments) == 2 and assignments[0]["shift"] == assignments[1]["shift"]:
+            errors.append("Riga 1 e Riga 2: gli orari devono essere diversi")
+
+        def shift_requires_dest(shift: str) -> bool:
+            if shift in {"8-14", "8-15", "14-20", "8-16"}:
+                return True
+            if shift == "8-20":
+                return not is_weekend
+            return False
+
+        # Se in doppia riga è stata indicata una sola destinazione, riusala
+        # per il turno che ne è privo (solo quando quella riga la richiede).
+        if len(assignments) == 2:
+            non_empty_dests = [str(a["dest"]).strip() for a in assignments if str(a["dest"]).strip()]
+            if len(non_empty_dests) == 1:
+                shared_dest = non_empty_dests[0]
+                for assignment in assignments:
+                    if (not str(assignment["dest"]).strip()) and shift_requires_dest(str(assignment["shift"])):
+                        assignment["dest"] = shared_dest
+
+        def validate_assignment(line_no: int, shift: str, dest: str) -> None:
+            if shift not in SHIFT_HOURS:
+                errors.append(f"Riga {line_no}: turno non ammesso ({shift})")
+                return
+            shifts.append(shift)
+            if shift in {"20-24", "0-8"}:
+                if dest:
+                    errors.append(f"Riga {line_no}: deve essere vuota per il turno notturno")
+                gn_segment = (20, 24, "GN") if shift == "20-24" else (0, 8, "GN")
+                segments.append(gn_segment)
+                return
+
+            if shift in {"8-14", "8-15", "14-20", "8-16"}:
+                if not dest:
+                    if line_no == 2:
+                        errors.append(DEST_REQUIRED_ERROR)
+                    else:
+                        errors.append("Riga 1: manca destinazione")
+                    return
+                if "+" in dest:
+                    errors.append(f"Riga {line_no}: turni di 6 ore non possono avere doppia destinazione")
+                    return
+                normalized_dest = normalize_dest_label(dest)
+                if not normalized_dest:
+                    errors.append(f"Riga {line_no}: destinazione non ricosciuta ({dest!r})")
+                    return
+                if shift == "8-14":
+                    segments.append((8, 14, normalized_dest))
+                elif shift == "8-15":
+                    segments.append((8, 15, normalized_dest))
+                elif shift == "14-20":
+                    segments.append((14, 20, normalized_dest))
+                else:
+                    segments.append((8, 16, normalized_dest))
+                return
+
+            if shift == "8-20":
+                if not dest and not is_weekend:
+                    if line_no == 2:
+                        errors.append(DEST_REQUIRED_ERROR)
+                    else:
+                        errors.append("Riga 1: manca destinazione")
+                    return
+                if not dest and is_weekend:
+                    return
+                if "+" in dest:
+                    parts = [part.strip() for part in dest.split("+")]
+                    if len(parts) != 2 or not all(parts):
+                        errors.append(f"Riga {line_no}: formato atteso 'A+B'")
+                        return
+                    normalized_parts = [normalize_dest_label(part) for part in parts]
+                    if any(not part for part in normalized_parts):
+                        errors.append(f"Riga {line_no}: destinazione non ricosciuta ({dest!r})")
+                        return
+                    segments.append((8, 14, normalized_parts[0]))
+                    segments.append((14, 20, normalized_parts[1]))
+                    return
+
+                normalized_dest = normalize_dest_label(dest)
+                if not normalized_dest:
+                    errors.append(f"Riga {line_no}: destinazione non ricosciuta ({dest!r})")
+                    return
                 segments.append((8, 14, normalized_dest))
-            elif shift == "8-15":
-                segments.append((8, 15, normalized_dest))
-            elif shift == "14-20":
                 segments.append((14, 20, normalized_dest))
-            else:
-                segments.append((8, 16, normalized_dest))
-            return segments, errors, shift
+                return
 
-        if shift == "8-20":
-            if not dest_line and not is_weekend:
-                errors.append(DEST_REQUIRED_ERROR)
-                return segments, errors, shift
-            if not dest_line and is_weekend:
-                return segments, errors, shift
-            if "+" in dest_line:
-                parts = [part.strip() for part in dest_line.split("+")]
-                if len(parts) != 2 or not all(parts):
-                    errors.append("Riga 2: formato atteso 'A+B'")
-                    return segments, errors, shift
-                normalized_parts = [normalize_dest_label(part) for part in parts]
-                if any(not part for part in normalized_parts):
-                    errors.append(f"Riga 2: destinazione non ricosciuta ({dest_line!r})")
-                    return segments, errors, shift
-                segments.append((8, 14, normalized_parts[0]))
-                segments.append((14, 20, normalized_parts[1]))
-                return segments, errors, shift
+            errors.append(f"Riga {line_no}: turno non ammesso ({shift})")
 
-            normalized_dest = normalize_dest_label(dest_line)
-            if not normalized_dest:
-                errors.append(f"Riga 2: destinazione non ricosciuta ({dest_line!r})")
-                return segments, errors, shift
-            segments.append((8, 14, normalized_dest))
-            segments.append((14, 20, normalized_dest))
-            return segments, errors, shift
+        for assignment in assignments:
+            validate_assignment(
+                int(assignment["line_no"]),
+                str(assignment["shift"]),
+                str(assignment["dest"]),
+            )
 
-        errors.append(f"Riga 1: turno non ammesso ({shift})")
-        return segments, errors, shift
+        return segments, errors, shifts
 
     def validate_cell_text(self, row: int, col: int, text: str) -> Tuple[float, List[str]]:
         """
@@ -1672,37 +1836,35 @@ class MainWindow(QMainWindow):
         - riga 2: destinazione validata in base al turno
         """
         total = 0.0
-        segments, errors, shift = self.segments_for_cell(text, col)
+        segments, errors, shifts = self.segments_for_cell(text, col)
         _ = segments
-        if shift:
+        for shift in shifts:
             total += SHIFT_HOURS.get(shift, 0)
             total += SPECIAL_HOUR_LABELS.get(shift, 0)
 
-        if shift == "0-8":
-            prev_shift = ""
+        if "0-8" in shifts:
+            prev_shifts: List[str] = []
             if col > 1:
                 prev_item = self.table.item(row, col - 1)
                 prev_text = prev_item.text() if prev_item else ""
-                prev_shift, _ = self._split_cell_lines(prev_text)
-                prev_shift = self._normalize_shift(prev_shift)
+                prev_shifts = self._shift_tokens_in_text(prev_text)
             elif col == 1:
-                prev_shift = self._get_prev_week_sunday_shift_for_doctor(row)
-            if prev_shift != "20-24":
+                prev_shifts = self._get_prev_week_sunday_shift_for_doctor(row)
+            if "20-24" not in prev_shifts:
                 if col == 1:
                     errors.append("Notte incompleta: manca 20-24 la domenica della settimana precedente")
                 else:
                     errors.append("Notte incompleta: manca 20-24 il giorno precedente")
 
-        if shift == "20-24":
-            next_shift = ""
+        if "20-24" in shifts:
+            next_shifts: List[str] = []
             if col < len(DAYS) - 1:
                 next_item = self.table.item(row, col + 1)
                 next_text = next_item.text() if next_item else ""
-                next_shift, _ = self._split_cell_lines(next_text)
-                next_shift = self._normalize_shift(next_shift)
+                next_shifts = self._shift_tokens_in_text(next_text)
             elif col == len(DAYS) - 1:
-                next_shift = self._get_next_week_monday_shift_for_doctor(row)
-            if next_shift != "0-8":
+                next_shifts = self._get_next_week_monday_shift_for_doctor(row)
+            if "0-8" not in next_shifts:
                 if col == len(DAYS) - 1:
                     errors.append("Notte incompleta: manca 0-8 il luned\u00ec della settimana successiva")
                 else:
@@ -1761,17 +1923,16 @@ class MainWindow(QMainWindow):
             doctor_count = 0
             for day in DAYS[1:]:
                 payload = day_map.get(day)
-                if isinstance(payload, dict):
-                    shift = str(payload.get("shift", "")).strip()
-                else:
-                    shift = ""
-                if self._normalize_shift(shift) == "20-24":
+                if isinstance(payload, dict) and "20-24" in self._payload_shift_tokens(payload):
                     doctor_count += 1
             counts[doctor] = doctor_count
         return counts
 
     def _shift_hours_from_shift_line(self, shift_line: str) -> int:
         token = shift_line.strip()
+        normalized_shift, _, _ = self._parse_shift_with_inline_dest(token)
+        if normalized_shift:
+            return int(SHIFT_HOURS.get(normalized_shift, 0))
         if token.endswith("**"):
             token = token[:-2].strip()
         normalized_shift = self._normalize_shift(token)
@@ -1843,8 +2004,7 @@ class MainWindow(QMainWindow):
                     payload_day = day_map.get(day_name)
                     if not isinstance(payload_day, dict):
                         continue
-                    shift = str(payload_day.get("shift", "")).strip()
-                    if self._normalize_shift(shift) == "20-24":
+                    if "20-24" in self._payload_shift_tokens(payload_day):
                         totals[doctor] += 1
 
         if not current_seen:
@@ -1868,8 +2028,7 @@ class MainWindow(QMainWindow):
                             payload_day = day_map.get(day_name)
                             if not isinstance(payload_day, dict):
                                 continue
-                            shift = str(payload_day.get("shift", "")).strip()
-                            if self._normalize_shift(shift) == "20-24":
+                            if "20-24" in self._payload_shift_tokens(payload_day):
                                 totals[doctor] += 1
         return totals
 
@@ -1884,19 +2043,37 @@ class MainWindow(QMainWindow):
         current_payload = self.serialize_week()
         current_seen = False
 
-        def normalized_shift_token(day_payload) -> str:
+        def normalized_shift_tokens(day_payload) -> List[str]:
             if isinstance(day_payload, dict):
-                raw = str(day_payload.get("shift", "")).strip()
+                shift = str(day_payload.get("shift", "")).strip()
+                dest = str(day_payload.get("dest", "")).strip()
+                raw = shift if not dest else f"{shift}\n{dest}"
             elif isinstance(day_payload, str):
                 raw = day_payload.strip()
             else:
                 raw = ""
             if not raw:
-                return ""
-            token = raw.splitlines()[0].strip()
-            if token.endswith("**"):
-                token = token[:-2].strip()
-            return token.casefold()
+                return []
+            tokens: List[str] = []
+            for idx, line in enumerate(raw.splitlines()[:2]):
+                token = line.strip()
+                if not token:
+                    continue
+                if token.endswith("**"):
+                    token = token[:-2].strip()
+                zero = normalize_zero_hour_label(token)
+                if zero:
+                    tokens.append(zero.casefold())
+                    continue
+                shift, _, _ = self._parse_shift_with_inline_dest(token)
+                if shift in SHIFT_HOURS:
+                    tokens.append(shift.casefold())
+                    continue
+                if idx == 0:
+                    normalized_shift = self._normalize_shift(token)
+                    if normalized_shift:
+                        tokens.append(normalized_shift.casefold())
+            return tokens
 
         def add_from_week_payload(week_key: str, payload: dict) -> None:
             m = re.match(r"^(\d{4})-W(\d{2})$", week_key)
@@ -1923,11 +2100,11 @@ class MainWindow(QMainWindow):
                     continue
                 sat_payload = day_map.get("Sab")
                 sun_payload = day_map.get("Dom")
-                sat_token = normalized_shift_token(sat_payload)
-                sun_token = normalized_shift_token(sun_payload)
-                sat_is_rs = sat_token == "rs"
-                sun_is_rs = sun_token == "rs"
-                has_any_weekend_shift = bool(sat_token or sun_token)
+                sat_tokens = normalized_shift_tokens(sat_payload)
+                sun_tokens = normalized_shift_tokens(sun_payload)
+                sat_is_rs = bool(sat_tokens) and all(token == "rs" for token in sat_tokens)
+                sun_is_rs = bool(sun_tokens) and all(token == "rs" for token in sun_tokens)
+                has_any_weekend_shift = bool(sat_tokens or sun_tokens)
                 if has_any_weekend_shift and not (sat_is_rs and sun_is_rs):
                     totals[doctor] += 1
 
@@ -2053,7 +2230,7 @@ class MainWindow(QMainWindow):
         item.setData(DEST_REQUIRED_LINE2_ROLE, dest_required_line2)
         shift_line, _ = self._split_cell_lines(item.text() if item else "")
         item_font = item.font()
-        item_font.setBold(shift_line.strip().endswith("**"))
+        item_font.setBold(self._line_has_project_flag(shift_line))
         item.setFont(item_font)
 
     def _revalidate_non_analysis_rows(self) -> None:
@@ -2062,11 +2239,18 @@ class MainWindow(QMainWindow):
             for col in range(1, len(DAYS)):
                 item = self.table.item(row, col)
                 text = item.text() if item else ""
-                _, _, shift = self.segments_for_cell(text, col)
+                segments, _, shifts = self.segments_for_cell(text, col)
                 _, dest_line = self._split_cell_lines(text)
-                hours += SHIFT_HOURS.get(shift, 0)
-                hours += SPECIAL_HOUR_LABELS.get(shift, 0)
-                self._set_cell_style(row, col, self._get_cell_background(shift, dest_line, col), "")
+                for shift in shifts:
+                    hours += SHIFT_HOURS.get(shift, 0)
+                    hours += SPECIAL_HOUR_LABELS.get(shift, 0)
+                cell_shift = shifts[0] if shifts else ""
+                cell_dest = dest_line
+                for _, _, label in segments:
+                    if label != "GN":
+                        cell_dest = label
+                        break
+                self._set_cell_style(row, col, self._get_cell_background(cell_shift, cell_dest, col), "")
 
             h_item = self.table.item(row, 0)
             if h_item:
@@ -2102,10 +2286,16 @@ class MainWindow(QMainWindow):
                         row_is_complete = False
                     if self._is_rs_shift(shift_line):
                         row_has_rs = True
-                    segments, _, shift = self.segments_for_cell(text, col)
+                    segments, _, shifts = self.segments_for_cell(text, col)
                     cell_hours, errors = self.validate_cell_text(row, col, text)
                     _, dest_line = self._split_cell_lines(text)
-                    cell_bg = self._get_cell_background(shift, dest_line, col)
+                    cell_shift = shifts[0] if shifts else ""
+                    cell_dest = dest_line
+                    for _, _, label in segments:
+                        if label != "GN":
+                            cell_dest = label
+                            break
+                    cell_bg = self._get_cell_background(cell_shift, cell_dest, col)
                     hours += cell_hours
 
                     if errors:
@@ -2123,8 +2313,9 @@ class MainWindow(QMainWindow):
                             self._set_cell_style(row, col, PINK_BG, "\n".join(errors), is_error=True)
                     else:
                         self._set_cell_style(row, col, cell_bg, "")
-                        if shift in {"20-24", "0-8"}:
-                            night_assignments[col][shift].append(row)
+                        for shift in shifts:
+                            if shift in {"20-24", "0-8"}:
+                                night_assignments[col][shift].append(row)
                         for start, end, label in segments:
                             if label == "GN":
                                 continue
@@ -2161,18 +2352,13 @@ class MainWindow(QMainWindow):
                     if not text:
                         col_is_complete = False
                         continue
-                    shift_line, dest_line = self._split_cell_lines(text)
-                    normalized_shift = self._normalize_shift(shift_line)
-                    if normalized_shift == "20-24":
+                    segments, _, shifts = self.segments_for_cell(text, col)
+                    col_count_20_24 += shifts.count("20-24")
+                    col_count_8_20 += shifts.count("8-20")
+                    if "20-24" in shifts:
                         col_has_20_24 = True
-                        col_count_20_24 += 1
-                    if normalized_shift == "8-20":
-                        col_count_8_20 += 1
-                    if normalized_shift == "14-20":
-                        if self._dest_has_guard_g(dest_line):
-                            col_has_guard_g = True
-                    if normalized_shift == "8-20":
-                        if self._dest_has_guard_g(dest_line):
+                    for start, end, label in segments:
+                        if (start, end) == (14, 20) and label == "G":
                             col_has_guard_g = True
 
                 day_header_item = self.table.horizontalHeaderItem(col)
@@ -2308,7 +2494,7 @@ class MainWindow(QMainWindow):
                 doctor_cells[day] = {
                     "shift": shift,
                     "dest": dest,
-                    "flagged": "**" in shift,
+                    "flagged": "**" in text,
                 }
             cells[doctor] = doctor_cells
 
@@ -2462,8 +2648,8 @@ class MainWindow(QMainWindow):
                     sunday_payload = day_map.get("Dom")
                     if not isinstance(sunday_payload, dict):
                         continue
-                    sunday_shift = self._normalize_shift(str(sunday_payload.get("shift", "")).strip())
-                    if sunday_shift != "20-24":
+                    sunday_shifts = self._payload_shift_tokens(sunday_payload)
+                    if "20-24" not in sunday_shifts:
                         continue
 
                     doctor_cells = next_cells.setdefault(doctor, {})
@@ -2520,9 +2706,17 @@ class MainWindow(QMainWindow):
 
         current_text = item.text() or ""
         shift_line, dest_line = self._split_cell_lines(current_text)
-        normalized_shift = autocomplete_shift_line(shift_line).upper()
-        normalized_dest = autocomplete_dest_line(dest_line)
-        normalized_text = normalized_shift if not normalized_dest else f"{normalized_shift}\n{normalized_dest}"
+        normalized_line1, line1_is_assignment = self._autocomplete_assignment_line(shift_line)
+        normalized_line2, line2_is_assignment = self._autocomplete_assignment_line(dest_line)
+
+        if line1_is_assignment and (line2_is_assignment or not dest_line.strip()):
+            normalized_text = normalized_line1 if not normalized_line2 else f"{normalized_line1}\n{normalized_line2}"
+        elif line1_is_assignment and " " in shift_line.strip():
+            normalized_text = normalized_line1 if not normalized_line2 else f"{normalized_line1}\n{normalized_line2}"
+        else:
+            normalized_shift = autocomplete_shift_line(shift_line).upper()
+            normalized_dest = autocomplete_dest_line(dest_line)
+            normalized_text = normalized_shift if not normalized_dest else f"{normalized_shift}\n{normalized_dest}"
         if normalized_text != item.text():
             self.table.blockSignals(True)
             try:
@@ -2531,8 +2725,8 @@ class MainWindow(QMainWindow):
                 self.table.blockSignals(False)
 
         if item.row() < len(DOCTORS):
-            shift_line, _ = self._split_cell_lines(item.text() if item else "")
-            if self._normalize_shift(shift_line) == "20-24":
+            shifts = self._shift_tokens_in_text(item.text() if item else "")
+            if "20-24" in shifts:
                 self._auto_assign_next_0_8(item.row(), item.column())
             self.revalidate_week()
             self.refresh_night_stats()
@@ -2580,6 +2774,13 @@ class MainWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    if not acquire_single_instance_lock():
+        QMessageBox.warning(
+            None,
+            APP_NAME,
+            "Applicazione già aperta. Chiudi l'altra istanza prima di avviare questa.",
+        )
+        return 0
     w = MainWindow()
     w.show()
     sys.exit(app.exec())
