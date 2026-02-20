@@ -79,7 +79,7 @@ SPECIAL_HOUR_LABELS_CASEFOLD = {label.casefold(): label for label in SPECIAL_HOU
 DEST_LABELS = {
     "ORTO",
     "VASC",
-    "CALÃ’",
+    "CAL\u00d2",
     "ZORCOLO",
     "PISANU",
     "SG",
@@ -97,7 +97,7 @@ DEST_LABELS = {
 }  # TODO: incollare lista reale
 DEST_LABELS_CASEFOLD = {label.casefold(): label for label in DEST_LABELS}
 DEST_SHORTCUTS = {
-    "c": "CALÃ’",
+    "c": "CAL\u00d2",
     "e": "END",
     "oc": "OCUL.POL",
     "op": "OCUL.PED",
@@ -152,7 +152,7 @@ DEST_LINE2_COLORS = {
     "ocul.ped": LINE2_GRIGIO,
     "ocul.pol": LINE2_GRIGIO,
     "ds": LINE2_MARRONE,
-    "calÃ²": LINE2_ROSSO,
+    "cal\u00f2": LINE2_ROSSO,
 }
 
 # accetta: "8-14", "8 - 14", "8-14**", "8-14 **"
@@ -1391,7 +1391,7 @@ class MainWindow(QMainWindow):
         self.main_title.setText(
             f"Settimana corrente {week_dates[0].strftime('%d/%m')}-{week_dates[-1].strftime('%d/%m')}"
         )
-        self.week_range_label.setText(f"{week_dates[0].strftime('%d/%m')}â€“{week_dates[-1].strftime('%d/%m')}")
+        self.week_range_label.setText(f"{week_dates[0].strftime('%d/%m')}-{week_dates[-1].strftime('%d/%m')}")
 
     def _normalize_week_for_year(self):
         year = self.year_spin.value()
@@ -1433,7 +1433,7 @@ class MainWindow(QMainWindow):
         if old_key != new_key:
             self.autosave_timer.stop()
 
-        # Aggiorna subito il contesto settimana, cosÃ¬ la validazione cross-settimana
+        # Aggiorna subito il contesto settimana, cosi la validazione cross-settimana
         # durante load_week/revalidate_week usa l'anno/settimana corretti.
         self.current_year = year
         self.current_week_index = week_index
@@ -1704,7 +1704,7 @@ class MainWindow(QMainWindow):
                 next_shift = self._get_next_week_monday_shift_for_doctor(row)
             if next_shift != "0-8":
                 if col == len(DAYS) - 1:
-                    errors.append("Notte incompleta: manca 0-8 il lunedÃ¬ della settimana successiva")
+                    errors.append("Notte incompleta: manca 0-8 il luned\u00ec della settimana successiva")
                 else:
                     errors.append("Notte incompleta: manca 0-8 il giorno successivo")
 
@@ -2222,7 +2222,7 @@ class MainWindow(QMainWindow):
                             continue
                         others = [DOCTORS[r] for r in rows if r != row]
                         other_name = ", ".join(others)
-                        tooltip = f"Conflitto: {label} giÃ  assegnata a {other_name} ({start}-{end})"
+                        tooltip = f"Conflitto: {label} gi\u00e0 assegnata a {other_name} ({start}-{end})"
                         self._set_cell_style(row, col, PINK_BG, tooltip, is_error=True)
 
                 for night_shift in ("20-24", "0-8"):
@@ -2235,7 +2235,7 @@ class MainWindow(QMainWindow):
                             continue
                         others = [DOCTORS[r] for r in rows if r != row]
                         other_name = ", ".join(others)
-                        tooltip = f"Conflitto: turno {night_shift} giÃ  assegnato a {other_name}"
+                        tooltip = f"Conflitto: turno {night_shift} gi\u00e0 assegnato a {other_name}"
                         self._set_cell_style(row, col, PINK_BG, tooltip, is_error=True)
             self._revalidate_non_analysis_rows()
             self.doctor_header.set_error_rows(rs_error_rows)
@@ -2587,4 +2587,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
