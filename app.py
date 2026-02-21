@@ -42,7 +42,7 @@ from PySide6.QtWidgets import (
 # ----------------------------
 
 APP_NAME = "Planner Turni Medici"
-APP_VERSION = "2.4"
+APP_VERSION = "2.5"
 APP_AUTHOR = "GN Aru"
 APP_SETTINGS_ORG = "PlannerTurni"
 APP_SETTINGS_APP = "PlannerTurniMedici"
@@ -833,11 +833,10 @@ class MainWindow(QMainWindow):
             self.table.horizontalHeader().setSectionResizeMode(c, QHeaderView.Stretch)
             self.prev_table.horizontalHeader().setSectionResizeMode(c, QHeaderView.Stretch)
 
-        # Editing stile Excel
+        # Editing solo via click o INVIO
         self.table.setEditTriggers(
             QAbstractItemView.DoubleClicked
             | QAbstractItemView.SelectedClicked
-            | QAbstractItemView.AnyKeyPressed
         )
         two_lines_height = self.table.fontMetrics().lineSpacing() * 2 + 6
         self.table.verticalHeader().setDefaultSectionSize(two_lines_height)
@@ -1115,6 +1114,28 @@ class MainWindow(QMainWindow):
             )
             return
 
+        full_text_for_check = self._read_so_source_full_text(input_path) or raw_text
+        if not self._text_contains_keyword(full_text_for_check, "blocco operatorio"):
+            QMessageBox.warning(
+                self,
+                "Importazione SO",
+                "Non riesco a trovare i dati da importare",
+            )
+            return
+        week_ok, week_reason = self._document_matches_current_week(full_text_for_check)
+        if not week_ok:
+            monday = get_week_dates_iso(self.current_year, self.current_week_index)[0]
+            QMessageBox.warning(
+                self,
+                "Importazione SO",
+                (
+                    "La settimana del documento non corrisponde alla settimana corrente.\n"
+                    f"Atteso inizio settimana: {monday.strftime('%d/%m/%Y')}.\n"
+                    f"Dettaglio: {week_reason}"
+                ),
+            )
+            return
+
         parsed_rows = self._parse_text_table_rows(raw_text)
         if not parsed_rows:
             QMessageBox.warning(
@@ -1160,6 +1181,152 @@ class MainWindow(QMainWindow):
                 return extracted
             return None
         return self._read_text_file_with_fallbacks(path)
+
+    def _read_so_source_full_text(self, path: Path) -> str | None:
+        ext = path.suffix.strip().casefold()
+        if ext == ".docx":
+            extracted = self._extract_full_text_from_docx(path)
+            if extracted and extracted.strip():
+                return extracted
+        return self._read_so_source_text(path)
+
+    def _text_contains_keyword(self, source_text: str, keyword: str) -> bool:
+        normalized_source = re.sub(r"[\W_]+", " ", source_text.casefold()).strip()
+        normalized_keyword = re.sub(r"[\W_]+", " ", keyword.casefold()).strip()
+        if not normalized_source or not normalized_keyword:
+            return False
+        padded_source = f" {normalized_source} "
+        padded_keyword = f" {normalized_keyword} "
+        return padded_keyword in padded_source
+
+    def _document_matches_current_week(self, source_text: str) -> Tuple[bool, str]:
+        text = source_text or ""
+        if not text.strip():
+            return False, "testo documento vuoto"
+
+        year = int(self.current_year)
+        week = int(self.current_week_index)
+        week_dates = get_week_dates_iso(year, week)
+        monday_dt = week_dates[0]
+        target_day = int(monday_dt.day)
+        target_month = int(monday_dt.month)
+        compact = re.sub(r"\s+", " ", text).casefold()
+        candidates: List[Tuple[int, int, str]] = []
+
+        # Verifica SOLO il giorno di partenza settimana:
+        # 1) date numeriche (dd/mm, d-m, dd.mm, con/without anno)
+        for match in re.finditer(
+            r"\b([0-3]?\d)\s*[/\-.]\s*([0-1]?\d)(?:\s*[/\-.]\s*\d{2,4})?\b",
+            compact,
+        ):
+            try:
+                day = int(match.group(1))
+                month = int(match.group(2))
+            except ValueError:
+                continue
+            if month < 1 or month > 12 or day < 1 or day > 31:
+                continue
+            candidates.append((day, month, match.group(0).strip()))
+            if day == target_day and month == target_month:
+                return True, "ok"
+
+        # 2) date testuali italiane (es. "3 marzo", "03 mar")
+        month_map = {
+            "gen": 1, "gennaio": 1,
+            "feb": 2, "febbraio": 2,
+            "mar": 3, "marzo": 3,
+            "apr": 4, "aprile": 4,
+            "mag": 5, "maggio": 5,
+            "giu": 6, "giugno": 6,
+            "lug": 7, "luglio": 7,
+            "ago": 8, "agosto": 8,
+            "set": 9, "sett": 9, "settembre": 9,
+            "ott": 10, "ottobre": 10,
+            "nov": 11, "novembre": 11,
+            "dic": 12, "dicembre": 12,
+        }
+        month_names_pattern = (
+            r"gen(?:naio)?|feb(?:braio)?|mar(?:zo)?|apr(?:ile)?|mag(?:gio)?|giu(?:gno)?|"
+            r"lug(?:lio)?|ago(?:sto)?|set(?:t(?:embre)?)?|ott(?:obre)?|nov(?:embre)?|dic(?:embre)?"
+        )
+        for match in re.finditer(
+            rf"\b([0-3]?\d)\s+({month_names_pattern})\b",
+            compact,
+            flags=re.IGNORECASE,
+        ):
+            try:
+                day = int(match.group(1))
+            except ValueError:
+                continue
+            month_token = match.group(2).casefold()
+            month = month_map.get(month_token, 0)
+            if month <= 0:
+                continue
+            candidates.append((day, month, match.group(0).strip()))
+            if day == target_day and month == target_month:
+                return True, "ok"
+
+        # 3) range con mese finale: "3-8 aprile", "dal 3 al 8 aprile"
+        for match in re.finditer(
+            rf"\b([0-3]?\d)\s*[-–]\s*([0-3]?\d)\s+({month_names_pattern})\b",
+            compact,
+            flags=re.IGNORECASE,
+        ):
+            try:
+                start_day = int(match.group(1))
+            except ValueError:
+                continue
+            month = month_map.get(match.group(3).casefold(), 0)
+            if month <= 0:
+                continue
+            candidates.append((start_day, month, match.group(0).strip()))
+            if start_day == target_day and month == target_month:
+                return True, "ok"
+
+        for match in re.finditer(
+            rf"\bdal\s+([0-3]?\d)\s+al\s+([0-3]?\d)\s+({month_names_pattern})\b",
+            compact,
+            flags=re.IGNORECASE,
+        ):
+            try:
+                start_day = int(match.group(1))
+            except ValueError:
+                continue
+            month = month_map.get(match.group(3).casefold(), 0)
+            if month <= 0:
+                continue
+            candidates.append((start_day, month, match.group(0).strip()))
+            if start_day == target_day and month == target_month:
+                return True, "ok"
+
+        # 4) fallback: "lunedi 3" + mese target presente nel testo
+        weekday_match = re.search(r"\blun(?:edi|edì)?\s+([0-3]?\d)\b", compact, flags=re.IGNORECASE)
+        if weekday_match:
+            try:
+                monday_day = int(weekday_match.group(1))
+            except ValueError:
+                monday_day = -1
+            month_synonyms = {
+                1: ("gen", "gennaio"),
+                2: ("feb", "febbraio"),
+                3: ("mar", "marzo"),
+                4: ("apr", "aprile"),
+                5: ("mag", "maggio"),
+                6: ("giu", "giugno"),
+                7: ("lug", "luglio"),
+                8: ("ago", "agosto"),
+                9: ("set", "sett", "settembre"),
+                10: ("ott", "ottobre"),
+                11: ("nov", "novembre"),
+                12: ("dic", "dicembre"),
+            }.get(target_month, ())
+            if monday_day == target_day and any(re.search(rf"\b{re.escape(tok)}\b", compact) for tok in month_synonyms):
+                return True, "ok"
+
+        if candidates:
+            sample = ", ".join(f"{d:02d}/{m:02d}" for d, m, _src in candidates[:4])
+            return False, f"date rilevate nel documento: {sample}"
+        return False, "nessuna data di inizio settimana riconoscibile nel documento"
 
     def _read_text_file_with_fallbacks(self, path: Path) -> str | None:
         for encoding in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
@@ -1221,6 +1388,38 @@ class MainWindow(QMainWindow):
                 paragraph_lines.append(text)
         if paragraph_lines:
             return "\n".join(paragraph_lines)
+        return None
+
+    def _extract_full_text_from_docx(self, path: Path) -> str | None:
+        try:
+            with zipfile.ZipFile(path, "r") as docx_zip:
+                xml_bytes = docx_zip.read("word/document.xml")
+        except (OSError, zipfile.BadZipFile, KeyError):
+            return None
+
+        try:
+            root = ET.fromstring(xml_bytes)
+        except ET.ParseError:
+            return None
+
+        ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+        lines: List[str] = []
+        for p in root.findall(".//w:body//w:p", ns):
+            chunks: List[str] = []
+            for node in p.iter():
+                tag = node.tag.rsplit("}", 1)[-1]
+                if tag == "t":
+                    chunks.append(node.text or "")
+                elif tag == "tab":
+                    chunks.append(" ")
+                elif tag in {"br", "cr"}:
+                    chunks.append(" ")
+            line = "".join(chunks).strip()
+            if line:
+                lines.append(line)
+
+        if lines:
+            return "\n".join(lines)
         return None
 
     def _extract_text_from_rtf(self, path: Path) -> str | None:
@@ -1487,7 +1686,7 @@ class MainWindow(QMainWindow):
         self._autosize_quick_grid_table(adjust_panel=self.quick_grid_dock.isVisible())
 
     def _setup_quick_grid_panel(self) -> None:
-        self.quick_grid_dock = QDockWidget("Tabella editabile 10x7", self)
+        self.quick_grid_dock = QDockWidget("Planner Sale Operatorie", self)
         self.quick_grid_dock.setAllowedAreas(Qt.RightDockWidgetArea)
         self.quick_grid_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
 
@@ -1496,13 +1695,12 @@ class MainWindow(QMainWindow):
         panel_layout.setContentsMargins(4, 4, 4, 4)
         panel_layout.setSpacing(4)
 
-        self.quick_grid_table = QTableWidget(10, 7, panel)
+        self.quick_grid_table = ShiftTableWidget(10, 7, panel)
         self.quick_grid_table.setHorizontalHeaderLabels([""] * 7)
         self.quick_grid_table.setVerticalHeaderLabels([""] * 10)
         self.quick_grid_table.setEditTriggers(
             QAbstractItemView.DoubleClicked
             | QAbstractItemView.SelectedClicked
-            | QAbstractItemView.AnyKeyPressed
         )
         self.quick_grid_table.setWordWrap(True)
         self.quick_grid_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
