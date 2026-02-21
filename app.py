@@ -4,15 +4,20 @@ import json
 import os
 import shutil
 import hashlib
+import subprocess
+import tempfile
+import zipfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from datetime import date, timedelta
 from typing import List, Tuple
 
-from PySide6.QtCore import Qt, Signal, QTimer, QSignalBlocker, QSettings, QLockFile
+from PySide6.QtCore import Qt, Signal, QTimer, QSignalBlocker, QSettings, QLockFile, QEvent
 from PySide6.QtGui import QColor, QPalette, QCloseEvent, QTextCursor, QPen, QBrush
 from PySide6.QtWidgets import (
     QAbstractItemDelegate,
     QApplication,
+    QDockWidget,
     QFileDialog,
     QLabel,
     QMainWindow,
@@ -37,7 +42,7 @@ from PySide6.QtWidgets import (
 # ----------------------------
 
 APP_NAME = "Planner Turni Medici"
-APP_VERSION = "2.3"
+APP_VERSION = "2.4"
 APP_AUTHOR = "GN Aru"
 APP_SETTINGS_ORG = "PlannerTurni"
 APP_SETTINGS_APP = "PlannerTurniMedici"
@@ -343,6 +348,9 @@ def autocomplete_shift_line(shift_line: str) -> str:
 
 def destination_shortcuts_legend_text() -> str:
     lines = [f"{alias.upper()} = {target}" for alias, target in sorted(DEST_SHORTCUTS.items(), key=lambda it: it[0].casefold())]
+    lines.append("")
+    lines.append("FF = F intera settimana")
+    lines.append("RSS = RS + RS")
     return "\n".join(lines)
 
 
@@ -550,6 +558,30 @@ class MultilineDelegate(QStyledItemDelegate):
         self.closeEditor.emit(editor, QAbstractItemDelegate.NoHint)
 
 
+class TwoLineCellDelegate(QStyledItemDelegate):
+    def createEditor(self, parent, option, index):
+        _ = index
+        editor = TwoLineEdit(parent)
+        editor.set_max_lines(2)
+        editor.setTabChangesFocus(True)
+        editor.setFixedHeight(option.rect.height())
+        editor.commit_requested.connect(lambda: self._commit_and_close(editor))
+        return editor
+
+    def setEditorData(self, editor, index):
+        with QSignalBlocker(editor):
+            editor.setPlainText(index.data() or "")
+        editor.moveCursor(QTextCursor.End)
+        editor.verticalScrollBar().setValue(0)
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.toPlainText())
+
+    def _commit_and_close(self, editor):
+        self.commitData.emit(editor)
+        self.closeEditor.emit(editor, QAbstractItemDelegate.NoHint)
+
+
 class ShiftTableWidget(QTableWidget):
     def keyPressEvent(self, event):
         if self.state() != QAbstractItemView.EditingState:
@@ -581,8 +613,10 @@ class MainWindow(QMainWindow):
         self._restored_splitter_sizes: List[int] = []
         self._prev_panel_last_width = 0
         self._stats_panel_last_width = 0
+        self._quick_grid_panel_last_width = 0
         self._prev_panel_preferred_width = 420
         self._stats_panel_preferred_width = 210
+        self._quick_grid_panel_preferred_width = 700
         self._restore_window_size()
         self._is_loading = False
         self._dirty = False
@@ -630,6 +664,17 @@ class MainWindow(QMainWindow):
         self.export_doc_btn.setToolTip("Esporta la settimana corrente in formato DOC (A4)")
         self.export_doc_btn.clicked.connect(self.export_main_week_doc)
         controls.addWidget(self.export_doc_btn)
+        self.import_so_btn = QToolButton(self)
+        self.import_so_btn.setText("Importazione SO")
+        self.import_so_btn.setToolTip("Importa dati da file testo nella tabella Planner SO")
+        self.import_so_btn.clicked.connect(self.import_so_table_from_text)
+        controls.addWidget(self.import_so_btn)
+        self.quick_grid_btn = QToolButton(self)
+        self.quick_grid_btn.setText("Planner SO")
+        self.quick_grid_btn.setToolTip("Mostra pannello 10x7")
+        self.quick_grid_btn.setCheckable(True)
+        self.quick_grid_btn.toggled.connect(self.toggle_quick_grid_panel)
+        controls.addWidget(self.quick_grid_btn)
         controls.addStretch()
         layout.addLayout(controls)
 
@@ -671,6 +716,8 @@ class MainWindow(QMainWindow):
         main_layout.setSpacing(6)
         self.main_title = QLabel("Settimana corrente")
         self.table = ShiftTableWidget()
+        self.main_panel.setMinimumWidth(0)
+        self.table.setMinimumWidth(0)
         self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         main_layout.addWidget(self.table)
         self.main_splitter.addWidget(main_panel)
@@ -738,6 +785,7 @@ class MainWindow(QMainWindow):
         content.addWidget(self.stats_toggle_btn)
 
         layout.addLayout(content, 1)
+        self._setup_quick_grid_panel()
         title_h = self.fontMetrics().height() + 6
         for lbl in (self.stats_title,):
             lbl.setFixedHeight(title_h)
@@ -840,10 +888,17 @@ class MainWindow(QMainWindow):
         if not self.stats_panel.isVisible():
             self._fit_stats_panel_width()
             stats_target = self._stats_panel_last_width or self._stats_panel_preferred_width
+            stats_min = max(1, int(self.stats_panel.minimumWidth()))
             main_target = max(1, sizes[1])
             prev_target = sizes[0] if self.prev_panel.isVisible() else 0
             applied = self._resize_window_width(stats_target, anchor_left=False)
             stats_width = max(0, min(int(stats_target), int(applied)))
+            if stats_width < stats_min:
+                if applied > 0:
+                    self._resize_window_width(-applied, anchor_left=False)
+                self.statusBar().showMessage("Spazio orizzontale insufficiente per aprire il pannello statistiche", 3500)
+                self._sync_side_toggle_buttons()
+                return
             if stats_width > 0:
                 self._stats_panel_last_width = stats_width
             self._set_stats_panel_visibility(True)
@@ -875,10 +930,17 @@ class MainWindow(QMainWindow):
         if not self.prev_panel.isVisible():
             self._fit_prev_panel_width()
             prev_target = self._prev_panel_last_width or self._prev_panel_preferred_width
+            prev_min = max(1, int(self.prev_panel.minimumWidth()))
             main_target = max(1, sizes[1])
             stats_target = sizes[2] if self.stats_panel.isVisible() else 0
             applied = self._resize_window_width(prev_target, anchor_left=True)
             prev_width = max(0, min(int(prev_target), int(applied)))
+            if prev_width < prev_min:
+                if applied > 0:
+                    self._resize_window_width(-applied, anchor_left=True)
+                self.statusBar().showMessage("Spazio orizzontale insufficiente per aprire la settimana precedente", 3500)
+                self._sync_side_toggle_buttons()
+                return
             if prev_width > 0:
                 self._prev_panel_last_width = prev_width
             self._set_prev_panel_visibility(True)
@@ -1030,6 +1092,538 @@ class MainWindow(QMainWindow):
         self.prev_panel.setMinimumWidth(220)
         self.prev_table.setMinimumWidth(220)
 
+    def import_so_table_from_text(self) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Importazione SO",
+            str(Path.home()),
+            "File Word/Testo (*.doc *.docx *.rtf *.txt *.csv *.tsv);;Tutti i file (*.*)",
+        )
+        if not file_path:
+            return
+
+        input_path = Path(file_path)
+        raw_text = self._read_so_source_text(input_path)
+        if raw_text is None:
+            extra_hint = ""
+            if input_path.suffix.strip().casefold() == ".doc":
+                extra_hint = "\nPer i file .doc è richiesto Microsoft Word installato su Windows."
+            QMessageBox.critical(
+                self,
+                "Importazione SO",
+                f"Impossibile leggere il file:\n{input_path}{extra_hint}",
+            )
+            return
+
+        parsed_rows = self._parse_text_table_rows(raw_text)
+        if not parsed_rows:
+            QMessageBox.warning(
+                self,
+                "Importazione SO",
+                "Nessuna tabella valida trovata nel file selezionato.",
+            )
+            return
+
+        shaped = self._shape_rows_for_so_table(parsed_rows, 10, 7)
+        self._apply_rows_to_so_table(shaped)
+        if not self.quick_grid_dock.isVisible():
+            self.quick_grid_btn.setChecked(True)
+        filled_cells = sum(1 for row in shaped for cell in row if cell.strip())
+        self.statusBar().showMessage(
+            f"Importazione SO completata: {filled_cells} celle valorizzate",
+            5000,
+        )
+
+    def _read_so_source_text(self, path: Path) -> str | None:
+        ext = path.suffix.strip().casefold()
+        if ext in {".txt", ".csv", ".tsv"}:
+            return self._read_text_file_with_fallbacks(path)
+        if ext == ".docx":
+            extracted = self._extract_text_from_docx(path)
+            if extracted and extracted.strip():
+                return extracted
+            extracted = self._extract_text_via_word_automation(path)
+            if extracted and extracted.strip():
+                return extracted
+            return None
+        if ext == ".rtf":
+            extracted = self._extract_text_from_rtf(path)
+            if extracted and extracted.strip():
+                return extracted
+            extracted = self._extract_text_via_word_automation(path)
+            if extracted and extracted.strip():
+                return extracted
+            return None
+        if ext == ".doc":
+            extracted = self._extract_text_via_word_automation(path)
+            if extracted and extracted.strip():
+                return extracted
+            return None
+        return self._read_text_file_with_fallbacks(path)
+
+    def _read_text_file_with_fallbacks(self, path: Path) -> str | None:
+        for encoding in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+            try:
+                return path.read_text(encoding=encoding)
+            except UnicodeDecodeError:
+                continue
+            except OSError:
+                return None
+        return None
+
+    def _extract_text_from_docx(self, path: Path) -> str | None:
+        try:
+            with zipfile.ZipFile(path, "r") as docx_zip:
+                xml_bytes = docx_zip.read("word/document.xml")
+        except (OSError, zipfile.BadZipFile, KeyError):
+            return None
+
+        try:
+            root = ET.fromstring(xml_bytes)
+        except ET.ParseError:
+            return None
+
+        ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+
+        def para_text(p_node: ET.Element) -> str:
+            parts: List[str] = []
+            for node in p_node.iter():
+                tag = node.tag.rsplit("}", 1)[-1]
+                if tag == "t":
+                    parts.append(node.text or "")
+                elif tag == "tab":
+                    parts.append("\t")
+                elif tag in {"br", "cr"}:
+                    parts.append("\\n")
+            text = "".join(parts).strip()
+            return text
+
+        lines: List[str] = []
+        for tr in root.findall(".//w:tbl/w:tr", ns):
+            row_cells: List[str] = []
+            for tc in tr.findall("./w:tc", ns):
+                cell_lines: List[str] = []
+                for p in tc.findall(".//w:p", ns):
+                    text = para_text(p)
+                    if text:
+                        cell_lines.append(text)
+                row_cells.append("\\n".join(cell_lines))
+            if any(cell.strip() for cell in row_cells):
+                lines.append("\t".join(row_cells))
+
+        if lines:
+            return "\n".join(lines)
+
+        paragraph_lines: List[str] = []
+        for p in root.findall(".//w:body/w:p", ns):
+            text = para_text(p)
+            if text:
+                paragraph_lines.append(text)
+        if paragraph_lines:
+            return "\n".join(paragraph_lines)
+        return None
+
+    def _extract_text_from_rtf(self, path: Path) -> str | None:
+        raw = self._read_text_file_with_fallbacks(path)
+        if raw is None:
+            return None
+
+        text = raw.replace("\r\n", "\n").replace("\r", "\n")
+
+        def replace_hex(match: re.Match[str]) -> str:
+            try:
+                return bytes.fromhex(match.group(1)).decode("cp1252", errors="ignore")
+            except ValueError:
+                return ""
+
+        def replace_unicode(match: re.Match[str]) -> str:
+            value = int(match.group(1))
+            if value < 0:
+                value += 65536
+            try:
+                return chr(value)
+            except ValueError:
+                return ""
+
+        text = re.sub(r"\\'([0-9a-fA-F]{2})", replace_hex, text)
+        text = re.sub(r"\\u(-?\d+)\??", replace_unicode, text)
+        text = text.replace("\\cell", "\t")
+        text = text.replace("\\row", "\n")
+        text = text.replace("\\par", "\\n")
+        text = text.replace("\\line", "\\n")
+        text = text.replace("\\tab", "\t")
+        text = re.sub(r"\\[a-zA-Z]+-?\d* ?", "", text)
+        text = text.replace("{", "").replace("}", "")
+        text = text.replace("\\\\", "\\")
+        cleaned_lines = [line.rstrip() for line in text.split("\n")]
+        return "\n".join(cleaned_lines)
+
+    def _extract_text_via_word_automation(self, path: Path) -> str | None:
+        if not sys.platform.startswith("win"):
+            return None
+
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
+        tmp_path = Path(tmp_file.name)
+        tmp_file.close()
+
+        src = str(path.resolve()).replace("'", "''")
+        dst = str(tmp_path.resolve()).replace("'", "''")
+        command = (
+            "$ErrorActionPreference='Stop';"
+            f"$src='{src}';"
+            f"$dst='{dst}';"
+            "$word=$null;$doc=$null;"
+            "try {"
+            " $word=New-Object -ComObject Word.Application;"
+            " $word.Visible=$false;"
+            " $word.DisplayAlerts=0;"
+            " $doc=$word.Documents.Open($src,$false,$true);"
+            " $doc.SaveAs([ref]$dst,[ref]7);"
+            "} finally {"
+            " if ($doc -ne $null) { $doc.Close([ref]$false) | Out-Null }"
+            " if ($word -ne $null) { $word.Quit() | Out-Null }"
+            "}"
+        )
+        try:
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", command],
+                capture_output=True,
+                text=True,
+                timeout=90,
+            )
+            if result.returncode != 0:
+                return None
+            return self._read_text_file_with_fallbacks(tmp_path)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        finally:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+    def _detect_table_delimiter(self, lines: List[str]) -> str:
+        best_delim = ""
+        best_score = -1
+        candidates = ("\t", ";", "|", ",")
+        for delim in candidates:
+            valid_rows = 0
+            total_cells = 0
+            for line in lines:
+                parts = self._split_table_line(line, delim)
+                if len(parts) >= 2:
+                    valid_rows += 1
+                    total_cells += len(parts)
+            score = valid_rows * 100 + total_cells
+            if score > best_score:
+                best_score = score
+                best_delim = delim
+        if best_score >= 202:
+            return best_delim
+        return "spaces"
+
+    def _split_table_line(self, line: str, delimiter: str) -> List[str]:
+        raw = line.replace("\r", "").replace("\n", "")
+        if not raw.strip():
+            return []
+
+        if delimiter == "spaces":
+            stripped = raw.strip()
+            parts = [part.strip() for part in re.split(r"\s{2,}", stripped)]
+            if len(parts) <= 1:
+                parts = [stripped]
+            return parts
+
+        # Importante: non usare strip() sulla riga completa,
+        # altrimenti si perdono delimiter iniziali (es. TAB) e le colonne slittano a sinistra.
+        parts = [part.strip() for part in raw.split(delimiter)]
+        if delimiter == "|":
+            if parts and not parts[0]:
+                parts = parts[1:]
+            if parts and not parts[-1]:
+                parts = parts[:-1]
+            if parts and all(re.fullmatch(r":?-{2,}:?", part) for part in parts if part):
+                return []
+        return parts
+
+    def _parse_text_table_rows(self, raw_text: str) -> List[List[str]]:
+        normalized = raw_text.replace("\r\n", "\n").replace("\r", "\n")
+        lines = [line for line in normalized.split("\n") if line.strip()]
+        if not lines:
+            return []
+
+        delimiter = self._detect_table_delimiter(lines)
+        rows: List[List[str]] = []
+        for line in lines:
+            plain = line.strip()
+            if plain and set(plain) <= set("-=+|:"):
+                continue
+            parts = self._split_table_line(line, delimiter)
+            if not parts:
+                continue
+            while len(parts) > 1 and not parts[-1].strip():
+                parts.pop()
+            if not any(part.strip() for part in parts):
+                continue
+            rows.append(parts)
+        return rows
+
+    def _is_header_like_token(self, token: str) -> bool:
+        value = token.strip().casefold()
+        if not value:
+            return True
+        if value in {"h", "lun", "mar", "mer", "gio", "ven", "sab", "dom"}:
+            return True
+        if re.fullmatch(r"\d{1,2}", value):
+            return True
+        if value in {"giorno", "day", "settimana", "week"}:
+            return True
+        return False
+
+    def _drop_header_edges_if_present(
+        self, matrix: List[List[str]], target_rows: int, target_cols: int
+    ) -> List[List[str]]:
+        if not matrix:
+            return matrix
+
+        width = max(len(row) for row in matrix)
+        normalized = [row + [""] * (width - len(row)) for row in matrix]
+
+        if len(normalized) >= target_rows + 1:
+            row_sample = normalized[0][: min(width, target_cols + 1)]
+            row_hits = sum(1 for token in row_sample if self._is_header_like_token(token))
+            if row_sample and row_hits >= int(len(row_sample) * 0.7):
+                normalized = normalized[1:]
+
+        if normalized:
+            width = max(len(row) for row in normalized)
+            normalized = [row + [""] * (width - len(row)) for row in normalized]
+            if width >= target_cols + 1 and len(normalized) >= target_rows:
+                col_sample = [normalized[r][0] for r in range(min(len(normalized), target_rows + 1))]
+                col_hits = sum(1 for token in col_sample if self._is_header_like_token(token))
+                if col_sample and col_hits >= int(len(col_sample) * 0.7):
+                    normalized = [row[1:] for row in normalized]
+        return normalized
+
+    def _shape_rows_for_so_table(
+        self, parsed_rows: List[List[str]], target_rows: int, target_cols: int
+    ) -> List[List[str]]:
+        if not parsed_rows:
+            return [[""] * target_cols for _ in range(target_rows)]
+
+        # Mantieni sempre anche prima riga/colonna del sorgente:
+        # non rimuovere intestazioni in automatico.
+        matrix = parsed_rows
+        if not matrix:
+            return [[""] * target_cols for _ in range(target_rows)]
+
+        matrix = self._trim_leading_empty_rows_and_cols(matrix)
+        if not matrix:
+            return [[""] * target_cols for _ in range(target_rows)]
+
+        width = max(len(row) for row in matrix)
+        matrix = [row + [""] * (width - len(row)) for row in matrix]
+
+        shaped: List[List[str]] = []
+        for rr in range(target_rows):
+            row_values: List[str] = []
+            src_r = rr
+            for cc in range(target_cols):
+                src_c = cc
+                value = ""
+                if 0 <= src_r < len(matrix) and 0 <= src_c < len(matrix[src_r]):
+                    value = matrix[src_r][src_c]
+                row_values.append(self._normalize_so_cell_value(value))
+            shaped.append(row_values)
+        return shaped
+
+    def _trim_leading_empty_rows_and_cols(self, matrix: List[List[str]]) -> List[List[str]]:
+        cleaned = [list(row) for row in matrix]
+        if not cleaned:
+            return cleaned
+
+        while cleaned and not any(str(cell).strip() for cell in cleaned[0]):
+            cleaned = cleaned[1:]
+        if not cleaned:
+            return cleaned
+
+        width = max(len(row) for row in cleaned)
+        normalized = [row + [""] * (width - len(row)) for row in cleaned]
+
+        while width > 0 and all(not str(row[0]).strip() for row in normalized):
+            normalized = [row[1:] for row in normalized]
+            width -= 1
+            if width <= 0:
+                return []
+        return normalized
+
+    def _normalize_so_cell_value(self, value: str) -> str:
+        text = str(value or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+        if not text:
+            return ""
+        if "\\n" in text and "\n" not in text:
+            text = text.replace("\\n", "\n")
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
+        if not lines:
+            return ""
+        return "\n".join(lines[:2])
+
+    def _apply_rows_to_so_table(self, rows: List[List[str]]) -> None:
+        self.quick_grid_table.blockSignals(True)
+        try:
+            for r in range(self.quick_grid_table.rowCount()):
+                for c in range(self.quick_grid_table.columnCount()):
+                    item = self.quick_grid_table.item(r, c)
+                    if item is None:
+                        item = QTableWidgetItem("")
+                        item.setTextAlignment(Qt.AlignTop | Qt.AlignLeft)
+                        self.quick_grid_table.setItem(r, c, item)
+                    text = ""
+                    if r < len(rows) and c < len(rows[r]):
+                        text = rows[r][c]
+                    item.setText(text)
+        finally:
+            self.quick_grid_table.blockSignals(False)
+        self._autosize_quick_grid_table(adjust_panel=self.quick_grid_dock.isVisible())
+
+    def _setup_quick_grid_panel(self) -> None:
+        self.quick_grid_dock = QDockWidget("Tabella editabile 10x7", self)
+        self.quick_grid_dock.setAllowedAreas(Qt.RightDockWidgetArea)
+        self.quick_grid_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
+
+        panel = QWidget(self.quick_grid_dock)
+        panel_layout = QVBoxLayout(panel)
+        panel_layout.setContentsMargins(4, 4, 4, 4)
+        panel_layout.setSpacing(4)
+
+        self.quick_grid_table = QTableWidget(10, 7, panel)
+        self.quick_grid_table.setHorizontalHeaderLabels([""] * 7)
+        self.quick_grid_table.setVerticalHeaderLabels([""] * 10)
+        self.quick_grid_table.setEditTriggers(
+            QAbstractItemView.DoubleClicked
+            | QAbstractItemView.SelectedClicked
+            | QAbstractItemView.AnyKeyPressed
+        )
+        self.quick_grid_table.setWordWrap(True)
+        self.quick_grid_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.quick_grid_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
+        self.quick_grid_table.horizontalHeader().setVisible(False)
+        self.quick_grid_table.verticalHeader().setVisible(False)
+        two_lines_height = self.quick_grid_table.fontMetrics().lineSpacing() * 2 + 6
+        self.quick_grid_table.verticalHeader().setDefaultSectionSize(two_lines_height)
+        self.quick_grid_delegate = TwoLineCellDelegate(self.quick_grid_table)
+        self.quick_grid_table.setItemDelegate(self.quick_grid_delegate)
+        for r in range(self.quick_grid_table.rowCount()):
+            for c in range(self.quick_grid_table.columnCount()):
+                item = QTableWidgetItem("")
+                item.setTextAlignment(Qt.AlignTop | Qt.AlignLeft)
+                self.quick_grid_table.setItem(r, c, item)
+        self.quick_grid_table.itemChanged.connect(self.on_quick_grid_item_changed)
+        self._autosize_quick_grid_table(adjust_panel=False)
+
+        panel_layout.addWidget(self.quick_grid_table)
+        self.quick_grid_dock.setWidget(panel)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.quick_grid_dock)
+        self.quick_grid_dock.installEventFilter(self)
+        self.quick_grid_dock.hide()
+        self.quick_grid_dock.visibilityChanged.connect(self._on_quick_grid_visibility_changed)
+
+    def _autosize_quick_grid_table(self, adjust_panel: bool) -> None:
+        min_row_height = self.quick_grid_table.fontMetrics().lineSpacing() * 2 + 6
+
+        # Con colonne in Stretch la larghezza celle segue il pannello.
+        self.quick_grid_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+        self.quick_grid_table.resizeRowsToContents()
+        for row in range(self.quick_grid_table.rowCount()):
+            row_h = max(min_row_height, int(self.quick_grid_table.rowHeight(row)))
+            self.quick_grid_table.setRowHeight(row, row_h)
+
+        table_width = self.quick_grid_table.frameWidth() * 2
+        if self.quick_grid_table.verticalHeader().isVisible():
+            table_width += self.quick_grid_table.verticalHeader().width()
+        for col in range(self.quick_grid_table.columnCount()):
+            table_width += self.quick_grid_table.columnWidth(col)
+        if self.quick_grid_table.verticalScrollBar().isVisible():
+            table_width += self.quick_grid_table.verticalScrollBar().sizeHint().width()
+        table_width += self.quick_grid_table.contentsMargins().left() + self.quick_grid_table.contentsMargins().right()
+
+        preferred = max(700, int(table_width + 12))
+        self._quick_grid_panel_preferred_width = preferred
+        self.quick_grid_dock.setMinimumWidth(140)
+        self.quick_grid_table.setMinimumWidth(0)
+
+        if adjust_panel and self.quick_grid_dock.isVisible():
+            current = max(0, int(self.quick_grid_dock.width()))
+            target = max(current, preferred)
+            delta = target - current
+            if delta > 0:
+                applied = self._resize_window_width(delta, anchor_left=False)
+                new_width = max(current, current + int(applied))
+                if new_width > 0:
+                    QTimer.singleShot(
+                        0,
+                        lambda w=new_width: self._set_quick_grid_dock_width(int(w)),
+                    )
+
+    def on_quick_grid_item_changed(self, _item: QTableWidgetItem) -> None:
+        self._autosize_quick_grid_table(adjust_panel=self.quick_grid_dock.isVisible())
+
+    def _fit_quick_grid_panel_width(self) -> None:
+        self._autosize_quick_grid_table(adjust_panel=False)
+
+    def toggle_quick_grid_panel(self, visible: bool) -> None:
+        if visible:
+            self._fit_quick_grid_panel_width()
+            target = max(self._quick_grid_panel_last_width, self._quick_grid_panel_preferred_width)
+            panel_min = max(1, int(self.quick_grid_dock.minimumWidth()))
+            applied = self._resize_window_width(target, anchor_left=False)
+            panel_width = max(0, min(int(target), int(applied)))
+            if panel_width < panel_min:
+                if applied > 0:
+                    self._resize_window_width(-applied, anchor_left=False)
+                with QSignalBlocker(self.quick_grid_btn):
+                    self.quick_grid_btn.setChecked(False)
+                self.statusBar().showMessage("Spazio orizzontale insufficiente per aprire Planner SO", 3500)
+                return
+            if panel_width > 0:
+                self._quick_grid_panel_last_width = panel_width
+            self.quick_grid_dock.setVisible(True)
+            if panel_width > 0:
+                QTimer.singleShot(
+                    0,
+                    lambda w=panel_width: self._set_quick_grid_dock_width(int(w)),
+                )
+        else:
+            current = max(0, int(self.quick_grid_dock.width()))
+            if current > 0:
+                self._quick_grid_panel_last_width = current
+            self.quick_grid_dock.setVisible(False)
+            self._resize_window_width(-current, anchor_left=False)
+        if visible:
+            self.quick_grid_dock.raise_()
+
+    def _on_quick_grid_visibility_changed(self, visible: bool) -> None:
+        with QSignalBlocker(self.quick_grid_btn):
+            self.quick_grid_btn.setChecked(bool(visible))
+        if visible:
+            self.quick_grid_btn.setToolTip("Nascondi pannello 10x7")
+        else:
+            self.quick_grid_btn.setToolTip("Mostra pannello 10x7")
+
+    def eventFilter(self, watched, event):
+        if watched is self.quick_grid_dock and event.type() == QEvent.Resize:
+            if self.quick_grid_dock.isVisible():
+                QTimer.singleShot(0, lambda: self._autosize_quick_grid_table(adjust_panel=False))
+        return super().eventFilter(watched, event)
+
+    def _set_quick_grid_dock_width(self, width: int) -> None:
+        target = max(int(self.quick_grid_dock.minimumWidth()), int(width))
+        self.resizeDocks([self.quick_grid_dock], [target], Qt.Horizontal)
+        actual = max(0, int(self.quick_grid_dock.width()))
+        if actual > 0:
+            self._quick_grid_panel_last_width = actual
+
     def show_dest_shortcuts_popup(self):
         QMessageBox.information(
             self,
@@ -1065,6 +1659,19 @@ class MainWindow(QMainWindow):
             return
 
         self.statusBar().showMessage(f"Esportato: {output_path}", 4000)
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(str(output_path))
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", str(output_path)])
+            else:
+                subprocess.Popen(["xdg-open", str(output_path)])
+        except OSError as exc:
+            QMessageBox.warning(
+                self,
+                "Export DOC",
+                f"File esportato ma non è stato possibile aprirlo automaticamente:\n{exc}",
+            )
 
     def _build_main_week_doc_rtf(self) -> str:
         week_dates = get_week_dates_iso(self.current_year, self.current_week_index)
