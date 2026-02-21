@@ -37,7 +37,7 @@ from PySide6.QtWidgets import (
 # ----------------------------
 
 APP_NAME = "Planner Turni Medici"
-APP_VERSION = "2.2"
+APP_VERSION = "2.3"
 APP_AUTHOR = "GN Aru"
 APP_SETTINGS_ORG = "PlannerTurni"
 APP_SETTINGS_APP = "PlannerTurniMedici"
@@ -417,6 +417,12 @@ class TwoLineEdit(QPlainTextEdit):
         shift = m.group(1).replace(" ", "")
         return shift in {"20-24", "0-8"}
 
+    def _is_single_line_quick_fill_shortcut(self) -> bool:
+        lines = self.toPlainText().splitlines()
+        if len(lines) != 1:
+            return False
+        return lines[0].strip().casefold() in {"ff", "rss"}
+
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key_Return, Qt.Key_Enter):
             modifiers = event.modifiers()
@@ -430,6 +436,8 @@ class TwoLineEdit(QPlainTextEdit):
                 super().keyPressEvent(event)
                 return
             if (
+                self._is_single_line_quick_fill_shortcut()
+                or
                 self._first_line_is_zero_hour_label()
                 or self._first_line_is_special_hour_label()
                 or self._first_line_is_single_line_shift()
