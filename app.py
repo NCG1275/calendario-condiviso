@@ -42,7 +42,7 @@ from PySide6.QtWidgets import (
 # ----------------------------
 
 APP_NAME = "Planner Turni Medici"
-APP_VERSION = "2.5"
+APP_VERSION = "2.6"
 APP_AUTHOR = "GN Aru"
 APP_SETTINGS_ORG = "PlannerTurni"
 APP_SETTINGS_APP = "PlannerTurniMedici"
@@ -1146,9 +1146,20 @@ class MainWindow(QMainWindow):
             return
 
         shaped = self._shape_rows_for_so_table(parsed_rows, 10, 7)
+        if self._quick_grid_has_content():
+            choice = QMessageBox.question(
+                self,
+                "Importazione SO",
+                "La tabella Planner SO contiene già dei dati. Vuoi sovrascriverli con il nuovo file?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if choice != QMessageBox.Yes:
+                return
         self._apply_rows_to_so_table(shaped)
         if not self.quick_grid_dock.isVisible():
             self.quick_grid_btn.setChecked(True)
+        self.schedule_autosave()
         filled_cells = sum(1 for row in shaped for cell in row if cell.strip())
         self.statusBar().showMessage(
             f"Importazione SO completata: {filled_cells} celle valorizzate",
@@ -1685,6 +1696,50 @@ class MainWindow(QMainWindow):
             self.quick_grid_table.blockSignals(False)
         self._autosize_quick_grid_table(adjust_panel=self.quick_grid_dock.isVisible())
 
+    def _serialize_quick_grid_cells(self) -> List[List[str]]:
+        rows: List[List[str]] = []
+        for r in range(self.quick_grid_table.rowCount()):
+            row_values: List[str] = []
+            for c in range(self.quick_grid_table.columnCount()):
+                item = self.quick_grid_table.item(r, c)
+                row_values.append(item.text() if item else "")
+            rows.append(row_values)
+        return rows
+
+    def _quick_grid_has_content(self) -> bool:
+        for r in range(self.quick_grid_table.rowCount()):
+            for c in range(self.quick_grid_table.columnCount()):
+                item = self.quick_grid_table.item(r, c)
+                if item and item.text().strip():
+                    return True
+        return False
+
+    def _load_quick_grid_cells(self, payload) -> None:
+        rows: List[List[str]] = []
+        if isinstance(payload, list):
+            for row in payload:
+                if isinstance(row, list):
+                    rows.append([str(value) if value is not None else "" for value in row])
+                else:
+                    rows.append([])
+
+        self.quick_grid_table.blockSignals(True)
+        try:
+            for r in range(self.quick_grid_table.rowCount()):
+                for c in range(self.quick_grid_table.columnCount()):
+                    item = self.quick_grid_table.item(r, c)
+                    if item is None:
+                        item = QTableWidgetItem("")
+                        item.setTextAlignment(Qt.AlignTop | Qt.AlignLeft)
+                        self.quick_grid_table.setItem(r, c, item)
+                    text = ""
+                    if r < len(rows) and c < len(rows[r]):
+                        text = rows[r][c]
+                    item.setText(text)
+        finally:
+            self.quick_grid_table.blockSignals(False)
+        self._autosize_quick_grid_table(adjust_panel=self.quick_grid_dock.isVisible())
+
     def _setup_quick_grid_panel(self) -> None:
         self.quick_grid_dock = QDockWidget("Planner Sale Operatorie", self)
         self.quick_grid_dock.setAllowedAreas(Qt.RightDockWidgetArea)
@@ -1766,6 +1821,7 @@ class MainWindow(QMainWindow):
 
     def on_quick_grid_item_changed(self, _item: QTableWidgetItem) -> None:
         self._autosize_quick_grid_table(adjust_panel=self.quick_grid_dock.isVisible())
+        self.schedule_autosave()
 
     def _fit_quick_grid_panel_width(self) -> None:
         self._autosize_quick_grid_table(adjust_panel=False)
@@ -2295,6 +2351,7 @@ class MainWindow(QMainWindow):
         finally:
             self.table.blockSignals(False)
             self._is_loading = False
+        self._load_quick_grid_cells([])
         self.revalidate_week()
 
     def on_week_selector_changed(self):
@@ -3373,6 +3430,7 @@ class MainWindow(QMainWindow):
         return {
             "cells": cells,
             "extra_rows": extra_rows,
+            "planner_so_cells": self._serialize_quick_grid_cells(),
             "night_counts": night_counts,
             "flagged_hours": flagged_hours,
         }
@@ -3434,6 +3492,7 @@ class MainWindow(QMainWindow):
                         else:
                             text = str(payload) if payload is not None else ""
                         item.setText(text)
+            self._load_quick_grid_cells(week_dict.get("planner_so_cells", []))
         finally:
             self.table.blockSignals(False)
             self._is_loading = False
