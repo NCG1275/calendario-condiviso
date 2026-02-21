@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import re
 import json
 import os
@@ -37,7 +37,7 @@ from PySide6.QtWidgets import (
 # ----------------------------
 
 APP_NAME = "Planner Turni Medici"
-APP_VERSION = "2b"
+APP_VERSION = "2.1"
 APP_AUTHOR = "GN Aru"
 APP_SETTINGS_ORG = "PlannerTurni"
 APP_SETTINGS_APP = "PlannerTurniMedici"
@@ -75,7 +75,7 @@ SHIFT_SHORTCUTS = {
 }
 ZERO_HOUR_LABELS = {"rs", "PT", "ro", "RF"}
 ZERO_HOUR_LABELS_CASEFOLD = {label.casefold(): label for label in ZERO_HOUR_LABELS}
-SPECIAL_HOUR_LABELS = {"aggp": 7, "cs": 7, "c": 7, "f": 7.36, "m": 6}
+SPECIAL_HOUR_LABELS = {"aggp": 7.36, "cs": 7.36, "c": 7.36, "f": 7.36, "m": 7.36}
 SPECIAL_HOUR_LABELS_CASEFOLD = {label.casefold(): label for label in SPECIAL_HOUR_LABELS}
 DEST_LABELS = {
     "ORTO",
@@ -429,16 +429,6 @@ class TwoLineEdit(QPlainTextEdit):
                     return
                 super().keyPressEvent(event)
                 return
-            if (
-                self._first_line_is_zero_hour_label()
-                or self._first_line_is_special_hour_label()
-                or self._first_line_is_single_line_shift()
-            ):
-                self.commit_requested.emit()
-                return
-            if self._line_count_after_insert("\n") <= self._max_lines:
-                super().keyPressEvent(event)
-                return
             self.commit_requested.emit()
             return
         super().keyPressEvent(event)
@@ -729,8 +719,8 @@ class MainWindow(QMainWindow):
         for lbl in (self.prev_title, self.main_title, self.stats_title):
             lbl.setFixedHeight(title_h)
             lbl.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.prev_panel.setVisible(False)
-        self.stats_panel.setVisible(False)
+        self._set_prev_panel_visibility(False)
+        self._set_stats_panel_visibility(False)
         self.main_splitter.setSizes([0, 1000, 0])
         self.main_splitter.splitterMoved.connect(self._on_main_splitter_moved)
 
@@ -773,7 +763,7 @@ class MainWindow(QMainWindow):
             self.prev_table.horizontalHeader().setSectionResizeMode(c, QHeaderView.Stretch)
 
         # Editing stile Excel
-        self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
+        self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.AnyKeyPressed)
         two_lines_height = self.table.fontMetrics().lineSpacing() * 2 + 6
         self.table.verticalHeader().setDefaultSectionSize(two_lines_height)
         self.prev_table.verticalHeader().setDefaultSectionSize(two_lines_height)
@@ -823,22 +813,30 @@ class MainWindow(QMainWindow):
         if not self.stats_panel.isVisible():
             self._fit_stats_panel_width()
             stats_target = self._stats_panel_last_width or self._stats_panel_preferred_width
-            main_target = max(sizes[1], self.main_panel.width())
+            main_target = max(1, sizes[1])
             prev_target = sizes[0] if self.prev_panel.isVisible() else 0
-            self._resize_window_width(stats_target, anchor_left=False)
-            self.stats_panel.setVisible(True)
+            applied = self._resize_window_width(stats_target, anchor_left=False)
+            stats_width = max(0, min(int(stats_target), int(applied)))
+            if stats_width > 0:
+                self._stats_panel_last_width = stats_width
+            self._set_stats_panel_visibility(True)
             QTimer.singleShot(
                 0,
-                lambda p=prev_target, m=main_target, s=stats_target: self._set_splitter_sizes(p, m, s),
+                lambda p=prev_target, m=main_target, s=stats_width: self._set_splitter_sizes(p, m, s),
             )
         else:
-            stats_current = max(sizes[2], self.stats_panel.width())
+            stats_current = max(0, int(sizes[2]))
             if stats_current > 0:
                 self._stats_panel_last_width = stats_current
-            main_target = max(sizes[1], self.main_panel.width()) + stats_current
+            main_target = max(1, sizes[1])
             prev_target = sizes[0] if self.prev_panel.isVisible() else 0
-            self.stats_panel.setVisible(False)
-            self._resize_window_width(-stats_current, anchor_left=False)
+            self._set_stats_panel_visibility(False)
+            applied = self._resize_window_width(-stats_current, anchor_left=False)
+            leftover = max(0, int(stats_current + applied))
+            if self.prev_panel.isVisible():
+                prev_target += leftover
+            else:
+                main_target += leftover
             QTimer.singleShot(
                 0,
                 lambda p=prev_target, m=main_target: self._set_splitter_sizes(p, m, 0),
@@ -850,22 +848,30 @@ class MainWindow(QMainWindow):
         if not self.prev_panel.isVisible():
             self._fit_prev_panel_width()
             prev_target = self._prev_panel_last_width or self._prev_panel_preferred_width
-            main_target = max(sizes[1], self.main_panel.width())
+            main_target = max(1, sizes[1])
             stats_target = sizes[2] if self.stats_panel.isVisible() else 0
-            self._resize_window_width(prev_target, anchor_left=True)
-            self.prev_panel.setVisible(True)
+            applied = self._resize_window_width(prev_target, anchor_left=True)
+            prev_width = max(0, min(int(prev_target), int(applied)))
+            if prev_width > 0:
+                self._prev_panel_last_width = prev_width
+            self._set_prev_panel_visibility(True)
             QTimer.singleShot(
                 0,
-                lambda p=prev_target, m=main_target, s=stats_target: self._set_splitter_sizes(p, m, s),
+                lambda p=prev_width, m=main_target, s=stats_target: self._set_splitter_sizes(p, m, s),
             )
         else:
-            prev_current = max(sizes[0], self.prev_panel.width())
+            prev_current = max(0, int(sizes[0]))
             if prev_current > 0:
                 self._prev_panel_last_width = prev_current
-            main_target = max(sizes[1], self.main_panel.width()) + prev_current
+            main_target = max(1, sizes[1])
             stats_target = sizes[2] if self.stats_panel.isVisible() else 0
-            self.prev_panel.setVisible(False)
-            self._resize_window_width(-prev_current, anchor_left=True)
+            self._set_prev_panel_visibility(False)
+            applied = self._resize_window_width(-prev_current, anchor_left=True)
+            leftover = max(0, int(prev_current + applied))
+            if self.stats_panel.isVisible():
+                stats_target += leftover
+            else:
+                main_target += leftover
             QTimer.singleShot(
                 0,
                 lambda m=main_target, s=stats_target: self._set_splitter_sizes(0, m, s),
@@ -884,9 +890,33 @@ class MainWindow(QMainWindow):
         stats = max(0, int(stats_w)) if self.stats_panel.isVisible() else 0
         self.main_splitter.setSizes([prev, main, stats])
 
-    def _resize_window_width(self, delta_width: int, anchor_left: bool = False) -> None:
-        if delta_width == 0 or self.isMaximized() or self.isFullScreen():
+    def _set_prev_panel_visibility(self, visible: bool) -> None:
+        if visible:
+            self.prev_panel.setMaximumWidth(16777215)
+            self.prev_table.setMaximumWidth(16777215)
+            self.prev_panel.setVisible(True)
             return
+        self.prev_panel.setVisible(False)
+        self.prev_panel.setMinimumWidth(0)
+        self.prev_table.setMinimumWidth(0)
+        self.prev_panel.setMaximumWidth(0)
+        self.prev_table.setMaximumWidth(0)
+
+    def _set_stats_panel_visibility(self, visible: bool) -> None:
+        if visible:
+            self.stats_panel.setMaximumWidth(16777215)
+            self.stats_table.setMaximumWidth(16777215)
+            self.stats_panel.setVisible(True)
+            return
+        self.stats_panel.setVisible(False)
+        self.stats_panel.setMinimumWidth(0)
+        self.stats_table.setMinimumWidth(0)
+        self.stats_panel.setMaximumWidth(0)
+        self.stats_table.setMaximumWidth(0)
+
+    def _resize_window_width(self, delta_width: int, anchor_left: bool = False) -> int:
+        if delta_width == 0 or self.isMaximized() or self.isFullScreen():
+            return 0
         geom = self.geometry()
         old_width = geom.width()
         new_width = max(self.minimumWidth(), old_width + int(delta_width))
@@ -897,7 +927,7 @@ class MainWindow(QMainWindow):
                 new_width = avail.width()
         applied_delta = new_width - old_width
         if applied_delta == 0:
-            return
+            return 0
         new_x = geom.x()
         if anchor_left:
             new_x = geom.x() - applied_delta
@@ -912,6 +942,7 @@ class MainWindow(QMainWindow):
             if new_x > max_x:
                 new_x = max_x
         self.setGeometry(new_x, geom.y(), new_width, geom.height())
+        return applied_delta
 
     def _on_main_splitter_moved(self, _pos: int, _index: int) -> None:
         sizes = self._current_splitter_sizes()
@@ -937,8 +968,8 @@ class MainWindow(QMainWindow):
     def _apply_restored_side_layout(self) -> None:
         prev_visible = bool(self._restored_prev_visible)
         stats_visible = bool(self._restored_stats_visible)
-        self.prev_panel.setVisible(prev_visible)
-        self.stats_panel.setVisible(stats_visible)
+        self._set_prev_panel_visibility(prev_visible)
+        self._set_stats_panel_visibility(stats_visible)
         self._sync_side_toggle_buttons()
 
         prev_w = self._prev_panel_last_width or self._prev_panel_preferred_width
@@ -2702,6 +2733,62 @@ class MainWindow(QMainWindow):
     def on_item_committed(self, item: QTableWidgetItem):
         # evita loop su colonna h
         if item.column() == 0 or self._is_loading:
+            return
+
+        if (item.text() or "").strip().casefold() == "ff":
+            friday_col = DAYS.index("Ven")
+            saturday_col = DAYS.index("Sab")
+            sunday_col = DAYS.index("Dom")
+            target_cols = list(range(item.column() + 1, friday_col + 1)) if item.column() < friday_col else []
+            can_fill_right = True
+            for col in target_cols:
+                right_item = self.table.item(item.row(), col)
+                if right_item and (right_item.text() or "").strip():
+                    can_fill_right = False
+                    break
+
+            self.table.blockSignals(True)
+            try:
+                item.setText("F")
+                if can_fill_right and item.column() < friday_col:
+                    for col in target_cols:
+                        right_item = self.table.item(item.row(), col)
+                        if right_item:
+                            right_item.setText("F")
+                    saturday_item = self.table.item(item.row(), saturday_col)
+                    if saturday_item:
+                        saturday_item.setText("RS")
+                    sunday_item = self.table.item(item.row(), sunday_col)
+                    if sunday_item:
+                        sunday_item.setText("RS")
+            finally:
+                self.table.blockSignals(False)
+
+            if item.row() < len(DOCTORS):
+                self.revalidate_week()
+                self.refresh_night_stats()
+            elif item.row() < DOCTOR_ROWS_COUNT:
+                self.revalidate_week()
+            self.schedule_autosave()
+            return
+
+        if (item.text() or "").strip().casefold() == "rss":
+            self.table.blockSignals(True)
+            try:
+                item.setText("RS")
+                if item.column() < len(DAYS) - 1:
+                    right_item = self.table.item(item.row(), item.column() + 1)
+                    if right_item:
+                        right_item.setText("RS")
+            finally:
+                self.table.blockSignals(False)
+
+            if item.row() < len(DOCTORS):
+                self.revalidate_week()
+                self.refresh_night_stats()
+            elif item.row() < DOCTOR_ROWS_COUNT:
+                self.revalidate_week()
+            self.schedule_autosave()
             return
 
         current_text = item.text() or ""
