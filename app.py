@@ -37,7 +37,7 @@ from PySide6.QtWidgets import (
 # ----------------------------
 
 APP_NAME = "Planner Turni Medici"
-APP_VERSION = "2.1"
+APP_VERSION = "2.2"
 APP_AUTHOR = "GN Aru"
 APP_SETTINGS_ORG = "PlannerTurni"
 APP_SETTINGS_APP = "PlannerTurniMedici"
@@ -429,6 +429,16 @@ class TwoLineEdit(QPlainTextEdit):
                     return
                 super().keyPressEvent(event)
                 return
+            if (
+                self._first_line_is_zero_hour_label()
+                or self._first_line_is_special_hour_label()
+                or self._first_line_is_single_line_shift()
+            ):
+                self.commit_requested.emit()
+                return
+            if self._line_count_after_insert("\n") <= self._max_lines:
+                super().keyPressEvent(event)
+                return
             self.commit_requested.emit()
             return
         super().keyPressEvent(event)
@@ -534,11 +544,18 @@ class MultilineDelegate(QStyledItemDelegate):
 
 class ShiftTableWidget(QTableWidget):
     def keyPressEvent(self, event):
-        if event.key() in (Qt.Key_Return, Qt.Key_Enter) and not self.state() == QAbstractItemView.EditingState:
+        if self.state() != QAbstractItemView.EditingState:
             current = self.currentItem()
             if current and bool(current.flags() & Qt.ItemIsEditable):
-                self.editItem(current)
-                return
+                if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+                    self.editItem(current)
+                    return
+
+                # Evita modifiche involontarie: sulle celle non vuote ignora la digitazione diretta.
+                text = event.text() or ""
+                if text and not (event.modifiers() & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)):
+                    if (current.text() or "").strip():
+                        return
         super().keyPressEvent(event)
 
 
@@ -636,7 +653,6 @@ class MainWindow(QMainWindow):
         self.prev_table.setFocusPolicy(Qt.NoFocus)
         self.prev_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         prev_panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        prev_layout.addWidget(self.prev_title)
         prev_layout.addWidget(self.prev_table)
         self.main_splitter.addWidget(prev_panel)
 
@@ -648,7 +664,6 @@ class MainWindow(QMainWindow):
         self.main_title = QLabel("Settimana corrente")
         self.table = ShiftTableWidget()
         self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        main_layout.addWidget(self.main_title)
         main_layout.addWidget(self.table)
         self.main_splitter.addWidget(main_panel)
 
@@ -716,7 +731,7 @@ class MainWindow(QMainWindow):
 
         layout.addLayout(content, 1)
         title_h = self.fontMetrics().height() + 6
-        for lbl in (self.prev_title, self.main_title, self.stats_title):
+        for lbl in (self.stats_title,):
             lbl.setFixedHeight(title_h)
             lbl.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self._set_prev_panel_visibility(False)
@@ -763,7 +778,11 @@ class MainWindow(QMainWindow):
             self.prev_table.horizontalHeader().setSectionResizeMode(c, QHeaderView.Stretch)
 
         # Editing stile Excel
-        self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.AnyKeyPressed)
+        self.table.setEditTriggers(
+            QAbstractItemView.DoubleClicked
+            | QAbstractItemView.SelectedClicked
+            | QAbstractItemView.AnyKeyPressed
+        )
         two_lines_height = self.table.fontMetrics().lineSpacing() * 2 + 6
         self.table.verticalHeader().setDefaultSectionSize(two_lines_height)
         self.prev_table.verticalHeader().setDefaultSectionSize(two_lines_height)
@@ -999,8 +1018,7 @@ class MainWindow(QMainWindow):
             table_width += self.prev_table.verticalScrollBar().sizeHint().width()
         table_width += self.prev_table.contentsMargins().left() + self.prev_table.contentsMargins().right()
         table_width = max(table_width, 1)
-        panel_width = max(table_width, self.prev_title.sizeHint().width())
-        self._prev_panel_preferred_width = panel_width
+        self._prev_panel_preferred_width = table_width
         self.prev_panel.setMinimumWidth(220)
         self.prev_table.setMinimumWidth(220)
 
