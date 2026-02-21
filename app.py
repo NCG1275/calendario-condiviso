@@ -7,6 +7,7 @@ import hashlib
 import subprocess
 import tempfile
 import zipfile
+import unicodedata
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from datetime import date, timedelta
@@ -42,7 +43,7 @@ from PySide6.QtWidgets import (
 # ----------------------------
 
 APP_NAME = "Planner Turni Medici"
-APP_VERSION = "2.6"
+APP_VERSION = "2.7"
 APP_AUTHOR = "GN Aru"
 APP_SETTINGS_ORG = "PlannerTurni"
 APP_SETTINGS_APP = "PlannerTurniMedici"
@@ -115,6 +116,28 @@ DEST_SHORTCUTS = {
     "orlp": "ORL.PED",
 }
 DEST_SHORTCUTS_CASEFOLD = {alias.casefold(): target for alias, target in DEST_SHORTCUTS.items()}
+SO_ERROR_BG = QColor(255, 175, 175)
+SO_DEST_EQUIV_ALIASES = {
+    "calo": "CAL\u00d2",
+    "cal\u00f2": "CAL\u00d2",
+    "end": "END",
+    "orto": "ORTO",
+    "zorcolo": "ZORCOLO",
+    "pisanu": "PISANU",
+    "vasc": "VASC",
+    "plast": "PLAST",
+    "plastica": "PLAST",
+}
+SO_DEST_EQUIV_PHRASES = {
+    "chirurgia generale": "CAL\u00d2",
+    "endoscopia": "END",
+    "ortopedia": "ORTO",
+    "chirurgia coloproctologica": "ZORCOLO",
+    "chirurgia d urgenza": "PISANU",
+    "chirurgia urgenza": "PISANU",
+    "chirurgia vascolare": "VASC",
+    "chirurgia plastica": "PLAST",
+}
 PINK_BG = QColor(255, 220, 220)
 ORANGE_BG = QColor(255, 235, 180)
 WHITE_BG = QColor(255, 255, 255)
@@ -164,6 +187,10 @@ DEST_LINE2_COLORS = {
 # accetta: "8-14", "8 - 14", "8-14**", "8-14 **"
 SHIFT_RE = re.compile(r"^\s*(\d{1,2}\s*-\s*\d{1,2})\s*(\*\*)?\s*$")
 SHIFT_WITH_DEST_RE = re.compile(r"^\s*(\d{1,2}\s*-\s*\d{1,2})\s*(\*\*)?(?:\s+(.+))?\s*$")
+SO_SHIFT_DEST_RE = re.compile(
+    r"(\d{1,2})\s*-\s*(\d{1,2})(.*?)(?=(?:\d{1,2}\s*-\s*\d{1,2})|$)",
+    re.IGNORECASE,
+)
 DATA_FILE = Path(__file__).resolve().parent / "planner_data.json"
 
 _APP_INSTANCE_LOCK: QLockFile | None = None
@@ -583,12 +610,48 @@ class TwoLineCellDelegate(QStyledItemDelegate):
 
 
 class ShiftTableWidget(QTableWidget):
+    def _enter_second_line_after_edit_open(self, row: int, col: int) -> None:
+        if self.state() != QAbstractItemView.EditingState:
+            return
+        if self.currentRow() != row or self.currentColumn() != col:
+            return
+
+        editor = QApplication.focusWidget()
+        if not isinstance(editor, TwoLineEdit):
+            return
+
+        text = editor.toPlainText()
+        if not text.strip() or "\n" in text:
+            return
+        if (
+            editor._is_single_line_quick_fill_shortcut()
+            or editor._first_line_is_zero_hour_label()
+            or editor._first_line_is_special_hour_label()
+            or editor._first_line_is_single_line_shift()
+        ):
+            return
+        if editor._line_count_after_insert("\n") > editor._max_lines:
+            return
+
+        cursor = editor.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        editor.setTextCursor(cursor)
+        editor.insertPlainText("\n")
+
     def keyPressEvent(self, event):
         if self.state() != QAbstractItemView.EditingState:
             current = self.currentItem()
             if current and bool(current.flags() & Qt.ItemIsEditable):
                 if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+                    open_on_second_line = bool((current.text() or "").strip())
+                    row = current.row()
+                    col = current.column()
                     self.editItem(current)
+                    if open_on_second_line:
+                        QTimer.singleShot(
+                            0,
+                            lambda r=row, c=col: self._enter_second_line_after_edit_open(r, c),
+                        )
                     return
 
                 # Evita modifiche involontarie: sulle celle non vuote ignora la digitazione diretta.
@@ -1695,6 +1758,7 @@ class MainWindow(QMainWindow):
         finally:
             self.quick_grid_table.blockSignals(False)
         self._autosize_quick_grid_table(adjust_panel=self.quick_grid_dock.isVisible())
+        self._revalidate_quick_grid_assignments()
 
     def _serialize_quick_grid_cells(self) -> List[List[str]]:
         rows: List[List[str]] = []
@@ -1739,6 +1803,7 @@ class MainWindow(QMainWindow):
         finally:
             self.quick_grid_table.blockSignals(False)
         self._autosize_quick_grid_table(adjust_panel=self.quick_grid_dock.isVisible())
+        self._revalidate_quick_grid_assignments()
 
     def _setup_quick_grid_panel(self) -> None:
         self.quick_grid_dock = QDockWidget("Planner Sale Operatorie", self)
@@ -1820,6 +1885,7 @@ class MainWindow(QMainWindow):
                     )
 
     def on_quick_grid_item_changed(self, _item: QTableWidgetItem) -> None:
+        self._revalidate_quick_grid_assignments()
         self._autosize_quick_grid_table(adjust_panel=self.quick_grid_dock.isVisible())
         self.schedule_autosave()
 
@@ -1862,8 +1928,10 @@ class MainWindow(QMainWindow):
             self.quick_grid_btn.setChecked(bool(visible))
         if visible:
             self.quick_grid_btn.setToolTip("Nascondi pannello 10x7")
+            self.revalidate_week()
         else:
             self.quick_grid_btn.setToolTip("Mostra pannello 10x7")
+            self.revalidate_week()
 
     def eventFilter(self, watched, event):
         if watched is self.quick_grid_dock and event.type() == QEvent.Resize:
@@ -2398,6 +2466,270 @@ class MainWindow(QMainWindow):
         shift = lines[0].strip() if lines else ""
         dest = lines[1].strip() if len(lines) > 1 else ""
         return shift, dest
+
+    def _fold_match_text(self, value: str) -> str:
+        text = str(value or "").casefold()
+        text = (
+            text.replace("â€™", "'")
+            .replace("’", "'")
+            .replace("`", "'")
+            .replace("´", "'")
+        )
+        text = unicodedata.normalize("NFKD", text)
+        text = "".join(ch for ch in text if not unicodedata.combining(ch))
+        text = re.sub(r"[^a-z0-9+ ]+", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+    def _normalize_so_destination(self, raw_dest: str, po_sg_row: bool = False) -> str:
+        token = str(raw_dest or "").strip()
+        if not token:
+            return ""
+
+        direct = normalize_dest_label(token)
+        if direct:
+            return direct
+
+        folded = self._fold_match_text(token)
+        if not folded:
+            return ""
+        if re.search(r"\bday\s+surgery\b", folded):
+            return "DS"
+
+        for chunk in re.split(r"[ +/]", folded):
+            part = chunk.strip()
+            if not part:
+                continue
+            alias_target = SO_DEST_EQUIV_ALIASES.get(part)
+            if alias_target:
+                return alias_target
+            direct_part = normalize_dest_label(part)
+            if direct_part:
+                return direct_part
+
+        for phrase, target in SO_DEST_EQUIV_PHRASES.items():
+            if phrase in folded:
+                return target
+
+        if "oculistic" in folded:
+            if po_sg_row:
+                return "SG"
+            return "OCUL.POL"
+        if "chirurg" in folded and "generale" in folded:
+            return "CAL\u00d2"
+        if "endoscop" in folded:
+            return "END"
+        if "ortoped" in folded:
+            return "ORTO"
+        if "chirurg" in folded and "coloproctolog" in folded:
+            return "ZORCOLO"
+        if "chirurg" in folded and "urgenza" in folded:
+            return "PISANU"
+        if "chirurg" in folded and "vascolar" in folded:
+            return "VASC"
+        if "chirurg" in folded and "plastica" in folded:
+            return "PLAST"
+
+        return ""
+
+    def _extract_so_cell_requirements(self, text: str, row_header: str = "") -> List[Tuple[int, int, str, str]]:
+        raw = str(text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+        if not raw:
+            return []
+
+        folded = self._fold_match_text(raw)
+        if folded in {"-", "--"}:
+            return []
+        folded_row_header = self._fold_match_text(row_header)
+        po_sg_row = "posg" in folded_row_header.replace(" ", "")
+
+        compact = re.sub(r"\s*\n\s*", " ", raw)
+        requirements: List[Tuple[int, int, str, str]] = []
+        seen: set[Tuple[int, int, str]] = set()
+        for match in SO_SHIFT_DEST_RE.finditer(compact):
+            try:
+                start = int(match.group(1))
+                end = int(match.group(2))
+            except ValueError:
+                continue
+            if start >= end:
+                continue
+
+            raw_dest = match.group(3).strip(" \t-:;,.")
+            dest = self._normalize_so_destination(raw_dest, po_sg_row=po_sg_row)
+            if not dest:
+                continue
+
+            slots: List[Tuple[int, int]] = []
+            if start <= 8 and end >= 14:
+                slots.append((8, 14))
+            if start <= 14 and end >= 20:
+                slots.append((14, 20))
+            if not slots:
+                slots.append((start, end))
+
+            label_text = raw_dest or dest
+            for slot_start, slot_end in slots:
+                key = (slot_start, slot_end, dest)
+                if key in seen:
+                    continue
+                seen.add(key)
+                requirements.append((slot_start, slot_end, dest, label_text))
+
+        return requirements
+
+    def _quick_grid_day_column_map(self) -> dict[int, int]:
+        day_tokens = {
+            1: ("lun", "lunedi", "monday"),
+            2: ("mar", "martedi", "tuesday"),
+            3: ("mer", "mercoledi", "wednesday"),
+            4: ("gio", "giovedi", "thursday"),
+            5: ("ven", "venerdi", "friday"),
+            6: ("sab", "sabato", "saturday"),
+            7: ("dom", "domenica", "sunday"),
+        }
+        mapping: dict[int, int] = {}
+
+        for col in range(self.quick_grid_table.columnCount()):
+            header_item = self.quick_grid_table.item(0, col)
+            header_text = header_item.text() if header_item else ""
+            folded = self._fold_match_text(header_text)
+            if not folded:
+                continue
+            for day_col, tokens in day_tokens.items():
+                if any(re.search(rf"\b{re.escape(token)}\b", folded) for token in tokens):
+                    mapping[col] = day_col
+                    break
+
+        if mapping:
+            return mapping
+
+        first_header_item = self.quick_grid_table.item(0, 0)
+        first_header = self._fold_match_text(first_header_item.text() if first_header_item else "")
+        first_col_is_day = any(day in first_header for day in ("lun", "mar", "mer", "gio", "ven", "sab", "dom"))
+        if first_col_is_day:
+            for col in range(min(self.quick_grid_table.columnCount(), len(DAYS) - 1)):
+                mapping[col] = col + 1
+            return mapping
+
+        for col in range(1, self.quick_grid_table.columnCount()):
+            if 1 <= col < len(DAYS):
+                mapping[col] = col
+        return mapping
+
+    def _build_week_day_segments(self) -> dict[int, List[Tuple[int, int, str]]]:
+        coverage = {col: [] for col in range(1, len(DAYS))}
+        for row in range(len(DOCTORS)):
+            for col in range(1, len(DAYS)):
+                item = self.table.item(row, col)
+                text = item.text() if item else ""
+                segments, _, _ = self.segments_for_cell(text, col)
+                for start, end, label in segments:
+                    if label == "GN":
+                        continue
+                    coverage[col].append((start, end, label))
+        return coverage
+
+    def _build_so_day_requirements(self) -> dict[int, List[Tuple[int, int, str, str]]]:
+        requirements_by_day = {col: [] for col in range(1, len(DAYS))}
+        if not hasattr(self, "quick_grid_table"):
+            return requirements_by_day
+
+        day_map = self._quick_grid_day_column_map()
+        for row in range(self.quick_grid_table.rowCount()):
+            for col in range(self.quick_grid_table.columnCount()):
+                day_col = day_map.get(col)
+                if day_col is None:
+                    continue
+                item = self.quick_grid_table.item(row, col)
+                if item is None:
+                    continue
+                row_header_item = self.quick_grid_table.item(row, 0)
+                row_header_text = row_header_item.text() if row_header_item else ""
+                requirements_by_day[day_col].extend(
+                    self._extract_so_cell_requirements(item.text(), row_header=row_header_text)
+                )
+        return requirements_by_day
+
+    def _normalize_planner_match_slot(self, start: int, end: int) -> Tuple[int, int]:
+        # Nel confronto Planner SO <-> settimana corrente considera 8-15 e 8-16
+        # equivalenti alla fascia mattina 8-14.
+        if int(start) == 8 and int(end) in {15, 16}:
+            return 8, 14
+        return int(start), int(end)
+
+    def _has_week_assignment_for_slot(
+        self,
+        day_segments: List[Tuple[int, int, str]],
+        req_start: int,
+        req_end: int,
+        req_dest: str,
+    ) -> bool:
+        req_start_n, req_end_n = self._normalize_planner_match_slot(req_start, req_end)
+        for start, end, dest in day_segments:
+            if dest != req_dest:
+                continue
+            seg_start_n, seg_end_n = self._normalize_planner_match_slot(start, end)
+            if seg_start_n <= req_start_n and seg_end_n >= req_end_n:
+                return True
+        return False
+
+    def _has_so_requirement_for_slot(
+        self,
+        day_requirements: List[Tuple[int, int, str, str]],
+        seg_start: int,
+        seg_end: int,
+        seg_dest: str,
+    ) -> bool:
+        seg_start_n, seg_end_n = self._normalize_planner_match_slot(seg_start, seg_end)
+        for req_start, req_end, req_dest, _ in day_requirements:
+            if req_dest != seg_dest:
+                continue
+            req_start_n, req_end_n = self._normalize_planner_match_slot(req_start, req_end)
+            if req_start_n <= seg_start_n and req_end_n >= seg_end_n:
+                return True
+        return False
+
+    def _revalidate_quick_grid_assignments(self) -> None:
+        if not hasattr(self, "quick_grid_table"):
+            return
+
+        week_segments = self._build_week_day_segments()
+        day_map = self._quick_grid_day_column_map()
+        planner_tip_prefix = "Planner SO:"
+
+        self.quick_grid_table.blockSignals(True)
+        try:
+            for row in range(self.quick_grid_table.rowCount()):
+                for col in range(self.quick_grid_table.columnCount()):
+                    item = self.quick_grid_table.item(row, col)
+                    if item is None:
+                        continue
+
+                    errors: List[str] = []
+                    if col in day_map:
+                        day_col = day_map[col]
+                        row_header_item = self.quick_grid_table.item(row, 0)
+                        row_header_text = row_header_item.text() if row_header_item else ""
+                        requirements = self._extract_so_cell_requirements(item.text(), row_header=row_header_text)
+                        if requirements:
+                            day_segments = week_segments.get(day_col, [])
+                            for req_start, req_end, req_dest, req_label in requirements:
+                                if not self._has_week_assignment_for_slot(day_segments, req_start, req_end, req_dest):
+                                    errors.append(f"{req_start}-{req_end} {req_label}".strip())
+
+                    if errors:
+                        item.setBackground(SO_ERROR_BG)
+                        item.setToolTip(
+                            f"{planner_tip_prefix} turno/destinazione non assegnato nella settimana corrente:\n"
+                            + "\n".join(errors)
+                        )
+                    else:
+                        item.setBackground(WHITE_BG)
+                        if (item.toolTip() or "").startswith(planner_tip_prefix):
+                            item.setToolTip("")
+        finally:
+            self.quick_grid_table.blockSignals(False)
 
     def _normalize_shift(self, shift_line: str) -> str:
         m = SHIFT_RE.match(shift_line)
@@ -3192,6 +3524,9 @@ class MainWindow(QMainWindow):
             night_assignments = {col: {"20-24": [], "0-8": []} for col in range(1, len(DAYS))}
             rs_error_rows: set[int] = set()
             day_20_24_error_cols: set[int] = set()
+            planner_open = bool(getattr(self, "quick_grid_dock", None) and self.quick_grid_dock.isVisible())
+            planner_has_content = planner_open and self._quick_grid_has_content()
+            so_requirements_by_day = self._build_so_day_requirements() if planner_has_content else {}
 
             for row in range(len(DOCTORS)):
                 hours = 0.0
@@ -3216,20 +3551,34 @@ class MainWindow(QMainWindow):
                             break
                     cell_bg = self._get_cell_background(cell_shift, cell_dest, col)
                     hours += cell_hours
+                    planner_errors: List[str] = []
+                    if planner_has_content:
+                        day_requirements = so_requirements_by_day.get(col, [])
+                        for seg_start, seg_end, seg_label in segments:
+                            if seg_label == "GN":
+                                continue
+                            if str(seg_label).casefold() in {"g", "gpo"}:
+                                continue
+                            if not self._has_so_requirement_for_slot(day_requirements, seg_start, seg_end, seg_label):
+                                planner_errors.append(
+                                    "Planner SO: turno/destinazione non compatibile "
+                                    f"({seg_start}-{seg_end} {seg_label})"
+                                )
+                    combined_errors = list(errors) + planner_errors
 
-                    if errors:
-                        only_dest_required = all(err == DEST_REQUIRED_ERROR for err in errors)
+                    if combined_errors:
+                        only_dest_required = all(err == DEST_REQUIRED_ERROR for err in combined_errors)
                         if only_dest_required:
                             self._set_cell_style(
                                 row,
                                 col,
                                 cell_bg,
-                                "\n".join(errors),
+                                "\n".join(combined_errors),
                                 is_error=True,
                                 dest_required_line2=True,
                             )
                         else:
-                            self._set_cell_style(row, col, PINK_BG, "\n".join(errors), is_error=True)
+                            self._set_cell_style(row, col, PINK_BG, "\n".join(combined_errors), is_error=True)
                     else:
                         self._set_cell_style(row, col, cell_bg, "")
                         for shift in shifts:
@@ -3345,6 +3694,7 @@ class MainWindow(QMainWindow):
             self._revalidate_non_analysis_rows()
             self.doctor_header.set_error_rows(rs_error_rows)
             self.day_header.set_error_cols(day_20_24_error_cols)
+            self._revalidate_quick_grid_assignments()
         finally:
             self.table.blockSignals(False)
             self._is_loading = False
