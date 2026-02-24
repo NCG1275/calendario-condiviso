@@ -2,6 +2,7 @@
 import re
 import json
 import os
+import io
 import shutil
 import hashlib
 import subprocess
@@ -43,7 +44,7 @@ from PySide6.QtWidgets import (
 # ----------------------------
 
 APP_NAME = "Planner Turni Medici"
-APP_VERSION = "2.7"
+APP_VERSION = "2.8"
 APP_AUTHOR = "GN Aru"
 APP_SETTINGS_ORG = "PlannerTurni"
 APP_SETTINGS_APP = "PlannerTurniMedici"
@@ -537,11 +538,14 @@ class DayHeaderView(QHeaderView):
 class MultilineDelegate(QStyledItemDelegate):
     text_live_changed = Signal(int, int, str)  # row, col, text
     max_lines_reached = Signal()
+    editing_started = Signal(int, int, bool)  # row, col, was_empty
 
     def createEditor(self, parent, option, index):
         editor = TwoLineEdit(parent)
         if index.row() >= EXTRA_START_ROW:
             editor.set_max_lines(1)
+        initial_text = str(index.data() or "")
+        self.editing_started.emit(index.row(), index.column(), not initial_text.strip())
         editor.setTabChangesFocus(True)  # TAB cambia cella
         editor.setFixedHeight(option.rect.height())
         editor.textChanged.connect(lambda: self._on_text_changed(index, editor))
@@ -610,6 +614,23 @@ class TwoLineCellDelegate(QStyledItemDelegate):
 
 
 class ShiftTableWidget(QTableWidget):
+    def _open_current_empty_cell_editor(self) -> None:
+        if self.state() == QAbstractItemView.EditingState:
+            return
+        current = self.currentItem()
+        if not current:
+            return
+        if not bool(current.flags() & Qt.ItemIsEditable):
+            return
+        if (current.text() or "").strip():
+            return
+        self.setFocus()
+        self.editItem(current)
+
+    def selectionChanged(self, selected, deselected):
+        super().selectionChanged(selected, deselected)
+        QTimer.singleShot(0, self._open_current_empty_cell_editor)
+
     def _enter_second_line_after_edit_open(self, row: int, col: int) -> None:
         if self.state() != QAbstractItemView.EditingState:
             return
@@ -688,6 +709,7 @@ class MainWindow(QMainWindow):
         iso_today = today.isocalendar()
         self._next_week_monday_shift_cache: dict[str, List[str]] = {}
         self._prev_week_sunday_shift_cache: dict[str, List[str]] = {}
+        self._pending_table_edit_context: Tuple[int, int, bool] | None = None
         self.data_file = resolve_data_file()
         self.data_file_weeks = _week_count_in_json(self.data_file)
         self.current_year, self.current_week_index = self._startup_week_from_data(
@@ -723,8 +745,8 @@ class MainWindow(QMainWindow):
         self.dest_help_btn.clicked.connect(self.show_dest_shortcuts_popup)
         controls.addWidget(self.dest_help_btn)
         self.export_doc_btn = QToolButton(self)
-        self.export_doc_btn.setText("Export DOC")
-        self.export_doc_btn.setToolTip("Esporta la settimana corrente in formato DOC (A4)")
+        self.export_doc_btn.setText("Export DOCX")
+        self.export_doc_btn.setToolTip("Esporta la settimana corrente in formato DOCX (A4)")
         self.export_doc_btn.clicked.connect(self.export_main_week_doc)
         controls.addWidget(self.export_doc_btn)
         self.import_so_btn = QToolButton(self)
@@ -935,6 +957,7 @@ class MainWindow(QMainWindow):
         self.delegate = MultilineDelegate()
         self.delegate.text_live_changed.connect(self.on_text_live_changed)
         self.delegate.max_lines_reached.connect(self.on_max_lines_reached)
+        self.delegate.editing_started.connect(self.on_table_cell_edit_started)
         for c in range(1, len(DAYS)):
             self.table.setItemDelegateForColumn(c, self.delegate)
 
@@ -1955,27 +1978,27 @@ class MainWindow(QMainWindow):
 
     def export_main_week_doc(self) -> None:
         week_key = get_week_key(self.current_year, self.current_week_index)
-        default_name = f"turni_{week_key}.doc"
+        default_name = f"turni_{week_key}.docx"
         default_path = Path.home() / default_name
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Esporta settimana principale in DOC",
+            "Esporta settimana principale in DOCX",
             str(default_path),
-            "Documento Word (*.doc);;Rich Text Format (*.rtf)",
+            "Documento Word (*.docx)",
         )
         if not file_path:
             return
 
         output_path = Path(file_path)
-        if output_path.suffix.lower() not in {".doc", ".rtf"}:
-            output_path = output_path.with_suffix(".doc")
+        if output_path.suffix.lower() != ".docx":
+            output_path = output_path.with_suffix(".docx")
 
         try:
-            output_path.write_text(self._build_main_week_doc_rtf(), encoding="utf-8")
+            output_path.write_bytes(self._build_main_week_docx())
         except OSError as exc:
             QMessageBox.critical(
                 self,
-                "Export DOC",
+                "Export DOCX",
                 f"Errore durante l'esportazione:\n{exc}",
             )
             return
@@ -1991,9 +2014,319 @@ class MainWindow(QMainWindow):
         except OSError as exc:
             QMessageBox.warning(
                 self,
-                "Export DOC",
+                "Export DOCX",
                 f"File esportato ma non è stato possibile aprirlo automaticamente:\n{exc}",
             )
+
+    def _build_main_week_docx(self) -> bytes:
+        week_dates = get_week_dates_iso(self.current_year, self.current_week_index)
+        week_key = get_week_key(self.current_year, self.current_week_index)
+        title = (
+            f"Settimana {week_key} "
+            f"({week_dates[0].strftime('%d/%m')} - {week_dates[-1].strftime('%d/%m')})"
+        )
+        generated_on = f"Generato il {date.today().strftime('%d/%m/%Y')}"
+        header_lines = [
+            "SERVIZIO SANITARIO REGIONE SARDEGNA",
+            "AZIENDA OSPEDALIERO - UNIVERSITARIA DI CAGLIARI",
+            "U.O.C. DI ANESTESIA RIANIMAZIONE TERAPIA ANTALGICA",
+            "Direttore Prof. Gabriele Finco",
+        ]
+        service_title = "ORARIO DI SERVIZIO"
+
+        headers = ["Medico"]
+        for col in range(len(DAYS)):
+            header_item = self.table.horizontalHeaderItem(col)
+            header_text = (header_item.text() if header_item else DAYS[col]).replace("\n", " ").strip()
+            headers.append(header_text)
+
+        rows: List[List[str]] = []
+        for row in range(self.table.rowCount()):
+            if row < DOCTOR_ROWS_COUNT:
+                row_label = TABLE_DOCTORS[row]
+            else:
+                row_label = EXTRA_ROWS[row - EXTRA_START_ROW]
+
+            row_values = [row_label]
+            for col in range(len(DAYS)):
+                item = self.table.item(row, col)
+                if row >= EXTRA_START_ROW and col == 0:
+                    cell_text = ""
+                else:
+                    cell_text = (item.text() if item else "").strip()
+                row_values.append(cell_text)
+            rows.append(row_values)
+
+        page_width_twips = 11907
+        page_height_twips = 16840
+        margin_left = 540
+        margin_right = 540
+        usable_page_twips = page_width_twips - margin_left - margin_right
+
+        day_cols_count = max(len(headers) - 2, 1)
+
+        def text_units(value: str) -> int:
+            lines = [line.strip() for line in value.splitlines() if line.strip()]
+            if not lines:
+                return 1
+            return max(len(line) for line in lines)
+
+        def max_units_for_col(col_idx: int) -> int:
+            header_units = text_units(headers[col_idx])
+            row_units = max((text_units(row[col_idx]) for row in rows), default=0)
+            return max(header_units, row_units, 1)
+
+        doctor_units = max_units_for_col(0)
+        h_units = max_units_for_col(1)
+        doctor_col = min(max(980 + doctor_units * 18, 1050), 1750)
+        h_col = min(max(260 + h_units * 30, 420), 640)
+
+        min_day_width = 360
+        min_required_for_days = day_cols_count * min_day_width
+        available_for_days = usable_page_twips - doctor_col - h_col
+        if available_for_days < min_required_for_days:
+            deficit = min_required_for_days - available_for_days
+            doctor_reducible = max(doctor_col - 900, 0)
+            reduce_doctor = min(deficit, doctor_reducible)
+            doctor_col -= reduce_doctor
+            deficit -= reduce_doctor
+            h_reducible = max(h_col - 320, 0)
+            reduce_h = min(deficit, h_reducible)
+            h_col -= reduce_h
+            available_for_days = usable_page_twips - doctor_col - h_col
+
+        day_units = [max(max_units_for_col(idx), 4) for idx in range(2, len(headers))]
+        day_units_sum = sum(day_units) or day_cols_count
+        day_widths: List[int] = []
+        for units in day_units:
+            proposed = (available_for_days * units) // day_units_sum
+            day_widths.append(max(min_day_width, proposed))
+
+        adjust = available_for_days - sum(day_widths)
+        if day_widths and adjust != 0:
+            order = sorted(range(len(day_widths)), key=lambda i: day_units[i], reverse=(adjust > 0))
+            step = 1 if adjust > 0 else -1
+            guard = 0
+            while adjust != 0 and guard < 20000:
+                idx = order[guard % len(order)]
+                if step < 0 and day_widths[idx] <= 300:
+                    guard += 1
+                    if guard >= len(order) * 3:
+                        break
+                    continue
+                day_widths[idx] += step
+                adjust -= step
+                guard += 1
+
+        col_widths = [doctor_col, h_col] + day_widths
+
+        w_ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+        xml_ns = "http://www.w3.org/XML/1998/namespace"
+        ET.register_namespace("w", w_ns)
+
+        def w_tag(tag: str) -> str:
+            return f"{{{w_ns}}}{tag}"
+
+        def w_attr(name: str) -> str:
+            return f"{{{w_ns}}}{name}"
+
+        document = ET.Element(w_tag("document"))
+        body = ET.SubElement(document, w_tag("body"))
+
+        def add_run(paragraph: ET.Element, text: str, bold: bool = False, italic: bool = False) -> None:
+            run = ET.SubElement(paragraph, w_tag("r"))
+            run_props = ET.SubElement(run, w_tag("rPr"))
+            fonts = ET.SubElement(run_props, w_tag("rFonts"))
+            fonts.set(w_attr("ascii"), "Arial")
+            fonts.set(w_attr("hAnsi"), "Arial")
+            fonts.set(w_attr("cs"), "Arial")
+            fonts.set(w_attr("eastAsia"), "Arial")
+            size = ET.SubElement(run_props, w_tag("sz"))
+            size.set(w_attr("val"), "18")
+            size_cs = ET.SubElement(run_props, w_tag("szCs"))
+            size_cs.set(w_attr("val"), "18")
+            if bold:
+                ET.SubElement(run_props, w_tag("b"))
+            if italic:
+                ET.SubElement(run_props, w_tag("i"))
+            text_node = ET.SubElement(run, w_tag("t"))
+            if text and text != text.strip():
+                text_node.set(f"{{{xml_ns}}}space", "preserve")
+            text_node.text = text
+
+        def add_break(paragraph: ET.Element) -> None:
+            run = ET.SubElement(paragraph, w_tag("r"))
+            ET.SubElement(run, w_tag("br"))
+
+        def add_paragraph(
+            parent: ET.Element,
+            text: str = "",
+            bold: bool = False,
+            italic: bool = False,
+            align: str | None = None,
+        ) -> ET.Element:
+            paragraph = ET.SubElement(parent, w_tag("p"))
+            if align:
+                paragraph_props = ET.SubElement(paragraph, w_tag("pPr"))
+                justify = ET.SubElement(paragraph_props, w_tag("jc"))
+                justify.set(w_attr("val"), align)
+
+            lines = text.splitlines()
+            if not lines:
+                add_run(paragraph, "", bold=bold, italic=italic)
+                return paragraph
+            for idx, line in enumerate(lines):
+                if idx > 0:
+                    add_break(paragraph)
+                add_run(paragraph, line, bold=bold, italic=italic)
+            return paragraph
+
+        for idx, line in enumerate(header_lines):
+            add_paragraph(body, line, bold=(idx < 3), align="center")
+        add_paragraph(body, service_title, bold=True, align="center")
+        add_paragraph(body, "")
+        add_paragraph(body, title, bold=True)
+        add_paragraph(body, generated_on)
+        add_paragraph(body, "")
+
+        table = ET.SubElement(body, w_tag("tbl"))
+        table_props = ET.SubElement(table, w_tag("tblPr"))
+        table_width = ET.SubElement(table_props, w_tag("tblW"))
+        table_width.set(w_attr("w"), "0")
+        table_width.set(w_attr("type"), "auto")
+        table_layout = ET.SubElement(table_props, w_tag("tblLayout"))
+        table_layout.set(w_attr("type"), "fixed")
+        table_cell_margins = ET.SubElement(table_props, w_tag("tblCellMar"))
+        for side, value in (("top", "0"), ("bottom", "0"), ("left", "60"), ("right", "60")):
+            margin = ET.SubElement(table_cell_margins, w_tag(side))
+            margin.set(w_attr("w"), value)
+            margin.set(w_attr("type"), "dxa")
+        borders = ET.SubElement(table_props, w_tag("tblBorders"))
+        for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+            border = ET.SubElement(borders, w_tag(edge))
+            border.set(w_attr("val"), "single")
+            border.set(w_attr("sz"), "4")
+            border.set(w_attr("space"), "0")
+            border.set(w_attr("color"), "auto")
+
+        grid = ET.SubElement(table, w_tag("tblGrid"))
+        for width in col_widths:
+            grid_col = ET.SubElement(grid, w_tag("gridCol"))
+            grid_col.set(w_attr("w"), str(max(120, int(width))))
+
+        def append_row(
+            cells: List[str],
+            bold_cols: set[int] | None = None,
+            shade_fill: str | None = None,
+        ) -> None:
+            if bold_cols is None:
+                bold_cols = set()
+            row_node = ET.SubElement(table, w_tag("tr"))
+            row_props = ET.SubElement(row_node, w_tag("trPr"))
+            row_height = ET.SubElement(row_props, w_tag("trHeight"))
+            row_height.set(w_attr("val"), "430")
+            row_height.set(w_attr("hRule"), "exact")
+            for col_idx, value in enumerate(cells):
+                cell = ET.SubElement(row_node, w_tag("tc"))
+                cell_props = ET.SubElement(cell, w_tag("tcPr"))
+                cell_width = ET.SubElement(cell_props, w_tag("tcW"))
+                cell_width.set(w_attr("type"), "dxa")
+                cell_width.set(w_attr("w"), str(max(120, int(col_widths[col_idx]))))
+                if shade_fill:
+                    shading = ET.SubElement(cell_props, w_tag("shd"))
+                    shading.set(w_attr("val"), "clear")
+                    shading.set(w_attr("color"), "auto")
+                    shading.set(w_attr("fill"), shade_fill)
+                paragraph = ET.SubElement(cell, w_tag("p"))
+                paragraph_props = ET.SubElement(paragraph, w_tag("pPr"))
+                spacing = ET.SubElement(paragraph_props, w_tag("spacing"))
+                spacing.set(w_attr("before"), "0")
+                spacing.set(w_attr("after"), "0")
+                spacing.set(w_attr("line"), "216")
+                spacing.set(w_attr("lineRule"), "auto")
+                bold = col_idx in bold_cols
+
+                lines = value.splitlines()
+                if col_idx >= 2:
+                    trimmed = [line.strip() for line in lines]
+                    if len(trimmed) > 1:
+                        has_text = False
+                        first_line = trimmed[0]
+                        if first_line:
+                            add_run(paragraph, first_line, bold=bold)
+                            has_text = True
+                        for line in trimmed[1:]:
+                            if not line:
+                                continue
+                            if has_text:
+                                add_break(paragraph)
+                            add_run(paragraph, line, bold=bold, italic=True)
+                            has_text = True
+                        if not has_text:
+                            add_run(paragraph, "", bold=bold)
+                        continue
+
+                if not lines:
+                    add_run(paragraph, "", bold=bold)
+                else:
+                    for idx, line in enumerate(lines):
+                        if idx > 0:
+                            add_break(paragraph)
+                        add_run(paragraph, line, bold=bold)
+
+        header_bold_cols = {
+            idx for idx, label in enumerate(headers) if label.split(" ", 1)[0].strip() in DAYS[1:]
+        }
+        rep_row_start = EXTRA_START_ROW
+
+        append_row(headers, bold_cols=header_bold_cols)
+        for row_idx, row_values in enumerate(rows):
+            bold_cols = {0}
+            if row_idx >= rep_row_start:
+                for col_idx, value in enumerate(row_values):
+                    if col_idx >= 2 and value.strip():
+                        bold_cols.add(col_idx)
+            shade_fill = "F2F2F2" if (row_idx % 2 == 1) else None
+            append_row(row_values, bold_cols=bold_cols, shade_fill=shade_fill)
+
+        section_props = ET.SubElement(body, w_tag("sectPr"))
+        page_size = ET.SubElement(section_props, w_tag("pgSz"))
+        page_size.set(w_attr("w"), str(page_width_twips))
+        page_size.set(w_attr("h"), str(page_height_twips))
+        page_margin = ET.SubElement(section_props, w_tag("pgMar"))
+        page_margin.set(w_attr("top"), "720")
+        page_margin.set(w_attr("right"), str(margin_right))
+        page_margin.set(w_attr("bottom"), "720")
+        page_margin.set(w_attr("left"), str(margin_left))
+        page_margin.set(w_attr("header"), "708")
+        page_margin.set(w_attr("footer"), "708")
+        page_margin.set(w_attr("gutter"), "0")
+
+        document_xml = ET.tostring(document, encoding="utf-8", xml_declaration=True)
+        content_types_xml = (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            '<Default Extension="xml" ContentType="application/xml"/>'
+            '<Override PartName="/word/document.xml" '
+            'ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+            "</Types>"
+        )
+        rels_xml = (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" '
+            'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+            'Target="word/document.xml"/>'
+            "</Relationships>"
+        )
+
+        output = io.BytesIO()
+        with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as docx_zip:
+            docx_zip.writestr("[Content_Types].xml", content_types_xml)
+            docx_zip.writestr("_rels/.rels", rels_xml)
+            docx_zip.writestr("word/document.xml", document_xml)
+        return output.getvalue()
 
     def _build_main_week_doc_rtf(self) -> str:
         week_dates = get_week_dates_iso(self.current_year, self.current_week_index)
@@ -4009,6 +4342,7 @@ class MainWindow(QMainWindow):
                 self.refresh_night_stats()
             elif item.row() < DOCTOR_ROWS_COUNT:
                 self.revalidate_week()
+            self._maybe_advance_to_next_empty_cell(item)
             self.schedule_autosave()
             return
 
@@ -4028,6 +4362,7 @@ class MainWindow(QMainWindow):
                 self.refresh_night_stats()
             elif item.row() < DOCTOR_ROWS_COUNT:
                 self.revalidate_week()
+            self._maybe_advance_to_next_empty_cell(item)
             self.schedule_autosave()
             return
 
@@ -4059,7 +4394,58 @@ class MainWindow(QMainWindow):
             self.refresh_night_stats()
         elif item.row() < DOCTOR_ROWS_COUNT:
             self.revalidate_week()
+        self._maybe_advance_to_next_empty_cell(item)
         self.schedule_autosave()
+
+    def on_table_cell_edit_started(self, row: int, col: int, was_empty: bool) -> None:
+        self._pending_table_edit_context = (row, col, was_empty)
+
+    def _maybe_advance_to_next_empty_cell(self, item: QTableWidgetItem) -> None:
+        context = self._pending_table_edit_context
+        self._pending_table_edit_context = None
+        if context is None:
+            return
+
+        row, col, was_empty = context
+        if row != item.row() or col != item.column() or not was_empty:
+            return
+        if not (item.text() or "").strip():
+            return
+        if item.column() >= len(DAYS) - 1:
+            return
+
+        right_item = self.table.item(item.row(), item.column() + 1)
+        if right_item and not (right_item.text() or "").strip():
+            target_row = item.row()
+            target_col = item.column() + 1
+            self.table.setCurrentCell(target_row, target_col)
+            self._queue_open_empty_cell_editor(target_row, target_col, retries=8)
+
+    def _queue_open_empty_cell_editor(self, row: int, col: int, retries: int = 0) -> None:
+        QTimer.singleShot(
+            0,
+            lambda r=row, c=col, left=retries: self._open_empty_cell_editor(r, c, left),
+        )
+
+    def _open_empty_cell_editor(self, row: int, col: int, retries_left: int = 0) -> None:
+        target_item = self.table.item(row, col)
+        if not target_item:
+            return
+        if not bool(target_item.flags() & Qt.ItemIsEditable):
+            return
+        if (target_item.text() or "").strip():
+            return
+        if self.table.currentRow() != row or self.table.currentColumn() != col:
+            return
+        if self.table.state() == QAbstractItemView.EditingState:
+            if retries_left > 0:
+                QTimer.singleShot(
+                    15,
+                    lambda r=row, c=col, left=retries_left - 1: self._open_empty_cell_editor(r, c, left),
+                )
+            return
+        self.table.setFocus()
+        self.table.editItem(target_item)
 
     def on_max_lines_reached(self):
         self.statusBar().showMessage("Max 2 righe per cella", 2000)
