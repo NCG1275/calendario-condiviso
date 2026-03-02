@@ -11,7 +11,7 @@ import zipfile
 import unicodedata
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import List, Tuple
 
 from PySide6.QtCore import Qt, Signal, QTimer, QSignalBlocker, QSettings, QLockFile, QEvent
@@ -44,7 +44,7 @@ from PySide6.QtWidgets import (
 # ----------------------------
 
 APP_NAME = "Planner Turni Medici"
-APP_VERSION = "2.8"
+APP_VERSION = "2.9"
 APP_AUTHOR = "GN Aru"
 APP_SETTINGS_ORG = "PlannerTurni"
 APP_SETTINGS_APP = "PlannerTurniMedici"
@@ -704,6 +704,7 @@ class MainWindow(QMainWindow):
         self._restore_window_size()
         self._is_loading = False
         self._dirty = False
+        self._corrupt_json_backup_done = False
 
         today = date.today()
         iso_today = today.isocalendar()
@@ -814,16 +815,25 @@ class MainWindow(QMainWindow):
         stats_layout.setSpacing(6)
         self.stats_title = QLabel("Statistiche")
         self.stats_table = QTableWidget()
-        self.stats_table.setColumnCount(3)
+        self.stats_table.setColumnCount(6)
         self.stats_table.setRowCount(0)
-        self.stats_table.setHorizontalHeaderLabels(["GN", "GW", "P"])
+        self.stats_table.setHorizontalHeaderLabels(["GN", "SD", "SN", "DD", "DN", "P"])
         gn_header = self.stats_table.horizontalHeaderItem(0)
-        gw_header = self.stats_table.horizontalHeaderItem(1)
-        p_header = self.stats_table.horizontalHeaderItem(2)
+        sd_header = self.stats_table.horizontalHeaderItem(1)
+        sn_header = self.stats_table.horizontalHeaderItem(2)
+        dd_header = self.stats_table.horizontalHeaderItem(3)
+        dn_header = self.stats_table.horizontalHeaderItem(4)
+        p_header = self.stats_table.horizontalHeaderItem(5)
         if gn_header:
             gn_header.setToolTip("Guardie notturne")
-        if gw_header:
-            gw_header.setToolTip("Guardie weekend")
+        if sd_header:
+            sd_header.setToolTip("Guardia Diurna Sabato")
+        if sn_header:
+            sn_header.setToolTip("Guardia Notturna Sabato")
+        if dd_header:
+            dd_header.setToolTip("Guardia Diurna Domenica")
+        if dn_header:
+            dn_header.setToolTip("Guardia Notturna Domenica")
         if p_header:
             p_header.setToolTip("Turni a progetto")
         self.stats_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -2819,11 +2829,25 @@ class MainWindow(QMainWindow):
         if not token:
             return ""
 
+        folded = self._fold_match_text(token)
+        folded_tokens = [part for part in folded.split() if part]
+        # Equivalenza planner: ORL + (ped/pediatr*) => ORL.PED.
+        if "orl" in folded_tokens and any(
+            part == "ped" or part.startswith("pediatr")
+            for part in folded_tokens
+        ):
+            return "ORL.PED"
+        # Equivalenza planner: oculistic* + (ped/pediatr*) => OCUL.PED.
+        if any(part.startswith("oculist") for part in folded_tokens) and any(
+            part == "ped" or part.startswith("pediatr")
+            for part in folded_tokens
+        ):
+            return "OCUL.PED"
+
         direct = normalize_dest_label(token)
         if direct:
             return direct
 
-        folded = self._fold_match_text(token)
         if not folded:
             return ""
         if re.search(r"\bday\s+surgery\b", folded):
@@ -3616,8 +3640,12 @@ class MainWindow(QMainWindow):
                                 totals[doctor] += 1
         return totals
 
-    def _compute_year_weekend_worked_totals(self, year: int) -> dict[str, int]:
-        totals = {doctor: 0 for doctor in DOCTORS}
+    def _compute_year_weekend_guard_totals(self, year: int) -> dict[str, dict[str, int]]:
+        totals = {
+            doctor: {"SD": 0, "SN": 0, "DD": 0, "DN": 0}
+            for doctor in DOCTORS
+        }
+        start_of_year = date(year, 1, 1)
         all_data = self.load_all()
         weeks = all_data.get("weeks", {})
         if not isinstance(weeks, dict):
@@ -3626,38 +3654,6 @@ class MainWindow(QMainWindow):
         current_key = get_week_key(self.current_year, self.current_week_index)
         current_payload = self.serialize_week()
         current_seen = False
-
-        def normalized_shift_tokens(day_payload) -> List[str]:
-            if isinstance(day_payload, dict):
-                shift = str(day_payload.get("shift", "")).strip()
-                dest = str(day_payload.get("dest", "")).strip()
-                raw = shift if not dest else f"{shift}\n{dest}"
-            elif isinstance(day_payload, str):
-                raw = day_payload.strip()
-            else:
-                raw = ""
-            if not raw:
-                return []
-            tokens: List[str] = []
-            for idx, line in enumerate(raw.splitlines()[:2]):
-                token = line.strip()
-                if not token:
-                    continue
-                if token.endswith("**"):
-                    token = token[:-2].strip()
-                zero = normalize_zero_hour_label(token)
-                if zero:
-                    tokens.append(zero.casefold())
-                    continue
-                shift, _, _ = self._parse_shift_with_inline_dest(token)
-                if shift in SHIFT_HOURS:
-                    tokens.append(shift.casefold())
-                    continue
-                if idx == 0:
-                    normalized_shift = self._normalize_shift(token)
-                    if normalized_shift:
-                        tokens.append(normalized_shift.casefold())
-            return tokens
 
         def add_from_week_payload(week_key: str, payload: dict) -> None:
             m = re.match(r"^(\d{4})-W(\d{2})$", week_key)
@@ -3669,10 +3665,6 @@ class MainWindow(QMainWindow):
                 week_dates = get_week_dates_iso(week_year, week_index)
             except ValueError:
                 return
-            # Considera weekend solo se sabato e domenica appartengono all'anno target.
-            sat_date, sun_date = week_dates[5], week_dates[6]
-            if sat_date.year != year or sun_date.year != year:
-                return
 
             cells = payload.get("cells", {})
             if not isinstance(cells, dict):
@@ -3682,15 +3674,20 @@ class MainWindow(QMainWindow):
                 day_map = cells.get(doctor, {})
                 if not isinstance(day_map, dict):
                     continue
-                sat_payload = day_map.get("Sab")
-                sun_payload = day_map.get("Dom")
-                sat_tokens = normalized_shift_tokens(sat_payload)
-                sun_tokens = normalized_shift_tokens(sun_payload)
-                sat_is_rs = bool(sat_tokens) and all(token == "rs" for token in sat_tokens)
-                sun_is_rs = bool(sun_tokens) and all(token == "rs" for token in sun_tokens)
-                has_any_weekend_shift = bool(sat_tokens or sun_tokens)
-                if has_any_weekend_shift and not (sat_is_rs and sun_is_rs):
-                    totals[doctor] += 1
+                sat_date = week_dates[5]
+                if sat_date >= start_of_year and sat_date.year == year:
+                    sat_tokens = self._payload_shift_tokens(day_map.get("Sab", {}))
+                    if "8-20" in sat_tokens:
+                        totals[doctor]["SD"] += 1
+                    if "20-24" in sat_tokens:
+                        totals[doctor]["SN"] += 1
+                sun_date = week_dates[6]
+                if sun_date >= start_of_year and sun_date.year == year:
+                    sun_tokens = self._payload_shift_tokens(day_map.get("Dom", {}))
+                    if "8-20" in sun_tokens:
+                        totals[doctor]["DD"] += 1
+                    if "20-24" in sun_tokens:
+                        totals[doctor]["DN"] += 1
 
         for week_key, week_data in weeks.items():
             payload = current_payload if week_key == current_key else week_data
@@ -3775,17 +3772,26 @@ class MainWindow(QMainWindow):
     def refresh_night_stats(self):
         target_year = self.current_year
         totals = self._compute_year_night_totals(target_year)
-        weekend_totals = self._compute_year_weekend_worked_totals(target_year)
+        weekend_totals = self._compute_year_weekend_guard_totals(target_year)
         flagged_totals = self._compute_year_flagged_hours_totals(target_year)
         self.stats_title.setText(f"Statistiche {target_year}")
         for row, doctor in enumerate(DOCTORS):
             nights_item = self.stats_table.item(row, 0)
-            weekends_item = self.stats_table.item(row, 1)
-            flagged_item = self.stats_table.item(row, 2)
+            sat_day_item = self.stats_table.item(row, 1)
+            sat_night_item = self.stats_table.item(row, 2)
+            sun_day_item = self.stats_table.item(row, 3)
+            sun_night_item = self.stats_table.item(row, 4)
+            flagged_item = self.stats_table.item(row, 5)
             if nights_item:
                 nights_item.setText(str(totals.get(doctor, 0)))
-            if weekends_item:
-                weekends_item.setText(str(weekend_totals.get(doctor, 0)))
+            if sat_day_item:
+                sat_day_item.setText(str(weekend_totals.get(doctor, {}).get("SD", 0)))
+            if sat_night_item:
+                sat_night_item.setText(str(weekend_totals.get(doctor, {}).get("SN", 0)))
+            if sun_day_item:
+                sun_day_item.setText(str(weekend_totals.get(doctor, {}).get("DD", 0)))
+            if sun_night_item:
+                sun_night_item.setText(str(weekend_totals.get(doctor, {}).get("DN", 0)))
             if flagged_item:
                 flagged_item.setText(str(flagged_totals.get(doctor, 0)))
         for row in range(len(DOCTORS), self.stats_table.rowCount()):
@@ -4185,7 +4191,38 @@ class MainWindow(QMainWindow):
 
     def save_all(self, data: dict) -> None:
         self.data_file.parent.mkdir(parents=True, exist_ok=True)
-        self.data_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        serialized = json.dumps(data, ensure_ascii=False, indent=2)
+        tmp_fd, tmp_path = tempfile.mkstemp(
+            prefix=f"{self.data_file.name}.",
+            suffix=".tmp",
+            dir=str(self.data_file.parent),
+        )
+        try:
+            with os.fdopen(tmp_fd, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(serialized)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(tmp_path, self.data_file)
+        finally:
+            if os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
+
+    def _backup_corrupted_data_file_once(self) -> None:
+        if self._corrupt_json_backup_done:
+            return
+        self._corrupt_json_backup_done = True
+        if not self.data_file.exists():
+            return
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup_name = f"{self.data_file.stem}.corrupt-{stamp}{self.data_file.suffix}"
+        backup_path = self.data_file.with_name(backup_name)
+        try:
+            shutil.copy2(self.data_file, backup_path)
+        except OSError:
+            pass
 
     def load_all(self) -> dict:
         if not self.data_file.exists():
@@ -4193,8 +4230,13 @@ class MainWindow(QMainWindow):
 
         try:
             raw = self.data_file.read_text(encoding="utf-8-sig")
+        except OSError:
+            return self._default_all_data()
+
+        try:
             data = json.loads(raw)
-        except (OSError, json.JSONDecodeError):
+        except json.JSONDecodeError:
+            self._backup_corrupted_data_file_once()
             return self._default_all_data()
 
         if not isinstance(data, dict):
@@ -4233,17 +4275,9 @@ class MainWindow(QMainWindow):
             next_iso = next_monday.isocalendar()
             next_key = get_week_key(next_iso.year, next_iso.week)
 
-            next_week_data = weeks.setdefault(next_key, {})
-            if not isinstance(next_week_data, dict):
-                next_week_data = {}
-                weeks[next_key] = next_week_data
-            next_cells = next_week_data.setdefault("cells", {})
-            if not isinstance(next_cells, dict):
-                next_cells = {}
-                next_week_data["cells"] = next_cells
-
             current_cells = week_payload.get("cells", {})
             if isinstance(current_cells, dict):
+                doctors_needing_next_0_8: List[str] = []
                 for doctor, day_map in current_cells.items():
                     if doctor not in DOCTORS:
                         continue
@@ -4255,7 +4289,19 @@ class MainWindow(QMainWindow):
                     sunday_shifts = self._payload_shift_tokens(sunday_payload)
                     if "20-24" not in sunday_shifts:
                         continue
+                    doctors_needing_next_0_8.append(doctor)
 
+                if doctors_needing_next_0_8:
+                    next_week_data = weeks.setdefault(next_key, {})
+                    if not isinstance(next_week_data, dict):
+                        next_week_data = {}
+                        weeks[next_key] = next_week_data
+                    next_cells = next_week_data.setdefault("cells", {})
+                    if not isinstance(next_cells, dict):
+                        next_cells = {}
+                        next_week_data["cells"] = next_cells
+
+                for doctor in doctors_needing_next_0_8:
                     doctor_cells = next_cells.setdefault(doctor, {})
                     if not isinstance(doctor_cells, dict):
                         doctor_cells = {}
@@ -4284,9 +4330,32 @@ class MainWindow(QMainWindow):
         self._dirty = True
         self.autosave_timer.start()
 
+    def _close_open_panels_before_exit(self) -> None:
+        sizes = self._current_splitter_sizes()
+        prev_width = sizes[0] if self.prev_panel.isVisible() else 0
+        stats_width = sizes[2] if self.stats_panel.isVisible() else 0
+        quick_width = 0
+        if hasattr(self, "quick_grid_dock") and self.quick_grid_dock.isVisible():
+            quick_width = max(0, int(self.quick_grid_dock.width()))
+
+        if self.prev_panel.isVisible():
+            self._set_prev_panel_visibility(False)
+        if self.stats_panel.isVisible():
+            self._set_stats_panel_visibility(False)
+        if hasattr(self, "quick_grid_dock") and self.quick_grid_dock.isVisible():
+            with QSignalBlocker(self.quick_grid_btn):
+                self.quick_grid_btn.setChecked(False)
+            self.quick_grid_dock.setVisible(False)
+        self._set_splitter_sizes(0, max(self.main_panel.width(), 1), 0)
+        total_side_width = max(0, int(prev_width + stats_width + quick_width))
+        if total_side_width > 0:
+            self._resize_window_width(-total_side_width, anchor_left=False)
+        self._sync_side_toggle_buttons()
+
     def closeEvent(self, event: QCloseEvent):
         self.autosave_timer.stop()
         self.save_current_week(show_message=False)
+        self._close_open_panels_before_exit()
         self._save_window_size()
         super().closeEvent(event)
 
