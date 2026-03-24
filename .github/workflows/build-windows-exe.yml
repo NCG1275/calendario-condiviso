@@ -1,6 +1,9 @@
 name: Build Windows Release
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       release_tag:
@@ -14,6 +17,8 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
 
     steps:
       - name: Checkout
@@ -31,7 +36,7 @@ jobs:
 
       - name: Build modular release assets
         run: |
-          python build_release.py --tag "${{ inputs.release_tag }}"
+          python build_release.py --tag "${env:RELEASE_TAG}"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
@@ -44,9 +49,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "${{ inputs.release_tag }}" --repo "${{ github.repository }}"
+          gh release view "${env:RELEASE_TAG}" --repo "${{ github.repository }}"
           if ($LASTEXITCODE -eq 0) {
-            gh release upload "${{ inputs.release_tag }}" release\* --clobber --repo "${{ github.repository }}"
+            gh release upload "${env:RELEASE_TAG}" release\* --clobber --repo "${{ github.repository }}"
           } else {
-            gh release create "${{ inputs.release_tag }}" release\* --title "${{ inputs.release_tag }}" --generate-notes --repo "${{ github.repository }}"
+            gh release create "${env:RELEASE_TAG}" release\* --title "${env:RELEASE_TAG}" --generate-notes --repo "${{ github.repository }}"
           }
