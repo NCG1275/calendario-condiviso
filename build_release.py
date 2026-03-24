@@ -34,6 +34,7 @@ def main() -> int:
     parser.add_argument("--python-cmd", default=sys.executable)
     parser.add_argument("--tag", default=f"v{APP_VERSION}")
     parser.add_argument("--runtime-version", default=None)
+    parser.add_argument("--mode", choices=("full", "app-only"), default="full")
     args = parser.parse_args()
 
     runtime_version = args.runtime_version or default_runtime_version()
@@ -45,12 +46,14 @@ def main() -> int:
     DIST_ROOT.mkdir(parents=True, exist_ok=True)
     RELEASE_ROOT.mkdir(parents=True, exist_ok=True)
 
-    build_launcher(args.python_cmd)
     build_application(args.python_cmd)
-    manifest = package_release_assets(tag=args.tag, runtime_version=runtime_version)
-    write_manifest(manifest)
-    build_portable_bundle()
-    build_installer(args.python_cmd)
+    if args.mode == "full":
+        build_launcher(args.python_cmd)
+    manifest = package_release_assets(tag=args.tag, runtime_version=runtime_version, mode=args.mode)
+    write_manifest(manifest, include_portable_layout=args.mode == "full")
+    if args.mode == "full":
+        build_portable_bundle()
+        build_installer(args.python_cmd)
     print(f"Release assets created in: {RELEASE_ROOT}")
     return 0
 
@@ -128,20 +131,21 @@ def build_application(python_cmd: str) -> None:
     run(command)
 
 
-def package_release_assets(*, tag: str, runtime_version: str) -> dict:
-    launcher_exe = DIST_ROOT / "launcher" / LAUNCHER_EXE_NAME
+def package_release_assets(*, tag: str, runtime_version: str, mode: str) -> dict:
     app_dir = DIST_ROOT / "app" / Path(APP_EXE_NAME).stem
     app_exe = app_dir / APP_EXE_NAME
     runtime_dir = app_dir / "_internal"
 
-    if not launcher_exe.exists():
-        raise FileNotFoundError(launcher_exe)
     if not app_exe.exists():
         raise FileNotFoundError(app_exe)
     if not runtime_dir.exists():
         raise FileNotFoundError(runtime_dir)
 
-    shutil.copy2(launcher_exe, RELEASE_ROOT / LAUNCHER_EXE_NAME)
+    if mode == "full":
+        launcher_exe = DIST_ROOT / "launcher" / LAUNCHER_EXE_NAME
+        if not launcher_exe.exists():
+            raise FileNotFoundError(launcher_exe)
+        shutil.copy2(launcher_exe, RELEASE_ROOT / LAUNCHER_EXE_NAME)
     build_zip(RELEASE_ROOT / APP_ARCHIVE_ASSET_NAME, [(app_exe, Path(APP_EXE_NAME))])
     runtime_files = [(path, path.relative_to(app_dir)) for path in sorted(runtime_dir.rglob("*")) if path.is_file()]
     build_zip(RELEASE_ROOT / RUNTIME_ARCHIVE_ASSET_NAME, runtime_files)
@@ -150,6 +154,7 @@ def package_release_assets(*, tag: str, runtime_version: str) -> dict:
         "release": {
             "tag": tag,
             "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "mode": mode,
         },
         "app": {
             "version": APP_VERSION,
@@ -166,9 +171,12 @@ def package_release_assets(*, tag: str, runtime_version: str) -> dict:
     }
 
 
-def write_manifest(manifest: dict) -> None:
+def write_manifest(manifest: dict, *, include_portable_layout: bool) -> None:
     manifest_path = RELEASE_ROOT / RELEASE_MANIFEST_ASSET_NAME
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+
+    if not include_portable_layout:
+        return
 
     current_dir = RELEASE_ROOT / APP_INSTALL_DIRNAME
     current_dir.mkdir(parents=True, exist_ok=True)

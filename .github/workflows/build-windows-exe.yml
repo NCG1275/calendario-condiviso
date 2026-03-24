@@ -10,6 +10,10 @@ on:
         description: Tag della release GitHub (es. v3.0.0)
         required: true
         default: v3.0.0
+      release_mode:
+        description: Tipo di release
+        required: true
+        default: app-only
 
 permissions:
   contents: write
@@ -19,6 +23,7 @@ jobs:
     runs-on: windows-latest
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+      RELEASE_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.release_mode || 'full' }}
 
     steps:
       - name: Checkout
@@ -28,6 +33,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
       - name: Install dependencies
         run: |
@@ -36,33 +42,23 @@ jobs:
 
       - name: Build modular release assets
         run: |
-          python build_release.py --tag "${env:RELEASE_TAG}"
+          python build_release.py --tag "${env:RELEASE_TAG}" --mode "${env:RELEASE_MODE}"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: PlannerTurni-windows-release
-          path: |
-            release/PlannerTurniInstaller.exe
-            release/PlannerTurniLauncher.exe
-            release/planner-release-manifest.json
-            release/planner-app-win64.zip
-            release/planner-runtime-win64.zip
-            release/planner-portable-win64.zip
+          path: release/*
           if-no-files-found: error
 
       - name: Publish GitHub release assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $releaseFiles = @(
-            "release\PlannerTurniInstaller.exe",
-            "release\PlannerTurniLauncher.exe",
-            "release\planner-release-manifest.json",
-            "release\planner-app-win64.zip",
-            "release\planner-runtime-win64.zip",
-            "release\planner-portable-win64.zip"
-          )
+          $releaseFiles = @(Get-ChildItem -Path "release" -File | ForEach-Object { $_.FullName })
+          if (-not $releaseFiles.Count) {
+            throw "Nessun file di release trovato."
+          }
           gh release view "${env:RELEASE_TAG}" --repo "${{ github.repository }}"
           if ($LASTEXITCODE -eq 0) {
             gh release upload "${env:RELEASE_TAG}" $releaseFiles --clobber --repo "${{ github.repository }}"
