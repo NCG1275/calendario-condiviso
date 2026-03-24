@@ -1,7 +1,15 @@
-name: Build Windows EXE
+name: Build Windows Release
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag della release GitHub (es. v3.0.0)
+        required: true
+        default: v3.0.0
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -21,18 +29,24 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller PySide6
 
-      - name: Build executable
+      - name: Build modular release assets
         run: |
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name PlannerTurni app.py
-          if (Test-Path "planner_data.json") {
-            Copy-Item "planner_data.json" "dist/planner_data.json" -Force
-          }
+          python build_release.py --tag "${{ inputs.release_tag }}"
 
-      - name: Upload artifact
+      - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PlannerTurni-windows
-          path: |
-            dist/PlannerTurni.exe
-            dist/planner_data.json
+          name: PlannerTurni-windows-release
+          path: release/*
           if-no-files-found: error
+
+      - name: Publish GitHub release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "${{ inputs.release_tag }}" --repo "${{ github.repository }}"
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "${{ inputs.release_tag }}" release\* --clobber --repo "${{ github.repository }}"
+          } else {
+            gh release create "${{ inputs.release_tag }}" release\* --title "${{ inputs.release_tag }}" --generate-notes --repo "${{ github.repository }}"
+          }

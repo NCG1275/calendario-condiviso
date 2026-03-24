@@ -3,6 +3,8 @@ import re
 import json
 import os
 import io
+import time
+import html as html_lib
 import shutil
 import hashlib
 import subprocess
@@ -14,14 +16,15 @@ from pathlib import Path
 from datetime import date, datetime, timedelta
 from typing import List, Tuple
 
-from PySide6.QtCore import Qt, Signal, QTimer, QSignalBlocker, QSettings, QLockFile, QEvent
-from PySide6.QtGui import QColor, QPalette, QCloseEvent, QTextCursor, QPen, QBrush
+from PySide6.QtCore import Qt, Signal, QTimer, QSignalBlocker, QSettings, QLockFile, QEvent, QMarginsF
+from PySide6.QtGui import QColor, QPalette, QCloseEvent, QTextCursor, QPen, QBrush, QPdfWriter, QTextDocument, QPageSize, QPageLayout, QPixmap, QPainter
 from PySide6.QtWidgets import (
     QAbstractItemDelegate,
     QApplication,
     QDockWidget,
     QFileDialog,
     QLabel,
+    QComboBox,
     QMainWindow,
     QMessageBox,
     QSpinBox,
@@ -29,6 +32,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QAbstractItemView,
     QPlainTextEdit,
+    QSplashScreen,
     QStyledItemDelegate,
     QVBoxLayout,
     QHBoxLayout,
@@ -39,15 +43,11 @@ from PySide6.QtWidgets import (
     QSplitter,
 )
 
+from app_metadata import APP_AUTHOR, APP_NAME, APP_SETTINGS_APP, APP_SETTINGS_ORG, APP_VERSION
+
 # ----------------------------
 # Config dati
 # ----------------------------
-
-APP_NAME = "Planner Turni Medici"
-APP_VERSION = "2.9"
-APP_AUTHOR = "GN Aru"
-APP_SETTINGS_ORG = "PlannerTurni"
-APP_SETTINGS_APP = "PlannerTurniMedici"
 
 DAYS = ["h", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
 
@@ -80,10 +80,27 @@ SHIFT_SHORTCUTS = {
     "816": "8-16",
     "820": "8-20",
 }
-ZERO_HOUR_LABELS = {"rs", "PT", "ro", "RF"}
+ZERO_HOUR_LABELS = {"rs", "PT"}
 ZERO_HOUR_LABELS_CASEFOLD = {label.casefold(): label for label in ZERO_HOUR_LABELS}
-SPECIAL_HOUR_LABELS = {"aggp": 7.36, "cs": 7.36, "c": 7.36, "f": 7.36, "m": 7.36}
+SPECIAL_HOUR_LABELS = {
+    "aggp": 7.36,
+    "aggpf": 7.36,
+    "aggpo": 7.36,
+    "cs": 7.36,
+    "csm": 7.36,
+    "csnm": 7.36,
+    "c": 7.36,
+    "ro": 7.36,
+    "rf": 7.36,
+    "f": 7.36,
+    "m": 7.36,
+}
 SPECIAL_HOUR_LABELS_CASEFOLD = {label.casefold(): label for label in SPECIAL_HOUR_LABELS}
+SPECIAL_HOUR_LABEL_ALIASES = {
+    "af": "aggpf",
+    "ao": "aggpo",
+}
+SPECIAL_HOUR_LABEL_ALIASES_CASEFOLD = {alias.casefold(): target for alias, target in SPECIAL_HOUR_LABEL_ALIASES.items()}
 DEST_LABELS = {
     "ORTO",
     "VASC",
@@ -369,6 +386,9 @@ def autocomplete_shift_line(shift_line: str) -> str:
     has_flag = token.endswith("**")
     base = token[:-2].strip() if has_flag else token
     completed = SHIFT_SHORTCUTS.get(base.casefold(), base)
+    normalized_special = normalize_special_hour_label(base)
+    if normalized_special:
+        return normalized_special
     if has_flag and completed in SHIFT_HOURS:
         return f"{completed}**"
     return completed
@@ -379,6 +399,10 @@ def destination_shortcuts_legend_text() -> str:
     lines.append("")
     lines.append("FF = F intera settimana")
     lines.append("RSS = RS + RS")
+    lines.append("AF = Aggiornamento facoltativo")
+    lines.append("AO = Aggiornamento obbligatorio")
+    lines.append("CSM = Congedo straordinario motivato")
+    lines.append("CSNM = Congedo straordinario non motivato")
     return "\n".join(lines)
 
 
@@ -387,7 +411,11 @@ def normalize_zero_hour_label(value: str) -> str:
 
 
 def normalize_special_hour_label(value: str) -> str:
-    return SPECIAL_HOUR_LABELS_CASEFOLD.get(value.strip().casefold(), "")
+    token = value.strip().casefold()
+    if not token:
+        return ""
+    token = SPECIAL_HOUR_LABEL_ALIASES_CASEFOLD.get(token, token)
+    return SPECIAL_HOUR_LABELS_CASEFOLD.get(token, "")
 
 
 # ----------------------------
@@ -746,10 +774,19 @@ class MainWindow(QMainWindow):
         self.dest_help_btn.clicked.connect(self.show_dest_shortcuts_popup)
         controls.addWidget(self.dest_help_btn)
         self.export_doc_btn = QToolButton(self)
-        self.export_doc_btn.setText("Export DOCX")
-        self.export_doc_btn.setToolTip("Esporta la settimana corrente in formato DOCX (A4)")
-        self.export_doc_btn.clicked.connect(self.export_main_week_doc)
+        self.export_doc_btn.setText("Export")
+        self.export_doc_btn.setToolTip("Esporta la settimana corrente nel formato selezionato")
+        self.export_doc_btn.clicked.connect(self.export_main_week)
         controls.addWidget(self.export_doc_btn)
+        self.export_format_combo = QComboBox(self)
+        self.export_format_combo.addItems(["docx", "pdf"])
+        self.export_format_combo.setToolTip("Formato export")
+        export_settings = QSettings(APP_SETTINGS_ORG, APP_SETTINGS_APP)
+        last_export_format = str(export_settings.value("export/main_week_format", "docx", str) or "docx").strip().lower()
+        format_index = max(0, self.export_format_combo.findText(last_export_format, Qt.MatchFixedString))
+        self.export_format_combo.setCurrentIndex(format_index)
+        self.export_format_combo.currentTextChanged.connect(self._on_export_format_changed)
+        controls.addWidget(self.export_format_combo)
         self.import_so_btn = QToolButton(self)
         self.import_so_btn.setText("Importazione SO")
         self.import_so_btn.setToolTip("Importa dati da file testo nella tabella Planner SO")
@@ -815,15 +852,19 @@ class MainWindow(QMainWindow):
         stats_layout.setSpacing(6)
         self.stats_title = QLabel("Statistiche")
         self.stats_table = QTableWidget()
-        self.stats_table.setColumnCount(6)
+        self.stats_table.setColumnCount(10)
         self.stats_table.setRowCount(0)
-        self.stats_table.setHorizontalHeaderLabels(["GN", "SD", "SN", "DD", "DN", "P"])
+        self.stats_table.setHorizontalHeaderLabels(["GN", "SD", "SN", "DD", "DN", "P", "AF", "AO", "CSM", "CSNM"])
         gn_header = self.stats_table.horizontalHeaderItem(0)
         sd_header = self.stats_table.horizontalHeaderItem(1)
         sn_header = self.stats_table.horizontalHeaderItem(2)
         dd_header = self.stats_table.horizontalHeaderItem(3)
         dn_header = self.stats_table.horizontalHeaderItem(4)
         p_header = self.stats_table.horizontalHeaderItem(5)
+        af_header = self.stats_table.horizontalHeaderItem(6)
+        ao_header = self.stats_table.horizontalHeaderItem(7)
+        csm_header = self.stats_table.horizontalHeaderItem(8)
+        csnm_header = self.stats_table.horizontalHeaderItem(9)
         if gn_header:
             gn_header.setToolTip("Guardie notturne")
         if sd_header:
@@ -836,6 +877,14 @@ class MainWindow(QMainWindow):
             dn_header.setToolTip("Guardia Notturna Domenica")
         if p_header:
             p_header.setToolTip("Turni a progetto")
+        if af_header:
+            af_header.setToolTip("Aggiornamento facoltativo")
+        if ao_header:
+            ao_header.setToolTip("Aggiornamento obbligatorio")
+        if csm_header:
+            csm_header.setToolTip("Congedo straordinario motivato")
+        if csnm_header:
+            csnm_header.setToolTip("Congedo straordinario non motivato")
         self.stats_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.stats_table.horizontalHeader().setStretchLastSection(False)
         self.stats_table.verticalHeader().setVisible(True)
@@ -1188,16 +1237,20 @@ class MainWindow(QMainWindow):
         self.prev_table.setMinimumWidth(220)
 
     def import_so_table_from_text(self) -> None:
+        settings = QSettings(APP_SETTINGS_ORG, APP_SETTINGS_APP)
+        last_import_dir = str(settings.value("import/so_last_dir", "", str) or "").strip()
+        default_dir = Path(last_import_dir) if last_import_dir else Path.home()
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Importazione SO",
-            str(Path.home()),
+            str(default_dir),
             "File Word/Testo (*.doc *.docx *.rtf *.txt *.csv *.tsv);;Tutti i file (*.*)",
         )
         if not file_path:
             return
 
         input_path = Path(file_path)
+        settings.setValue("import/so_last_dir", str(input_path.parent))
         raw_text = self._read_so_source_text(input_path)
         if raw_text is None:
             extra_hint = ""
@@ -1986,10 +2039,41 @@ class MainWindow(QMainWindow):
             destination_shortcuts_legend_text(),
         )
 
+    def _on_export_format_changed(self, value: str) -> None:
+        settings = QSettings(APP_SETTINGS_ORG, APP_SETTINGS_APP)
+        settings.setValue("export/main_week_format", str(value or "docx").strip().lower())
+
+    def _open_path_in_shell(self, output_path: Path, title: str) -> None:
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(str(output_path))
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", str(output_path)])
+            else:
+                subprocess.Popen(["xdg-open", str(output_path)])
+        except OSError as exc:
+            QMessageBox.warning(
+                self,
+                title,
+                f"File esportato ma non è stato possibile aprirlo automaticamente:\n{exc}",
+            )
+
+    def export_main_week(self) -> None:
+        export_format = self.export_format_combo.currentText().strip().lower() if hasattr(self, "export_format_combo") else "docx"
+        if export_format == "pdf":
+            self.export_main_week_pdf()
+            return
+        self.export_main_week_doc()
+
     def export_main_week_doc(self) -> None:
         week_key = get_week_key(self.current_year, self.current_week_index)
         default_name = f"turni_{week_key}.docx"
-        default_path = Path.home() / default_name
+        settings = QSettings(APP_SETTINGS_ORG, APP_SETTINGS_APP)
+        last_export_dir = str(settings.value("export/main_week_last_dir", "", str) or "").strip()
+        if not last_export_dir:
+            last_export_dir = str(settings.value("export/docx_last_dir", str(Path.home()), str) or "").strip()
+        default_dir = Path(last_export_dir) if last_export_dir else Path.home()
+        default_path = default_dir / default_name
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             "Esporta settimana principale in DOCX",
@@ -2005,7 +2089,7 @@ class MainWindow(QMainWindow):
 
         try:
             output_path.write_bytes(self._build_main_week_docx())
-        except OSError as exc:
+        except Exception as exc:
             QMessageBox.critical(
                 self,
                 "Export DOCX",
@@ -2013,20 +2097,51 @@ class MainWindow(QMainWindow):
             )
             return
 
+        settings.setValue("export/main_week_last_dir", str(output_path.parent))
+        settings.setValue("export/main_week_format", "docx")
+        if hasattr(self, "export_format_combo"):
+            self.export_format_combo.setCurrentText("docx")
         self.statusBar().showMessage(f"Esportato: {output_path}", 4000)
+        self._open_path_in_shell(output_path, "Export DOCX")
+
+    def export_main_week_pdf(self) -> None:
+        week_key = get_week_key(self.current_year, self.current_week_index)
+        default_name = f"turni_{week_key}.pdf"
+        settings = QSettings(APP_SETTINGS_ORG, APP_SETTINGS_APP)
+        last_export_dir = str(settings.value("export/main_week_last_dir", "", str) or "").strip()
+        if not last_export_dir:
+            last_export_dir = str(settings.value("export/docx_last_dir", str(Path.home()), str) or "").strip()
+        default_dir = Path(last_export_dir) if last_export_dir else Path.home()
+        default_path = default_dir / default_name
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Esporta settimana principale in PDF",
+            str(default_path),
+            "Documento PDF (*.pdf)",
+        )
+        if not file_path:
+            return
+
+        output_path = Path(file_path)
+        if output_path.suffix.lower() != ".pdf":
+            output_path = output_path.with_suffix(".pdf")
+
         try:
-            if sys.platform.startswith("win"):
-                os.startfile(str(output_path))
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", str(output_path)])
-            else:
-                subprocess.Popen(["xdg-open", str(output_path)])
-        except OSError as exc:
-            QMessageBox.warning(
+            self._write_main_week_pdf(output_path)
+        except Exception as exc:
+            QMessageBox.critical(
                 self,
-                "Export DOCX",
-                f"File esportato ma non è stato possibile aprirlo automaticamente:\n{exc}",
+                "Export PDF",
+                f"Errore durante l'esportazione:\n{exc}",
             )
+            return
+
+        settings.setValue("export/main_week_last_dir", str(output_path.parent))
+        settings.setValue("export/main_week_format", "pdf")
+        if hasattr(self, "export_format_combo"):
+            self.export_format_combo.setCurrentText("pdf")
+        self.statusBar().showMessage(f"Esportato: {output_path}", 4000)
+        self._open_path_in_shell(output_path, "Export PDF")
 
     def _build_main_week_docx(self) -> bytes:
         week_dates = get_week_dates_iso(self.current_year, self.current_week_index)
@@ -2338,6 +2453,114 @@ class MainWindow(QMainWindow):
             docx_zip.writestr("word/document.xml", document_xml)
         return output.getvalue()
 
+    def _build_main_week_pdf_html(self) -> str:
+        week_dates = get_week_dates_iso(self.current_year, self.current_week_index)
+        week_key = get_week_key(self.current_year, self.current_week_index)
+        title = (
+            f"Settimana {week_key} "
+            f"({week_dates[0].strftime('%d/%m')} - {week_dates[-1].strftime('%d/%m')})"
+        )
+        generated_on = f"Generato il {date.today().strftime('%d/%m/%Y')}"
+        header_lines = [
+            "SERVIZIO SANITARIO REGIONE SARDEGNA",
+            "AZIENDA OSPEDALIERO - UNIVERSITARIA DI CAGLIARI",
+            "U.O.C. DI ANESTESIA RIANIMAZIONE TERAPIA ANTALGICA",
+            "Direttore Prof. Gabriele Finco",
+        ]
+
+        headers = ["Medico"]
+        for col in range(len(DAYS)):
+            header_item = self.table.horizontalHeaderItem(col)
+            header_text = (header_item.text() if header_item else DAYS[col]).replace("\n", " ").strip()
+            headers.append(header_text)
+
+        rows: List[List[str]] = []
+        for row in range(self.table.rowCount()):
+            if row < DOCTOR_ROWS_COUNT:
+                row_label = TABLE_DOCTORS[row]
+            else:
+                row_label = EXTRA_ROWS[row - EXTRA_START_ROW]
+
+            row_values = [row_label]
+            for col in range(len(DAYS)):
+                item = self.table.item(row, col)
+                if row >= EXTRA_START_ROW and col == 0:
+                    cell_text = ""
+                else:
+                    cell_text = (item.text() if item else "").strip()
+                row_values.append(cell_text)
+            rows.append(row_values)
+
+        def html_cell(value: str, force_two_lines: bool = False) -> str:
+            lines = [html_lib.escape(line.strip()) for line in value.splitlines() if line.strip()]
+            if force_two_lines:
+                first_line = lines[0] if lines else "&nbsp;"
+                second_line = " / ".join(lines[1:]) if len(lines) > 1 else "&nbsp;"
+                return f"<nobr>{first_line}</nobr><br><em><nobr>{second_line}</nobr></em>"
+            if not lines:
+                return "&nbsp;"
+            if len(lines) == 1:
+                return lines[0]
+            first_line = lines[0]
+            rest = "<br>".join(f"<em>{line}</em>" for line in lines[1:])
+            return f"{first_line}<br>{rest}" if first_line else rest
+
+        table_rows: List[str] = []
+        header_html = "".join(f"<th>{html_lib.escape(header)}</th>" for header in headers)
+        table_rows.append(f"<tr>{header_html}</tr>")
+        for idx, row_values in enumerate(rows):
+            row_class = "alt" if idx % 2 else ""
+            cells_html = []
+            for col_idx, cell in enumerate(row_values):
+                tag = "th" if col_idx == 0 else "td"
+                class_attr = f' class="{row_class}"' if row_class else ""
+                cells_html.append(f"<{tag}{class_attr}>{html_cell(cell, col_idx > 0)}</{tag}>")
+            table_rows.append(f"<tr>{''.join(cells_html)}</tr>")
+
+        header_html = "<br>".join(html_lib.escape(line) for line in header_lines)
+        return f'''<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@page {{ size: A4 portrait; margin: 8mm; }}
+body {{ font-family: Arial, sans-serif; font-size: 8pt; color: #111; margin: 0; }}
+.header {{ text-align: center; font-size: 8pt; line-height: 1.15; margin-bottom: 6px; }}
+.service {{ text-align: center; font-weight: bold; margin-bottom: 8px; }}
+.title {{ font-weight: bold; margin-bottom: 2px; }}
+.generated {{ margin-bottom: 6px; }}
+table {{ width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 7pt; }}
+th, td {{ border: 1px solid #444; padding: 2px 3px; vertical-align: top; word-wrap: break-word; line-height: 1.1; }}
+th {{ background: #d7e6f7; }}th:first-child, td:first-child {{ width: 14%; font-size: 6.8pt; }}
+nobr {{ white-space: nowrap; }}
+.alt {{ background: #f2f2f2; }}
+em {{ font-style: italic; }}
+</style>
+</head>
+<body>
+<div class="header">{header_html}</div>
+<div class="service">ORARIO DI SERVIZIO</div>
+<div class="title">{html_lib.escape(title)}</div>
+<div class="generated">{html_lib.escape(generated_on)}</div>
+<table>
+{''.join(table_rows)}
+</table>
+</body>
+</html>'''
+
+    def _write_main_week_pdf(self, output_path: Path) -> None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        writer = QPdfWriter(str(output_path))
+        writer.setPageSize(QPageSize(QPageSize.A4))
+        writer.setPageOrientation(QPageLayout.Portrait)
+        writer.setPageMargins(QMarginsF(12.0, 12.0, 12.0, 12.0), QPageLayout.Millimeter)
+        document = QTextDocument(self)
+        document.setHtml(self._build_main_week_pdf_html())
+        document.setPageSize(writer.pageLayout().paintRect(QPageLayout.Point).size())
+        if hasattr(document, "print"):
+            document.print(writer)
+        else:
+            document.print_(writer)
     def _build_main_week_doc_rtf(self) -> str:
         week_dates = get_week_dates_iso(self.current_year, self.current_week_index)
         week_key = get_week_key(self.current_year, self.current_week_index)
@@ -3159,6 +3382,45 @@ class MainWindow(QMainWindow):
         text = shift if not dest else f"{shift}\n{dest}"
         return self._shift_tokens_in_text(text)
 
+    def _cell_counts_as_required_gpo_guard(self, text: str, col: int) -> bool:
+        shift_line, dest_line = self._split_cell_lines(text)
+        if not shift_line:
+            return False
+
+        line1_shift, line1_inline_dest, _ = self._parse_shift_with_inline_dest(shift_line)
+        line2_shift, line2_inline_dest, _ = self._parse_shift_with_inline_dest(dest_line)
+        line2_is_shift = bool(dest_line and line2_shift)
+
+        assignments: List[dict[str, str]] = []
+        if dest_line and not line2_is_shift:
+            assignments.append({"shift": line1_shift, "dest": dest_line})
+        else:
+            assignments.append({"shift": line1_shift, "dest": line1_inline_dest})
+            if dest_line:
+                if not line2_is_shift:
+                    return False
+                assignments.append({"shift": line2_shift, "dest": line2_inline_dest})
+
+        if len(assignments) == 2:
+            non_empty_dests = [str(a["dest"]).strip() for a in assignments if str(a["dest"]).strip()]
+            if len(non_empty_dests) == 1:
+                shared_dest = non_empty_dests[0]
+                for assignment in assignments:
+                    if (not str(assignment["dest"]).strip()) and str(assignment["shift"]) in {"8-14", "8-15", "14-20", "8-16", "8-20"}:
+                        assignment["dest"] = shared_dest
+
+        for assignment in assignments:
+            shift = str(assignment["shift"]).strip()
+            dest = str(assignment["dest"]).strip()
+            if shift == "14-20" and normalize_dest_label(dest) == "GPO":
+                return True
+            if shift == "8-20" and "+" in dest:
+                parts = [normalize_dest_label(part.strip()) for part in dest.split("+")]
+                if len(parts) == 2 and all(parts) and parts[1] == "GPO":
+                    return True
+
+        return False
+
     def _autocomplete_assignment_line(self, line: str) -> Tuple[str, bool]:
         token = line.strip()
         if not token:
@@ -3769,19 +4031,155 @@ class MainWindow(QMainWindow):
 
         return totals
 
+    def _compute_year_special_label_totals(self, year: int, labels: set[str]) -> dict[str, int]:
+        totals = {doctor: 0 for doctor in DOCTORS}
+        start_of_year = date(year, 1, 1)
+        normalized_labels = {label.casefold() for label in labels}
+
+        all_data = self.load_all()
+        weeks = all_data.get("weeks", {})
+        if not isinstance(weeks, dict):
+            return totals
+
+        current_key = get_week_key(self.current_year, self.current_week_index)
+        current_payload = self.serialize_week()
+        current_seen = False
+
+        def add_from_week_payload(week_key: str, payload: dict) -> None:
+            m = re.match(r"^(\d{4})-W(\d{2})$", week_key)
+            if not m:
+                return
+            week_year = int(m.group(1))
+            week_index = int(m.group(2))
+            try:
+                week_dates = get_week_dates_iso(week_year, week_index)
+            except ValueError:
+                return
+
+            cells = payload.get("cells", {})
+            if not isinstance(cells, dict):
+                return
+
+            for doctor in DOCTORS:
+                day_map = cells.get(doctor, {})
+                if not isinstance(day_map, dict):
+                    continue
+                for day_name, day_date in zip(DAYS[1:], week_dates):
+                    if day_date < start_of_year or day_date.year != year:
+                        continue
+                    payload_day = day_map.get(day_name)
+                    if not isinstance(payload_day, dict):
+                        continue
+                    shift = str(payload_day.get("shift", "")).strip()
+                    if shift.endswith("**"):
+                        shift = shift[:-2].strip()
+                    normalized_special = normalize_special_hour_label(shift)
+                    if normalized_special and normalized_special.casefold() in normalized_labels:
+                        totals[doctor] += 1
+
+        for week_key, week_data in weeks.items():
+            payload = current_payload if week_key == current_key else week_data
+            if week_key == current_key:
+                current_seen = True
+            if not isinstance(payload, dict):
+                continue
+            add_from_week_payload(week_key, payload)
+
+        if not current_seen:
+            add_from_week_payload(current_key, current_payload)
+
+        return totals
+
+    def _collect_year_special_label_dates(self, year: int, labels: set[str]) -> dict[str, list[date]]:
+        dates_by_doctor = {doctor: [] for doctor in DOCTORS}
+        start_of_year = date(year, 1, 1)
+        normalized_labels = {label.casefold() for label in labels}
+
+        all_data = self.load_all()
+        weeks = all_data.get("weeks", {})
+        if not isinstance(weeks, dict):
+            return dates_by_doctor
+
+        current_key = get_week_key(self.current_year, self.current_week_index)
+        current_payload = self.serialize_week()
+        current_seen = False
+
+        def add_from_week_payload(week_key: str, payload: dict) -> None:
+            m = re.match(r"^(\d{4})-W(\d{2})$", week_key)
+            if not m:
+                return
+            week_year = int(m.group(1))
+            week_index = int(m.group(2))
+            try:
+                week_dates = get_week_dates_iso(week_year, week_index)
+            except ValueError:
+                return
+
+            cells = payload.get("cells", {})
+            if not isinstance(cells, dict):
+                return
+
+            for doctor in DOCTORS:
+                day_map = cells.get(doctor, {})
+                if not isinstance(day_map, dict):
+                    continue
+                for day_name, day_date in zip(DAYS[1:], week_dates):
+                    if day_date < start_of_year or day_date.year != year:
+                        continue
+                    payload_day = day_map.get(day_name)
+                    if not isinstance(payload_day, dict):
+                        continue
+                    shift = str(payload_day.get("shift", "")).strip()
+                    if shift.endswith("**"):
+                        shift = shift[:-2].strip()
+                    normalized_special = normalize_special_hour_label(shift)
+                    if normalized_special and normalized_special.casefold() in normalized_labels:
+                        dates_by_doctor[doctor].append(day_date)
+
+        for week_key, week_data in weeks.items():
+            payload = current_payload if week_key == current_key else week_data
+            if week_key == current_key:
+                current_seen = True
+            if not isinstance(payload, dict):
+                continue
+            add_from_week_payload(week_key, payload)
+
+        if not current_seen:
+            add_from_week_payload(current_key, current_payload)
+
+        for doctor in DOCTORS:
+            dates_by_doctor[doctor].sort()
+
+        return dates_by_doctor
+
     def refresh_night_stats(self):
         target_year = self.current_year
         totals = self._compute_year_night_totals(target_year)
         weekend_totals = self._compute_year_weekend_guard_totals(target_year)
         flagged_totals = self._compute_year_flagged_hours_totals(target_year)
+        aggpf_totals = self._compute_year_special_label_totals(target_year, {"aggpf"})
+        aggpo_totals = self._compute_year_special_label_totals(target_year, {"aggpo"})
+        csm_totals = self._compute_year_special_label_totals(target_year, {"csm"})
+        csnm_totals = self._compute_year_special_label_totals(target_year, {"csnm"})
+        csm_dates = self._collect_year_special_label_dates(target_year, {"csm"})
+        csnm_dates = self._collect_year_special_label_dates(target_year, {"csnm"})
         self.stats_title.setText(f"Statistiche {target_year}")
         for row, doctor in enumerate(DOCTORS):
+            for col in range(self.stats_table.columnCount()):
+                stats_item = self.stats_table.item(row, col)
+                if stats_item:
+                    stats_item.setBackground(STATS_BLUE_BG)
+                    stats_item.setForeground(STATS_TEXT_FG)
             nights_item = self.stats_table.item(row, 0)
             sat_day_item = self.stats_table.item(row, 1)
             sat_night_item = self.stats_table.item(row, 2)
             sun_day_item = self.stats_table.item(row, 3)
             sun_night_item = self.stats_table.item(row, 4)
             flagged_item = self.stats_table.item(row, 5)
+            aggpf_item = self.stats_table.item(row, 6)
+            aggpo_item = self.stats_table.item(row, 7)
+            csm_item = self.stats_table.item(row, 8)
+            csnm_item = self.stats_table.item(row, 9)
             if nights_item:
                 nights_item.setText(str(totals.get(doctor, 0)))
             if sat_day_item:
@@ -3794,6 +4192,55 @@ class MainWindow(QMainWindow):
                 sun_night_item.setText(str(weekend_totals.get(doctor, {}).get("DN", 0)))
             if flagged_item:
                 flagged_item.setText(str(flagged_totals.get(doctor, 0)))
+            if aggpf_item:
+                aggpf_item.setText(str(aggpf_totals.get(doctor, 0)))
+            if aggpo_item:
+                aggpo_item.setText(str(aggpo_totals.get(doctor, 0)))
+            if csm_item:
+                csm_item.setText(str(csm_totals.get(doctor, 0)))
+                csm_dates_text = "\n".join(dt.strftime("%d/%m") for dt in csm_dates.get(doctor, []))
+                csm_tooltip = f"{doctor}\nCongedo straordinario motivato"
+                if csm_dates_text:
+                    csm_tooltip += f"\n{csm_dates_text}"
+                csm_item.setToolTip(csm_tooltip)
+            if csnm_item:
+                csnm_item.setText(str(csnm_totals.get(doctor, 0)))
+                csnm_dates_text = "\n".join(dt.strftime("%d/%m") for dt in csnm_dates.get(doctor, []))
+                csnm_tooltip = f"{doctor}\nCongedo straordinario non motivato"
+                if csnm_dates_text:
+                    csnm_tooltip += f"\n{csnm_dates_text}"
+                csnm_item.setToolTip(csnm_tooltip)
+            for item in (nights_item, sat_day_item, sat_night_item, sun_day_item, sun_night_item, flagged_item, aggpf_item, aggpo_item):
+                if item:
+                    item.setToolTip("")
+
+        for col in range(5):
+            column_items: List[tuple[QTableWidgetItem, int]] = []
+            for row in range(len(DOCTORS)):
+                item = self.stats_table.item(row, col)
+                if not item:
+                    continue
+                try:
+                    value = int((item.text() or "").strip())
+                except ValueError:
+                    continue
+                column_items.append((item, value))
+            if not column_items:
+                continue
+            max_value = max(value for _, value in column_items)
+            positive_values = [value for _, value in column_items if value > 0]
+            min_positive_value = min(positive_values) if positive_values else None
+            for item, value in column_items:
+                if value == 0:
+                    item.setBackground(LINE2_GRIGIO)
+                    item.setForeground(QColor(0, 0, 0))
+                elif min_positive_value is not None and value == min_positive_value:
+                    item.setBackground(LINE2_YELLOW)
+                    item.setForeground(QColor(0, 0, 0))
+                if min_positive_value is not None and max_value != min_positive_value and value == max_value:
+                    item.setBackground(LINE2_ROSSO)
+                    item.setForeground(QColor(0, 0, 0))
+
         for row in range(len(DOCTORS), self.stats_table.rowCount()):
             for col in range(self.stats_table.columnCount()):
                 item = self.stats_table.item(row, col)
@@ -3953,6 +4400,7 @@ class MainWindow(QMainWindow):
                 col_count_8_20 = 0
                 col_count_20_24 = 0
                 col_has_guard_g = False
+                col_has_required_gpo = False
                 for row in range(len(DOCTORS)):
                     item = self.table.item(row, col)
                     text = item.text().strip() if item else ""
@@ -3964,6 +4412,8 @@ class MainWindow(QMainWindow):
                     col_count_8_20 += shifts.count("8-20")
                     if "20-24" in shifts:
                         col_has_20_24 = True
+                    if self._cell_counts_as_required_gpo_guard(text, col):
+                        col_has_required_gpo = True
                     for start, end, label in segments:
                         if (start, end) == (14, 20) and label == "G":
                             col_has_guard_g = True
@@ -3988,6 +4438,8 @@ class MainWindow(QMainWindow):
                             missing_rules.append("almeno un turno 20-24")
                         if not col_has_guard_g:
                             missing_rules.append("almeno una guardia G in fascia 14-20 o turno 8-20")
+                        if not col_has_required_gpo:
+                            missing_rules.append("almeno un turno 14-20 GPO valido")
                         if missing_rules:
                             has_day_error = True
                             header_tooltip = (
@@ -4099,6 +4551,9 @@ class MainWindow(QMainWindow):
                 item = self.table.item(row, col)
                 text = item.text() if item else ""
                 shift, dest = self._split_cell_lines(text)
+                normalized_special = normalize_special_hour_label(shift)
+                if normalized_special:
+                    shift = normalized_special.upper()
                 doctor_cells[day] = {
                     "shift": shift,
                     "dest": dest,
@@ -4151,6 +4606,9 @@ class MainWindow(QMainWindow):
                     if col is None or not isinstance(payload, dict):
                         continue
                     shift = str(payload.get("shift", "")).strip()
+                    normalized_special = normalize_special_hour_label(shift)
+                    if normalized_special:
+                        shift = normalized_special.upper()
                     dest = str(payload.get("dest", "")).strip()
                     flagged = bool(payload.get("flagged", False))
                     if flagged and shift and "**" not in shift:
@@ -4554,6 +5012,50 @@ class MainWindow(QMainWindow):
         settings.setValue("layout/splitter_sizes", json.dumps(sizes))
 
 
+
+
+def create_splash_screen() -> QSplashScreen:
+    pixmap = QPixmap(520, 240)
+    pixmap.fill(QColor("#f7fbff"))
+
+    painter = QPainter(pixmap)
+    painter.fillRect(pixmap.rect(), QColor("#f7fbff"))
+    painter.fillRect(0, 0, pixmap.width(), 54, QColor("#d7e6f7"))
+    painter.setPen(QColor("#8aa7c5"))
+    painter.drawRect(pixmap.rect().adjusted(0, 0, -1, -1))
+
+    title_font = painter.font()
+    title_font.setPointSize(20)
+    title_font.setBold(True)
+    painter.setFont(title_font)
+    painter.setPen(QColor("#143a5c"))
+    painter.drawText(28, 102, APP_NAME)
+
+    subtitle_font = painter.font()
+    subtitle_font.setPointSize(10)
+    subtitle_font.setBold(False)
+    painter.setFont(subtitle_font)
+    painter.setPen(QColor("#355c7d"))
+    painter.drawText(28, 136, "Preparazione dell'ambiente di lavoro...")
+
+    version_font = painter.font()
+    version_font.setPointSize(9)
+    painter.setFont(version_font)
+    painter.setPen(QColor("#5b738a"))
+    painter.drawText(28, 205, f"Versione {APP_VERSION}")
+    painter.drawText(28, 223, APP_AUTHOR)
+    painter.end()
+
+    splash = QSplashScreen(pixmap, Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+    splash.showMessage("Caricamento in corso", Qt.AlignBottom | Qt.AlignRight, QColor("#355c7d"))
+    return splash
+
+
+
+
+def finish_splash_and_show_main(splash: QSplashScreen, window: QMainWindow) -> None:
+    window.show()
+    splash.finish(window)
 def main():
     app = QApplication(sys.argv)
     if not acquire_single_instance_lock():
@@ -4563,8 +5065,17 @@ def main():
             "Applicazione già aperta. Chiudi l'altra istanza prima di avviare questa.",
         )
         return 0
+    splash = create_splash_screen()
+    splash_started_at = time.monotonic()
+    splash.show()
+    app.processEvents()
     w = MainWindow()
-    w.show()
+    elapsed_ms = int((time.monotonic() - splash_started_at) * 1000)
+    remaining_ms = max(0, 4000 - elapsed_ms)
+    if remaining_ms > 0:
+        QTimer.singleShot(remaining_ms, lambda: finish_splash_and_show_main(splash, w))
+    else:
+        finish_splash_and_show_main(splash, w)
     sys.exit(app.exec())
 
 

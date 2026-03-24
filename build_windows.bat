@@ -19,18 +19,18 @@ echo [INFO] Installo dipendenze build...
 python -m pip install pyinstaller PySide6
 if errorlevel 1 goto :error
 
-echo [INFO] Compilo eseguibile...
-python -m PyInstaller --noconfirm --clean --onefile --windowed --name PlannerTurni app.py
+echo [INFO] Compilo release modulare...
+python build_release.py
 if errorlevel 1 goto :error
-
-if exist "planner_data.json" (
-  copy /Y "planner_data.json" "dist\planner_data.json" >nul
-)
 
 echo.
 echo [OK] Build completata:
-echo      dist\PlannerTurni.exe
-echo      dist\planner_data.json
+echo      release\PlannerTurniInstaller.exe
+echo      release\PlannerTurniLauncher.exe
+echo      release\planner-release-manifest.json
+echo      release\planner-app-win64.zip
+echo      release\planner-runtime-win64.zip
+echo      release\planner-portable-win64.zip
 exit /b 0
 
 :error

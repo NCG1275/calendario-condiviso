@@ -8,6 +8,9 @@ __pycache__/
 
 # output locali
 output/
+build_release/
+dist_release/
+release/
 
 # VS Code
 .vscode/
