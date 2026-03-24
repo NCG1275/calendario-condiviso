@@ -42,16 +42,30 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PlannerTurni-windows-release
-          path: release/*
+          path: |
+            release/PlannerTurniInstaller.exe
+            release/PlannerTurniLauncher.exe
+            release/planner-release-manifest.json
+            release/planner-app-win64.zip
+            release/planner-runtime-win64.zip
+            release/planner-portable-win64.zip
           if-no-files-found: error
 
       - name: Publish GitHub release assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          $releaseFiles = @(
+            "release\PlannerTurniInstaller.exe",
+            "release\PlannerTurniLauncher.exe",
+            "release\planner-release-manifest.json",
+            "release\planner-app-win64.zip",
+            "release\planner-runtime-win64.zip",
+            "release\planner-portable-win64.zip"
+          )
           gh release view "${env:RELEASE_TAG}" --repo "${{ github.repository }}"
           if ($LASTEXITCODE -eq 0) {
-            gh release upload "${env:RELEASE_TAG}" release\* --clobber --repo "${{ github.repository }}"
+            gh release upload "${env:RELEASE_TAG}" $releaseFiles --clobber --repo "${{ github.repository }}"
           } else {
-            gh release create "${env:RELEASE_TAG}" release\* --title "${env:RELEASE_TAG}" --generate-notes --repo "${{ github.repository }}"
+            gh release create "${env:RELEASE_TAG}" $releaseFiles --title "${env:RELEASE_TAG}" --generate-notes --repo "${{ github.repository }}"
           }
