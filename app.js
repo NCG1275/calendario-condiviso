@@ -49,6 +49,12 @@ function setStatus(message, tone) {
   els.status.className = 'status' + (tone ? ' ' + tone : '');
 }
 
+function resolveEventElement(target) {
+  if (target instanceof Element) return target;
+  if (target && target.parentElement instanceof Element) return target.parentElement;
+  return null;
+}
+
 function setBusy(isBusy) {
   els.saveButton.disabled = isBusy || !state.idToken;
   els.refreshButton.disabled = isBusy || !state.idToken;
@@ -519,7 +525,7 @@ function initGoogleIdentity() {
 }
 
 document.addEventListener('click', (event) => {
-  const target = event.target instanceof Element ? event.target : null;
+  const target = resolveEventElement(event.target);
   if (!target) return;
   const button = target.closest('[data-action="edit"]');
   if (button) {
@@ -539,7 +545,8 @@ document.addEventListener('click', (event) => {
 });
 
 document.addEventListener('keydown', (event) => {
-  const target = event.target instanceof Element ? event.target.closest('[data-action="edit"]') : null;
+  const targetElement = resolveEventElement(event.target);
+  const target = targetElement ? targetElement.closest('[data-action="edit"]') : null;
   if (!target) return;
   if (event.key !== 'Enter' && event.key !== ' ') return;
   event.preventDefault();

@@ -86,10 +86,8 @@ h1 {
   max-width: 720px;
 }
 
-.layout {
+.calendar-stack {
   display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 18px;
 }
 
 .panel {
@@ -145,19 +143,6 @@ h1 {
   color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.45;
-}
-
-#openCreateModalButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  justify-self: start;
-  align-self: start;
-  width: auto;
-  max-width: 100%;
-  min-width: 0;
-  padding-inline: 14px;
-  white-space: nowrap;
 }
 
 h2 {
@@ -233,6 +218,23 @@ textarea {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 14px;
+}
+
+.calendar-actions {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+#openCreateModalButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 0;
+  padding-inline: 14px;
+  white-space: nowrap;
 }
 
 .calendar-nav {
@@ -581,11 +583,6 @@ hr {
     text-align: left;
   }
 
-  .layout {
-    display: flex;
-    flex-direction: column;
-  }
-
   .welcome-card {
     padding: 28px 22px;
   }
@@ -626,12 +623,7 @@ hr {
     min-height: 150px;
   }
 
-  .form {
-    justify-items: start;
-  }
-
   #openCreateModalButton {
     width: auto !important;
-    max-width: none;
   }
 }
