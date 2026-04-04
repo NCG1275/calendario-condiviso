@@ -87,7 +87,7 @@ function escapeHtml(value) {
 function formatDateTime(value) {
   return new Intl.DateTimeFormat('it-IT', {
     dateStyle: 'medium',
-  }).format(new Date(value));
+  }).format(parseCalendarDate(value));
 }
 
 function formatMonthTitle(date) {
@@ -118,12 +118,21 @@ function dayKeyFromDate(date) {
   return `${y}-${m}-${d}`;
 }
 
+function parseCalendarDate(value) {
+  const raw = String(value || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const [year, month, day] = raw.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  return new Date(raw);
+}
+
 function eventStartDate(event) {
-  return new Date(event.start);
+  return parseCalendarDate(event.start);
 }
 
 function eventLastDate(event) {
-  const date = new Date(event.end);
+  const date = parseCalendarDate(event.end);
   date.setDate(date.getDate() - 1);
   return date;
 }
@@ -140,27 +149,26 @@ function formatMiniEvent(event, segmentType) {
 
 function toInputDate(value) {
   if (!value) return '';
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
   return dayKeyFromDate(date);
 }
 
 function toInclusiveEndInputDate(value) {
   if (!value) return '';
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
   date.setDate(date.getDate() - 1);
   return dayKeyFromDate(date);
 }
 
 function fromInputDateStart(value) {
-  if (!value) return '';
-  return new Date(`${value}T00:00:00`).toISOString();
+  return value ? String(value) : '';
 }
 
 function fromInputDateEndExclusive(value) {
   if (!value) return '';
-  const date = new Date(`${value}T00:00:00`);
+  const date = parseCalendarDate(value);
   date.setDate(date.getDate() + 1);
-  return date.toISOString();
+  return dayKeyFromDate(date);
 }
 
 function encodePayload(payload) {
@@ -348,8 +356,7 @@ function renderMonthGrid() {
   const today = new Date();
   const eventsByDay = new Map();
   state.events.forEach((event) => {
-    const start = new Date(event.start);
-    const endExclusive = new Date(event.end);
+    const start = eventStartDate(event);
     const lastDay = eventLastDate(event);
     let cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
     while (cursor <= lastDay) {
@@ -363,7 +370,7 @@ function renderMonthGrid() {
       if (isStart && isEnd) segmentType = 'single';
       else if (isStart) segmentType = 'start';
       else if (isEnd) segmentType = 'end';
-      eventsByDay.get(key).push({ event, segmentType, startTime: new Date(event.start).getTime() });
+      eventsByDay.get(key).push({ event, segmentType, startTime: eventStartDate(event).getTime() });
       cursor.setDate(cursor.getDate() + 1);
     }
   });
