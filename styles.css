@@ -386,8 +386,8 @@ button:disabled { opacity: 0.55; cursor: default; }
 }
 
 .mini-event.mine {
-  background: #d7efe3;
-  color: #21543b;
+  background: #f6d9bd;
+  color: #8a4417;
 }
 
 .mini-event.segment-single {
