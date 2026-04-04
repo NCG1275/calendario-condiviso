@@ -582,7 +582,8 @@ hr {
   }
 
   .layout {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
   }
 
   .welcome-card {
@@ -627,5 +628,10 @@ hr {
 
   .form {
     justify-items: start;
+  }
+
+  #openCreateModalButton {
+    width: auto !important;
+    max-width: none;
   }
 }

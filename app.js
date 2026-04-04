@@ -519,7 +519,9 @@ function initGoogleIdentity() {
 }
 
 document.addEventListener('click', (event) => {
-  const button = event.target.closest('[data-action="edit"]');
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) return;
+  const button = target.closest('[data-action="edit"]');
   if (button) {
     event.stopPropagation();
     const selected = state.events.find((item) => item.id === button.dataset.id);
@@ -529,7 +531,7 @@ document.addEventListener('click', (event) => {
     return;
   }
 
-  const dayCell = event.target.closest('[data-action="new-on-date"]');
+  const dayCell = target.closest('[data-action="new-on-date"]');
   if (!dayCell) return;
   const dateParts = dayCell.dataset.date.split('-').map(Number);
   prepareNewEventForDate(new Date(dateParts[0], dateParts[1] - 1, dateParts[2]));
@@ -537,7 +539,7 @@ document.addEventListener('click', (event) => {
 });
 
 document.addEventListener('keydown', (event) => {
-  const target = event.target.closest('[data-action="edit"]');
+  const target = event.target instanceof Element ? event.target.closest('[data-action="edit"]') : null;
   if (!target) return;
   if (event.key !== 'Enter' && event.key !== ' ') return;
   event.preventDefault();
