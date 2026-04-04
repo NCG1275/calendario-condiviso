@@ -28,6 +28,7 @@ const els = {
   modalTitle: document.getElementById('modalTitle'),
   modalEyebrow: document.getElementById('modalEyebrow'),
   modalMeta: document.getElementById('modalMeta'),
+  modalTimestamps: document.getElementById('modalTimestamps'),
   openCreateModalButton: document.getElementById('openCreateModalButton'),
   closeModalButton: document.getElementById('closeModalButton'),
   eventForm: document.getElementById('eventForm'),
@@ -222,6 +223,8 @@ function resetForm() {
   els.modalTitle.textContent = 'Inserisci evento';
   els.modalMeta.textContent = '';
   els.modalMeta.classList.add('hidden');
+  els.modalTimestamps.textContent = '';
+  els.modalTimestamps.classList.add('hidden');
   setFormEditable(true);
 }
 
@@ -274,6 +277,20 @@ function fillForm(event) {
     ? `Autore: ${owner}. Puoi modificare questa richiesta.`
     : `Autore: ${owner}. Puoi solo visualizzare questa richiesta.`;
   els.modalMeta.classList.remove('hidden');
+  const stamps = [];
+  if (event.created) {
+    stamps.push(`Creata: ${formatDateTime(event.created)}`);
+  }
+  if (event.updated) {
+    stamps.push(`Aggiornata: ${formatDateTime(event.updated)}`);
+  }
+  if (stamps.length) {
+    els.modalTimestamps.textContent = stamps.join(' • ');
+    els.modalTimestamps.classList.remove('hidden');
+  } else {
+    els.modalTimestamps.textContent = '';
+    els.modalTimestamps.classList.add('hidden');
+  }
   setFormEditable(!!event.canEdit);
   openModal();
 }
