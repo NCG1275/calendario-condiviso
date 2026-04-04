@@ -27,6 +27,7 @@ const els = {
   requestModal: document.getElementById('requestModal'),
   modalTitle: document.getElementById('modalTitle'),
   modalEyebrow: document.getElementById('modalEyebrow'),
+  modalMeta: document.getElementById('modalMeta'),
   openCreateModalButton: document.getElementById('openCreateModalButton'),
   closeModalButton: document.getElementById('closeModalButton'),
   eventForm: document.getElementById('eventForm'),
@@ -219,6 +220,9 @@ function resetForm() {
   els.deleteButton.disabled = true;
   els.modalEyebrow.textContent = 'Nuova richiesta';
   els.modalTitle.textContent = 'Inserisci evento';
+  els.modalMeta.textContent = '';
+  els.modalMeta.classList.add('hidden');
+  setFormEditable(true);
 }
 
 function logout() {
@@ -245,6 +249,16 @@ function closeModal() {
   els.requestModal.classList.add('hidden');
 }
 
+function setFormEditable(editable) {
+  els.summary.disabled = !editable;
+  els.start.disabled = !editable;
+  els.end.disabled = !editable;
+  els.location.disabled = !editable;
+  els.description.disabled = !editable;
+  els.saveButton.disabled = !editable || !state.idToken;
+  els.deleteButton.disabled = !editable || !els.eventId.value;
+}
+
 function fillForm(event) {
   els.eventId.value = event.id;
   els.summary.value = event.summary || '';
@@ -252,10 +266,15 @@ function fillForm(event) {
   els.end.value = toInclusiveEndInputDate(event.end);
   els.location.value = event.location || '';
   els.description.value = event.description || '';
+  const owner = event.ownerName || event.ownerEmail || 'Utente';
   els.saveButton.textContent = 'Aggiorna';
-  els.deleteButton.disabled = !event.canEdit;
-  els.modalEyebrow.textContent = 'Richiesta esistente';
-  els.modalTitle.textContent = 'Modifica evento';
+  els.modalEyebrow.textContent = event.canEdit ? 'Richiesta esistente' : 'Sola lettura';
+  els.modalTitle.textContent = event.canEdit ? 'Modifica evento' : 'Evento in sola lettura';
+  els.modalMeta.textContent = event.canEdit
+    ? `Autore: ${owner}. Puoi modificare questa richiesta.`
+    : `Autore: ${owner}. Puoi solo visualizzare questa richiesta.`;
+  els.modalMeta.classList.remove('hidden');
+  setFormEditable(!!event.canEdit);
   openModal();
 }
 

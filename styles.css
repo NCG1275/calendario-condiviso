@@ -508,6 +508,12 @@ hr {
   margin: 0;
 }
 
+.modal-meta {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .modal-close {
   width: 40px;
   height: 40px;
