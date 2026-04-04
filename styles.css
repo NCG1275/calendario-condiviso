@@ -147,6 +147,12 @@ h1 {
   line-height: 1.45;
 }
 
+#openCreateModalButton {
+  justify-self: start;
+  width: auto;
+  padding-inline: 14px;
+}
+
 h2 {
   margin: 0 0 14px;
   font-size: 1.14rem;
