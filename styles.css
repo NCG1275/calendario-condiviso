@@ -284,6 +284,7 @@ button {
   cursor: pointer;
   background: var(--soft);
   color: var(--ink);
+  touch-action: manipulation;
 }
 
 button.primary {
@@ -423,6 +424,8 @@ button:disabled { opacity: 0.55; cursor: default; }
   align-items: center;
   cursor: pointer;
   text-align: left;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mini-event.mine {
@@ -570,6 +573,15 @@ hr {
 }
 
 @media (max-width: 900px) {
+  .calendar-stack {
+    display: block;
+  }
+
+  .panel {
+    min-width: 0;
+    width: 100%;
+  }
+
   .hero-top {
     flex-direction: column;
   }
@@ -594,20 +606,34 @@ hr {
     border-radius: 20px;
   }
 
+  .calendar-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
   .month-grid-wrap {
+    display: block;
+    width: 100%;
     overflow-x: auto;
+    overflow-y: hidden;
     margin-inline: -6px;
     padding-inline: 6px;
+    -webkit-overflow-scrolling: touch;
   }
 
   .calendar-shell {
-    width: max-content;
+    display: block;
+    width: 720px;
     min-width: 720px;
+    max-width: none;
     border-radius: 16px;
   }
 
   .weekdays,
   .week-row {
+    display: grid;
     width: 720px;
     min-width: 720px;
     max-width: 720px;
@@ -616,7 +642,8 @@ hr {
   }
 
   .month-grid {
-    width: max-content;
+    display: block;
+    width: 720px;
     min-width: 720px;
   }
 
@@ -627,5 +654,7 @@ hr {
 
   #openCreateModalButton {
     width: auto !important;
+    max-width: none;
+    flex: 0 0 auto;
   }
 }
