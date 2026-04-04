@@ -31,6 +31,13 @@ body {
   margin-bottom: 18px;
 }
 
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   color: var(--accent);
@@ -63,6 +70,18 @@ h1 {
   border-radius: 18px;
   padding: 18px;
   box-shadow: 0 10px 30px rgba(71, 45, 24, 0.08);
+}
+
+.account-panel {
+  min-width: 300px;
+  max-width: 340px;
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
+.account-panel .status {
+  text-align: right;
 }
 
 h2 {
@@ -349,6 +368,21 @@ hr {
 }
 
 @media (max-width: 900px) {
+  .hero-top {
+    flex-direction: column;
+  }
+
+  .account-panel {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    justify-items: start;
+  }
+
+  .account-panel .status {
+    text-align: left;
+  }
+
   .layout {
     grid-template-columns: 1fr;
   }

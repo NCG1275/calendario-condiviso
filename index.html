@@ -10,26 +10,28 @@
   <body>
     <div class="shell">
       <section class="hero">
-        <p class="eyebrow">GitHub Pages + Google Calendar</p>
-        <h1>Calendario condiviso</h1>
-        <p class="lead">Tutti vedono gli eventi. Ognuno crea e modifica solo i propri.</p>
+        <div class="hero-top">
+          <div>
+            <p class="eyebrow">GitHub Pages + Google Calendar</p>
+            <h1>Calendario condiviso</h1>
+            <p class="lead">Tutti vedono gli eventi. Ognuno crea e modifica solo i propri.</p>
+          </div>
+          <div class="account-panel">
+            <div id="signin" class="signin"></div>
+            <div id="userCard" class="user-card hidden">
+              <img id="userPicture" alt="Profilo">
+              <div>
+                <div id="userName" class="user-name"></div>
+                <div id="userEmail" class="user-email"></div>
+              </div>
+            </div>
+            <p id="status" class="status">Accedi con Google per iniziare.</p>
+          </div>
+        </div>
       </section>
 
       <div class="layout">
         <aside class="panel">
-          <h2>Accesso</h2>
-          <div id="signin" class="signin"></div>
-          <div id="userCard" class="user-card hidden">
-            <img id="userPicture" alt="Profilo">
-            <div>
-              <div id="userName" class="user-name"></div>
-              <div id="userEmail" class="user-email"></div>
-            </div>
-          </div>
-          <p id="status" class="status">Accedi con Google per iniziare.</p>
-
-          <hr>
-
           <h2>Evento</h2>
           <form id="eventForm" class="form">
             <input type="hidden" id="eventId">
