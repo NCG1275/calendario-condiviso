@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Calendario condiviso</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <div class="shell">
+      <section class="hero">
+        <p class="eyebrow">GitHub Pages + Google Calendar</p>
+        <h1>Calendario condiviso</h1>
+        <p class="lead">Tutti vedono gli eventi. Ognuno crea e modifica solo i propri.</p>
+      </section>
+
+      <div class="layout">
+        <aside class="panel">
+          <h2>Accesso</h2>
+          <div id="signin" class="signin"></div>
+          <div id="userCard" class="user-card hidden">
+            <img id="userPicture" alt="Profilo">
+            <div>
+              <div id="userName" class="user-name"></div>
+              <div id="userEmail" class="user-email"></div>
+            </div>
+          </div>
+          <p id="status" class="status">Accedi con Google per iniziare.</p>
+
+          <hr>
+
+          <h2>Evento</h2>
+          <form id="eventForm" class="form">
+            <input type="hidden" id="eventId">
+            <label>Titolo<input id="summary" required></label>
+            <div class="two-cols">
+              <label>Inizio<input id="start" type="datetime-local" required></label>
+              <label>Fine<input id="end" type="datetime-local" required></label>
+            </div>
+            <label>Luogo<input id="location"></label>
+            <label>Descrizione<textarea id="description"></textarea></label>
+            <div class="actions">
+              <button type="submit" id="saveButton" class="primary" disabled>Salva</button>
+              <button type="button" id="resetButton">Nuovo</button>
+              <button type="button" id="deleteButton" class="danger" disabled>Elimina</button>
+            </div>
+          </form>
+        </aside>
+
+        <main class="panel">
+          <div class="toolbar">
+            <h2>Agenda</h2>
+            <button type="button" id="refreshButton" disabled>Aggiorna</button>
+          </div>
+          <div id="events" class="events">
+            <div class="empty">Nessun evento caricato.</div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
+
