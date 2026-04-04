@@ -389,7 +389,7 @@ function renderMonthGrid() {
       const event = entry.event;
       const mineClass = event.canEdit ? ' mine' : '';
       const segmentClass = ` segment-${entry.segmentType}`;
-      return `<button type="button" class="mini-event${mineClass}${segmentClass}" data-action="edit" data-id="${event.id}">${escapeHtml(formatMiniEvent(event, entry.segmentType))}</button>`;
+      return `<div role="button" tabindex="0" class="mini-event${mineClass}${segmentClass}" data-action="edit" data-id="${event.id}">${escapeHtml(formatMiniEvent(event, entry.segmentType))}</div>`;
     }).join('');
 
     cells.push(
@@ -533,6 +533,17 @@ document.addEventListener('click', (event) => {
   if (!dayCell) return;
   const dateParts = dayCell.dataset.date.split('-').map(Number);
   prepareNewEventForDate(new Date(dateParts[0], dateParts[1] - 1, dateParts[2]));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+document.addEventListener('keydown', (event) => {
+  const target = event.target.closest('[data-action="edit"]');
+  if (!target) return;
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  const selected = state.events.find((item) => item.id === target.dataset.id);
+  if (!selected) return;
+  fillForm(selected);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
