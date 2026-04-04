@@ -148,8 +148,13 @@ h1 {
 }
 
 #openCreateModalButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   justify-self: start;
+  align-self: start;
   width: auto;
+  max-width: max-content;
   padding-inline: 14px;
 }
 
