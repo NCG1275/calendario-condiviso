@@ -223,15 +223,19 @@ textarea {
 }
 
 .calendar-nav {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  display: block;
 }
 
 .calendar-heading {
   display: grid;
   gap: 4px;
+  justify-content: start;
+}
+
+.calendar-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .month-arrow {
@@ -242,7 +246,6 @@ textarea {
   font-size: 1.8rem;
   line-height: 1;
   box-shadow: none;
-  margin-top: 1px;
 }
 
 .month-arrow:hover {
@@ -251,7 +254,7 @@ textarea {
 }
 
 .calendar-title {
-  margin-bottom: 4px;
+  margin: 0;
 }
 
 .calendar-subtitle {

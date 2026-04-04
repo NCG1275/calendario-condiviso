@@ -53,12 +53,14 @@
         <main class="panel">
           <div class="toolbar">
             <div class="calendar-nav">
-              <button type="button" id="prevMonthButton" class="month-arrow" aria-label="Mese precedente">‹</button>
               <div class="calendar-heading">
-                <h2 id="calendarTitle" class="calendar-title">Calendario</h2>
+                <div class="calendar-title-row">
+                  <button type="button" id="prevMonthButton" class="month-arrow" aria-label="Mese precedente">‹</button>
+                  <h2 id="calendarTitle" class="calendar-title">Calendario</h2>
+                  <button type="button" id="nextMonthButton" class="month-arrow" aria-label="Mese successivo">›</button>
+                </div>
                 <div class="calendar-subtitle">Clicca un giorno per preparare un nuovo evento.</div>
               </div>
-              <button type="button" id="nextMonthButton" class="month-arrow" aria-label="Mese successivo">›</button>
             </div>
             <button type="button" id="refreshButton" disabled>Aggiorna</button>
           </div>
