@@ -592,12 +592,16 @@ hr {
 
   .weekdays,
   .month-grid {
+    display: grid !important;
     width: 720px;
     min-width: 720px;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    max-width: 720px;
+    grid-template-columns: repeat(7, calc(720px / 7));
+    grid-auto-flow: row;
   }
 
   .day-cell {
+    width: calc(720px / 7);
     min-height: 150px;
   }
 }
