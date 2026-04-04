@@ -229,6 +229,21 @@ textarea {
   flex-wrap: wrap;
 }
 
+.month-arrow {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #5f6368;
+  font-size: 1.8rem;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.month-arrow:hover {
+  background: transparent;
+  color: var(--ink);
+}
+
 .calendar-title {
   margin-bottom: 4px;
 }
