@@ -361,18 +361,19 @@ button:disabled { opacity: 0.55; cursor: default; }
 
 .day-events {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   align-content: start;
 }
 
 .mini-event {
-  padding: 5px 8px;
+  min-height: 24px;
+  padding: 4px 8px;
   border-radius: 0;
-  background: #dff2f4;
+  background: #cfeaf0;
   border-left: 0;
   color: #1d5264;
-  font-size: 0.78rem;
-  line-height: 1.25;
+  font-size: 0.76rem;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -380,10 +381,12 @@ button:disabled { opacity: 0.55; cursor: default; }
   margin-right: -10px;
   padding-left: 10px;
   padding-right: 10px;
+  display: flex;
+  align-items: center;
 }
 
 .mini-event.mine {
-  background: #e0f3eb;
+  background: #d7efe3;
   color: #21543b;
 }
 
@@ -411,6 +414,10 @@ button:disabled { opacity: 0.55; cursor: default; }
 
 .mini-event.segment-middle {
   border-radius: 0;
+}
+
+.mini-event.segment-end {
+  justify-content: flex-end;
 }
 
 .section-title {
