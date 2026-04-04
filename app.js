@@ -385,22 +385,17 @@ function renderMonthGrid() {
       sameDay(cellDate, today) ? 'today' : '',
     ].filter(Boolean).join(' ');
 
-    const previews = dayEvents.slice(0, 3).map((entry) => {
+    const previews = dayEvents.slice(0, 8).map((entry) => {
       const event = entry.event;
       const mineClass = event.canEdit ? ' mine' : '';
       const segmentClass = ` segment-${entry.segmentType}`;
       return `<div class="mini-event${mineClass}${segmentClass}" data-action="edit" data-id="${event.id}">${escapeHtml(formatMiniEvent(event, entry.segmentType))}</div>`;
     }).join('');
 
-    const more = dayEvents.length > 3
-      ? `<div class="day-count">+${dayEvents.length - 3} altri</div>`
-      : `<div class="day-count">${dayEvents.length ? `${dayEvents.length} eventi` : '\u00a0'}</div>`;
-
     cells.push(
       `<div class="${classes}" data-action="new-on-date" data-date="${key}">` +
         `<div class="day-head">` +
           `<div class="day-number">${cellDate.getDate()}</div>` +
-          `${more}` +
         `</div>` +
         `<div class="day-events">${previews}</div>` +
       `</div>`
