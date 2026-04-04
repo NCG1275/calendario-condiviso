@@ -36,7 +36,6 @@ const els = {
   summary: document.getElementById('summary'),
   start: document.getElementById('start'),
   end: document.getElementById('end'),
-  location: document.getElementById('location'),
   description: document.getElementById('description'),
   saveButton: document.getElementById('saveButton'),
   deleteButton: document.getElementById('deleteButton'),
@@ -264,7 +263,6 @@ function setFormEditable(editable) {
   els.summary.disabled = !editable;
   els.start.disabled = !editable;
   els.end.disabled = !editable;
-  els.location.disabled = !editable;
   els.description.disabled = !editable;
   els.saveButton.disabled = !editable || !state.idToken;
   els.deleteButton.disabled = !editable || !els.eventId.value;
@@ -275,7 +273,6 @@ function fillForm(event) {
   els.summary.value = event.summary || '';
   els.start.value = toInputDate(event.start);
   els.end.value = toInclusiveEndInputDate(event.end);
-  els.location.value = event.location || '';
   els.description.value = event.description || '';
   const owner = event.ownerName || event.ownerEmail || 'Utente';
   els.saveButton.textContent = 'Aggiorna';
@@ -335,7 +332,6 @@ function renderEvents() {
           '<div><strong>Dal:</strong> ' + escapeHtml(formatDateTime(event.start)) + '</div>' +
           '<div><strong>Al:</strong> ' + escapeHtml(formatDateTime(eventLastDate(event).toISOString())) + '</div>' +
           '<div><strong>Proprietario:</strong> ' + escapeHtml(owner) + '</div>' +
-          (event.location ? '<div><strong>Luogo:</strong> ' + escapeHtml(event.location) + '</div>' : '') +
         '</div>' +
         (event.description ? '<div>' + escapeHtml(event.description) + '</div>' : '') +
         (event.canEdit ? '<div class="actions"><button type="button" data-action="edit" data-id="' + event.id + '">Modifica</button></div>' : '') +
@@ -448,7 +444,6 @@ function getFormPayload() {
     summary: els.summary.value,
     start: fromInputDateStart(els.start.value),
     end: fromInputDateEndExclusive(els.end.value),
-    location: els.location.value,
     description: els.description.value,
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Rome',
   };
