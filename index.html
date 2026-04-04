@@ -43,22 +43,11 @@
 
         <div class="layout">
         <aside class="panel">
-          <h2>Evento</h2>
-          <form id="eventForm" class="form">
-            <input type="hidden" id="eventId">
-            <label>Titolo<input id="summary" required></label>
-            <div class="two-cols">
-              <label>Inizio<input id="start" type="datetime-local" required></label>
-              <label>Fine<input id="end" type="datetime-local" required></label>
-            </div>
-            <label>Luogo<input id="location"></label>
-            <label>Descrizione<textarea id="description"></textarea></label>
-            <div class="actions">
-              <button type="submit" id="saveButton" class="primary" disabled>Salva</button>
-              <button type="button" id="resetButton">Nuovo</button>
-              <button type="button" id="deleteButton" class="danger" disabled>Elimina</button>
-            </div>
-          </form>
+          <h2>Azioni</h2>
+          <div class="form">
+            <button type="button" id="openCreateModalButton" class="primary" disabled>Aggiungi richiesta</button>
+            <div class="side-note">Apri una nuova richiesta da qui oppure clicca direttamente un giorno del calendario.</div>
+          </div>
         </aside>
 
         <main class="panel">
@@ -96,6 +85,33 @@
         </main>
         </div>
       </section>
+    </div>
+
+    <div id="requestModal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <div>
+            <div id="modalEyebrow" class="modal-eyebrow">Nuova richiesta</div>
+            <h2 id="modalTitle" class="modal-title">Inserisci evento</h2>
+          </div>
+          <button type="button" id="closeModalButton" class="modal-close" aria-label="Chiudi">×</button>
+        </div>
+        <form id="eventForm" class="form modal-form">
+          <input type="hidden" id="eventId">
+          <label>Titolo<input id="summary" required></label>
+          <div class="two-cols">
+            <label>Inizio<input id="start" type="datetime-local" required></label>
+            <label>Fine<input id="end" type="datetime-local" required></label>
+          </div>
+          <label>Luogo<input id="location"></label>
+          <label>Descrizione<textarea id="description"></textarea></label>
+          <div class="actions">
+            <button type="submit" id="saveButton" class="primary" disabled>Salva</button>
+            <button type="button" id="resetButton">Nuovo</button>
+            <button type="button" id="deleteButton" class="danger" disabled>Elimina</button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <script src="./app.js"></script>

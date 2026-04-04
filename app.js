@@ -23,6 +23,11 @@ const els = {
   events: document.getElementById('events'),
   monthGrid: document.getElementById('monthGrid'),
   calendarTitle: document.getElementById('calendarTitle'),
+  requestModal: document.getElementById('requestModal'),
+  modalTitle: document.getElementById('modalTitle'),
+  modalEyebrow: document.getElementById('modalEyebrow'),
+  openCreateModalButton: document.getElementById('openCreateModalButton'),
+  closeModalButton: document.getElementById('closeModalButton'),
   eventForm: document.getElementById('eventForm'),
   eventId: document.getElementById('eventId'),
   summary: document.getElementById('summary'),
@@ -46,6 +51,7 @@ function setStatus(message, tone) {
 function setBusy(isBusy) {
   els.saveButton.disabled = isBusy || !state.idToken;
   els.refreshButton.disabled = isBusy || !state.idToken;
+  els.openCreateModalButton.disabled = isBusy || !state.idToken;
 }
 
 function setSignedInUi(isSignedIn) {
@@ -185,6 +191,8 @@ function resetForm() {
   els.eventId.value = '';
   els.saveButton.textContent = 'Salva';
   els.deleteButton.disabled = true;
+  els.modalEyebrow.textContent = 'Nuova richiesta';
+  els.modalTitle.textContent = 'Inserisci evento';
 }
 
 function logout() {
@@ -198,7 +206,17 @@ function logout() {
   setStatus('Accesso disconnesso.');
   els.saveButton.disabled = true;
   els.refreshButton.disabled = true;
+  els.openCreateModalButton.disabled = true;
+  closeModal();
   google.accounts.id.disableAutoSelect();
+}
+
+function openModal() {
+  els.requestModal.classList.remove('hidden');
+}
+
+function closeModal() {
+  els.requestModal.classList.add('hidden');
 }
 
 function fillForm(event) {
@@ -210,6 +228,9 @@ function fillForm(event) {
   els.description.value = event.description || '';
   els.saveButton.textContent = 'Aggiorna';
   els.deleteButton.disabled = !event.canEdit;
+  els.modalEyebrow.textContent = 'Richiesta esistente';
+  els.modalTitle.textContent = 'Modifica evento';
+  openModal();
 }
 
 function prepareNewEventForDate(date) {
@@ -218,6 +239,7 @@ function prepareNewEventForDate(date) {
   const end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 10, 0, 0);
   els.start.value = toInputDateTime(start.toISOString());
   els.end.value = toInputDateTime(end.toISOString());
+  openModal();
   els.summary.focus();
 }
 
@@ -361,6 +383,7 @@ function saveEvent(event) {
   })
     .then(() => {
       resetForm();
+      closeModal();
       loadBootstrap();
     })
     .catch((error) => {
@@ -381,6 +404,7 @@ function deleteCurrentEvent() {
   })
     .then(() => {
       resetForm();
+      closeModal();
       loadBootstrap();
     })
     .catch((error) => {
@@ -393,6 +417,7 @@ function onGoogleCredential(response) {
   state.idToken = response.credential;
   els.saveButton.disabled = false;
   els.refreshButton.disabled = false;
+  els.openCreateModalButton.disabled = false;
   loadBootstrap();
 }
 
@@ -432,7 +457,15 @@ document.addEventListener('click', (event) => {
 els.eventForm.addEventListener('submit', saveEvent);
 els.deleteButton.addEventListener('click', deleteCurrentEvent);
 els.refreshButton.addEventListener('click', loadBootstrap);
-els.resetButton.addEventListener('click', resetForm);
+els.resetButton.addEventListener('click', () => {
+  resetForm();
+  openModal();
+});
+els.openCreateModalButton.addEventListener('click', () => {
+  resetForm();
+  openModal();
+});
+els.closeModalButton.addEventListener('click', closeModal);
 els.logoutButton.addEventListener('click', logout);
 els.prevMonthButton.addEventListener('click', () => {
   state.visibleMonth = addMonths(state.visibleMonth, -1);
@@ -443,6 +476,11 @@ els.nextMonthButton.addEventListener('click', () => {
   state.visibleMonth = addMonths(state.visibleMonth, 1);
   renderMonthGrid();
   renderEvents();
+});
+els.requestModal.addEventListener('click', (event) => {
+  if (event.target === els.requestModal) {
+    closeModal();
+  }
 });
 window.addEventListener('load', initGoogleIdentity);
 
