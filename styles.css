@@ -350,6 +350,8 @@ button:disabled { opacity: 0.55; cursor: default; }
   grid-template-rows: auto 1fr;
   gap: 4px;
   cursor: pointer;
+}
+
 .week-row .day-cell:last-child {
   border-right: 0;
 }
