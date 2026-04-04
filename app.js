@@ -435,6 +435,11 @@ function onGoogleCredential(response) {
 
 function initGoogleIdentity() {
   showWelcome();
+  resetForm();
+  closeModal();
+  els.saveButton.disabled = true;
+  els.refreshButton.disabled = true;
+  els.openCreateModalButton.disabled = true;
   google.accounts.id.initialize({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
     callback: onGoogleCredential,
