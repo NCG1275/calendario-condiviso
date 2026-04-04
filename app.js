@@ -8,6 +8,7 @@ const state = {
   user: null,
   events: [],
   visibleMonth: startOfMonth(new Date()),
+  isAuthenticated: false,
 };
 
 const els = {
@@ -59,6 +60,17 @@ function setSignedInUi(isSignedIn) {
   els.appScreen.classList.toggle('hidden', !isSignedIn);
   els.logoutButton.classList.toggle('hidden', !isSignedIn);
   els.userCard.classList.toggle('hidden', !isSignedIn);
+}
+
+function showWelcome() {
+  state.isAuthenticated = false;
+  setSignedInUi(false);
+  closeModal();
+}
+
+function showApp() {
+  state.isAuthenticated = true;
+  setSignedInUi(true);
 }
 
 function escapeHtml(value) {
@@ -199,7 +211,7 @@ function logout() {
   state.idToken = '';
   state.user = null;
   state.events = [];
-  setSignedInUi(false);
+  showWelcome();
   resetForm();
   els.events.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
   els.monthGrid.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
@@ -341,7 +353,7 @@ function loadBootstrap() {
       const hadEventsLoaded = state.events.length > 0;
       state.user = data.user;
       state.events = data.events || [];
-      setSignedInUi(true);
+      showApp();
       els.userPicture.src = data.user.picture || '';
       els.userName.textContent = data.user.name || 'Utente';
       els.userEmail.textContent = data.user.email || '';
@@ -422,6 +434,7 @@ function onGoogleCredential(response) {
 }
 
 function initGoogleIdentity() {
+  showWelcome();
   google.accounts.id.initialize({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
     callback: onGoogleCredential,
