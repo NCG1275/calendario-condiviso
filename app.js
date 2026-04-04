@@ -1,6 +1,6 @@
 const CONFIG = {
-  APPS_SCRIPT_API_URL: 'https://script.google.com/macros/s/AKfycbyXEn26k7gg3TZl1Hy_8jhrCP1giI4vmBEHVeF576O0h_2Mwb-6BILxKCgTAZxpx5wo/exec',
-  GOOGLE_CLIENT_ID: '773831536759-913anpfiumvmnpd7h10okqqioq0gj2tm.apps.googleusercontent.com',
+  APPS_SCRIPT_API_URL: 'https://script.google.com/a/*/macros/s/AKfycbyx8SC5ZD3eXviFvctb5d4RccejdOnrAGDKoBMMEhffIZPuHZTiliwYhlk_K-n8XQ5oYA/exec',
+  GOOGLE_CLIENT_ID: '879487248442-lur0tpgfk2vcb3v116n6ttgdhtntfe58.apps.googleusercontent.com',
 };
 
 const state = {
