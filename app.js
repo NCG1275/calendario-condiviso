@@ -20,7 +20,6 @@ const els = {
   userCard: document.getElementById('userCard'),
   userPicture: document.getElementById('userPicture'),
   userName: document.getElementById('userName'),
-  events: document.getElementById('events'),
   monthGrid: document.getElementById('monthGrid'),
   calendarTitle: document.getElementById('calendarTitle'),
   requestModal: document.getElementById('requestModal'),
@@ -314,37 +313,6 @@ function prepareNewEventForDate(date) {
   els.summary.focus();
 }
 
-function renderEvents() {
-  const month = state.visibleMonth.getMonth();
-  const year = state.visibleMonth.getFullYear();
-  const monthEvents = state.events.filter((event) => {
-    const start = eventStartDate(event);
-    return start.getMonth() === month && start.getFullYear() === year;
-  });
-
-  if (!monthEvents.length) {
-    els.events.innerHTML = '<div class="empty">Nessun evento nel mese selezionato.</div>';
-    return;
-  }
-
-  els.events.innerHTML = monthEvents.map((event) => {
-    const owner = event.ownerName || 'Utente';
-    return (
-      '<article class="event">' +
-        '<h3>' + escapeHtml(event.summary) + '</h3>' +
-        '<div class="meta">' +
-          '<div><span class="pill">' + (event.canEdit ? 'Tua richiesta' : 'Solo lettura') + '</span></div>' +
-          '<div><strong>Dal:</strong> ' + escapeHtml(formatDateTime(event.start)) + '</div>' +
-          '<div><strong>Al:</strong> ' + escapeHtml(formatDateTime(eventLastDate(event).toISOString())) + '</div>' +
-          '<div><strong>Autore:</strong> ' + escapeHtml(owner) + '</div>' +
-        '</div>' +
-        (event.description ? '<div>' + escapeHtml(event.description) + '</div>' : '') +
-        (event.canEdit ? '<div class="actions"><button type="button" data-action="edit" data-id="' + event.id + '">Modifica</button></div>' : '') +
-      '</article>'
-    );
-  }).join('');
-}
-
 function renderMonthGrid() {
   const monthStart = state.visibleMonth;
   const gridStart = new Date(monthStart);
@@ -432,7 +400,6 @@ function loadBootstrap() {
         state.visibleMonth = startOfMonth(new Date());
       }
       renderMonthGrid();
-      renderEvents();
       setStatus('Eventi caricati.', 'ok');
       setBusy(false);
     })
@@ -572,12 +539,10 @@ els.logoutButton.addEventListener('click', logout);
 els.prevMonthButton.addEventListener('click', () => {
   state.visibleMonth = addMonths(state.visibleMonth, -1);
   renderMonthGrid();
-  renderEvents();
 });
 els.nextMonthButton.addEventListener('click', () => {
   state.visibleMonth = addMonths(state.visibleMonth, 1);
   renderMonthGrid();
-  renderEvents();
 });
 els.requestModal.addEventListener('click', (event) => {
   if (event.target === els.requestModal) {
