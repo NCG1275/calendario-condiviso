@@ -1,13 +1,13 @@
 :root {
-  --bg: #f5efe5;
-  --paper: #fffdf8;
-  --ink: #1e1a17;
-  --muted: #6f675f;
-  --line: #ddd1c3;
-  --accent: #b6532c;
-  --accent-dark: #8f3e1d;
-  --danger: #b13d2e;
-  --soft: #efe3d5;
+  --bg: #eef8f6;
+  --paper: #fbfffe;
+  --ink: #173133;
+  --muted: #5b7476;
+  --line: #c9e1df;
+  --accent: #2d8f87;
+  --accent-dark: #226f68;
+  --danger: #c15f5b;
+  --soft: #e2f1ef;
 }
 
 * { box-sizing: border-box; }
@@ -17,8 +17,9 @@ body {
   color: var(--ink);
   font-family: Georgia, "Times New Roman", serif;
   background:
-    radial-gradient(circle at top left, rgba(182, 83, 44, 0.16), transparent 28%),
-    linear-gradient(180deg, #f9f2e7 0%, var(--bg) 100%);
+    radial-gradient(circle at top left, rgba(65, 168, 160, 0.16), transparent 28%),
+    radial-gradient(circle at top right, rgba(101, 182, 214, 0.16), transparent 24%),
+    linear-gradient(180deg, #f1fbff 0%, var(--bg) 100%);
 }
 
 .shell {
@@ -131,7 +132,7 @@ h2 {
   align-items: center;
   padding: 12px;
   border-radius: 14px;
-  background: #f4eadb;
+  background: #eef8f7;
 }
 
 .user-card img {
@@ -230,7 +231,7 @@ button:disabled { opacity: 0.55; cursor: default; }
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .weekdays,
@@ -240,7 +241,7 @@ button:disabled { opacity: 0.55; cursor: default; }
 }
 
 .weekdays {
-  background: #f7edde;
+  background: #e6f4f5;
   border-bottom: 1px solid var(--line);
 }
 
@@ -284,16 +285,16 @@ button:disabled { opacity: 0.55; cursor: default; }
 }
 
 .day-cell:hover {
-  background: #fff8ef;
+  background: #f5fcfb;
 }
 
 .day-cell.other-month {
-  background: #fbf7f0;
+  background: #f5faf9;
 }
 
 .day-cell.today {
   background:
-    linear-gradient(180deg, rgba(182, 83, 44, 0.08), rgba(182, 83, 44, 0.01)),
+    linear-gradient(180deg, rgba(45, 143, 135, 0.11), rgba(45, 143, 135, 0.02)),
     #fffdf9;
 }
 
@@ -334,9 +335,9 @@ button:disabled { opacity: 0.55; cursor: default; }
 .mini-event {
   padding: 5px 8px;
   border-radius: 8px;
-  background: #f1e2cc;
-  border-left: 3px solid #c37a4f;
-  color: #5f311b;
+  background: #dff2f4;
+  border-left: 3px solid #5aa8c1;
+  color: #1d5264;
   font-size: 0.78rem;
   line-height: 1.25;
   white-space: nowrap;
@@ -345,9 +346,9 @@ button:disabled { opacity: 0.55; cursor: default; }
 }
 
 .mini-event.mine {
-  background: #e5efe7;
-  border-left-color: #4a8b5e;
-  color: #234d32;
+  background: #e0f3eb;
+  border-left-color: #4e9f74;
+  color: #21543b;
 }
 
 .section-title {
