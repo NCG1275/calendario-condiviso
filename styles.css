@@ -225,8 +225,13 @@ textarea {
 .calendar-nav {
   display: flex;
   gap: 10px;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
+}
+
+.calendar-heading {
+  display: grid;
+  gap: 4px;
 }
 
 .month-arrow {
@@ -237,6 +242,7 @@ textarea {
   font-size: 1.8rem;
   line-height: 1;
   box-shadow: none;
+  margin-top: 1px;
 }
 
 .month-arrow:hover {
