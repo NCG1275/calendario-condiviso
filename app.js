@@ -1,6 +1,6 @@
 const CONFIG = {
   APPS_SCRIPT_API_URL: 'https://script.google.com/a/*/macros/s/AKfycbyx8SC5ZD3eXviFvctb5d4RccejdOnrAGDKoBMMEhffIZPuHZTiliwYhlk_K-n8XQ5oYA/exec',
-  GOOGLE_CLIENT_ID: '879487248442-lur0tpgfk2vcb3v116n6ttgdhtntfe58.apps.googleusercontent.com',
+  GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
 };
 
 const state = {
@@ -277,3 +277,4 @@ els.deleteButton.addEventListener('click', deleteCurrentEvent);
 els.refreshButton.addEventListener('click', loadBootstrap);
 els.resetButton.addEventListener('click', resetForm);
 window.addEventListener('load', initGoogleIdentity);
+
