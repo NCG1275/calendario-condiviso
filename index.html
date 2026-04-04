@@ -50,9 +50,31 @@
 
         <main class="panel">
           <div class="toolbar">
-            <h2>Agenda</h2>
+            <div class="calendar-nav">
+              <button type="button" id="prevMonthButton">Mese precedente</button>
+              <div>
+                <h2 id="calendarTitle" class="calendar-title">Calendario</h2>
+                <div class="calendar-subtitle">Clicca un giorno per preparare un nuovo evento.</div>
+              </div>
+              <button type="button" id="nextMonthButton">Mese successivo</button>
+            </div>
             <button type="button" id="refreshButton" disabled>Aggiorna</button>
           </div>
+          <div class="month-grid-wrap">
+            <div class="weekdays">
+              <div>Lun</div>
+              <div>Mar</div>
+              <div>Mer</div>
+              <div>Gio</div>
+              <div>Ven</div>
+              <div>Sab</div>
+              <div>Dom</div>
+            </div>
+            <div id="monthGrid" class="month-grid">
+              <div class="empty">Nessun evento caricato.</div>
+            </div>
+          </div>
+          <h2 class="section-title">Dettaglio eventi del mese</h2>
           <div id="events" class="events">
             <div class="empty">Nessun evento caricato.</div>
           </div>
@@ -63,4 +85,3 @@
     <script src="./app.js"></script>
   </body>
 </html>
-

@@ -7,6 +7,7 @@ const state = {
   idToken: '',
   user: null,
   events: [],
+  visibleMonth: startOfMonth(new Date()),
 };
 
 const els = {
@@ -17,6 +18,8 @@ const els = {
   userName: document.getElementById('userName'),
   userEmail: document.getElementById('userEmail'),
   events: document.getElementById('events'),
+  monthGrid: document.getElementById('monthGrid'),
+  calendarTitle: document.getElementById('calendarTitle'),
   eventForm: document.getElementById('eventForm'),
   eventId: document.getElementById('eventId'),
   summary: document.getElementById('summary'),
@@ -28,6 +31,8 @@ const els = {
   deleteButton: document.getElementById('deleteButton'),
   refreshButton: document.getElementById('refreshButton'),
   resetButton: document.getElementById('resetButton'),
+  prevMonthButton: document.getElementById('prevMonthButton'),
+  nextMonthButton: document.getElementById('nextMonthButton'),
 };
 
 function setStatus(message, tone) {
@@ -54,6 +59,47 @@ function formatDateTime(value) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function formatMonthTitle(date) {
+  return new Intl.DateTimeFormat('it-IT', {
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
+
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addMonths(date, delta) {
+  return new Date(date.getFullYear(), date.getMonth() + delta, 1);
+}
+
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate();
+}
+
+function dayKeyFromDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function eventStartDate(event) {
+  return new Date(event.start);
+}
+
+function formatMiniEvent(event) {
+  const start = eventStartDate(event);
+  const time = new Intl.DateTimeFormat('it-IT', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(start);
+  return `${time} ${event.summary}`;
 }
 
 function toInputDateTime(value) {
@@ -142,13 +188,29 @@ function fillForm(event) {
   els.deleteButton.disabled = !event.canEdit;
 }
 
+function prepareNewEventForDate(date) {
+  resetForm();
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 9, 0, 0);
+  const end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 10, 0, 0);
+  els.start.value = toInputDateTime(start.toISOString());
+  els.end.value = toInputDateTime(end.toISOString());
+  els.summary.focus();
+}
+
 function renderEvents() {
-  if (!state.events.length) {
-    els.events.innerHTML = '<div class="empty">Nessun evento nei prossimi 60 giorni.</div>';
+  const month = state.visibleMonth.getMonth();
+  const year = state.visibleMonth.getFullYear();
+  const monthEvents = state.events.filter((event) => {
+    const start = eventStartDate(event);
+    return start.getMonth() === month && start.getFullYear() === year;
+  });
+
+  if (!monthEvents.length) {
+    els.events.innerHTML = '<div class="empty">Nessun evento nel mese selezionato.</div>';
     return;
   }
 
-  els.events.innerHTML = state.events.map((event) => {
+  els.events.innerHTML = monthEvents.map((event) => {
     const owner = event.ownerName || event.ownerEmail || 'Utente';
     return (
       '<article class="event">' +
@@ -167,18 +229,80 @@ function renderEvents() {
   }).join('');
 }
 
+function renderMonthGrid() {
+  const monthStart = state.visibleMonth;
+  const gridStart = new Date(monthStart);
+  const weekday = (monthStart.getDay() + 6) % 7;
+  gridStart.setDate(monthStart.getDate() - weekday);
+
+  const monthLabel = formatMonthTitle(monthStart);
+  els.calendarTitle.textContent = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+
+  const today = new Date();
+  const eventsByDay = new Map();
+  state.events.forEach((event) => {
+    const key = dayKeyFromDate(eventStartDate(event));
+    if (!eventsByDay.has(key)) {
+      eventsByDay.set(key, []);
+    }
+    eventsByDay.get(key).push(event);
+  });
+
+  const cells = [];
+  for (let i = 0; i < 42; i += 1) {
+    const cellDate = new Date(gridStart);
+    cellDate.setDate(gridStart.getDate() + i);
+    const key = dayKeyFromDate(cellDate);
+    const dayEvents = (eventsByDay.get(key) || [])
+      .slice()
+      .sort((a, b) => new Date(a.start) - new Date(b.start));
+    const otherMonth = cellDate.getMonth() !== monthStart.getMonth();
+    const classes = [
+      'day-cell',
+      otherMonth ? 'other-month' : '',
+      sameDay(cellDate, today) ? 'today' : '',
+    ].filter(Boolean).join(' ');
+
+    const previews = dayEvents.slice(0, 3).map((event) => {
+      const mineClass = event.canEdit ? ' mine' : '';
+      return `<div class="mini-event${mineClass}" data-action="edit" data-id="${event.id}">${escapeHtml(formatMiniEvent(event))}</div>`;
+    }).join('');
+
+    const more = dayEvents.length > 3
+      ? `<div class="day-count">+${dayEvents.length - 3} altri</div>`
+      : `<div class="day-count">${dayEvents.length ? `${dayEvents.length} eventi` : ''}</div>`;
+
+    cells.push(
+      `<div class="${classes}" data-action="new-on-date" data-date="${key}">` +
+        `<div class="day-head">` +
+          `<div class="day-number">${cellDate.getDate()}</div>` +
+          `${more}` +
+        `</div>` +
+        `<div class="day-events">${previews}</div>` +
+      `</div>`
+    );
+  }
+
+  els.monthGrid.innerHTML = cells.join('');
+}
+
 function loadBootstrap() {
   if (!state.idToken) return;
   setBusy(true);
   setStatus('Caricamento eventi...');
   jsonpRequest('bootstrap', { idToken: state.idToken })
     .then((data) => {
+      const hadEventsLoaded = state.events.length > 0;
       state.user = data.user;
       state.events = data.events || [];
       els.userCard.classList.remove('hidden');
       els.userPicture.src = data.user.picture || '';
       els.userName.textContent = data.user.name || 'Utente';
       els.userEmail.textContent = data.user.email || '';
+      if (!hadEventsLoaded) {
+        state.visibleMonth = startOfMonth(new Date());
+      }
+      renderMonthGrid();
       renderEvents();
       setStatus('Eventi caricati.', 'ok');
       setBusy(false);
@@ -265,10 +389,19 @@ function initGoogleIdentity() {
 
 document.addEventListener('click', (event) => {
   const button = event.target.closest('[data-action="edit"]');
-  if (!button) return;
-  const selected = state.events.find((item) => item.id === button.dataset.id);
-  if (!selected) return;
-  fillForm(selected);
+  if (button) {
+    event.stopPropagation();
+    const selected = state.events.find((item) => item.id === button.dataset.id);
+    if (!selected) return;
+    fillForm(selected);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  const dayCell = event.target.closest('[data-action="new-on-date"]');
+  if (!dayCell) return;
+  const dateParts = dayCell.dataset.date.split('-').map(Number);
+  prepareNewEventForDate(new Date(dateParts[0], dateParts[1] - 1, dateParts[2]));
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
@@ -276,5 +409,15 @@ els.eventForm.addEventListener('submit', saveEvent);
 els.deleteButton.addEventListener('click', deleteCurrentEvent);
 els.refreshButton.addEventListener('click', loadBootstrap);
 els.resetButton.addEventListener('click', resetForm);
+els.prevMonthButton.addEventListener('click', () => {
+  state.visibleMonth = addMonths(state.visibleMonth, -1);
+  renderMonthGrid();
+  renderEvents();
+});
+els.nextMonthButton.addEventListener('click', () => {
+  state.visibleMonth = addMonths(state.visibleMonth, 1);
+  renderMonthGrid();
+  renderEvents();
+});
 window.addEventListener('load', initGoogleIdentity);
 
