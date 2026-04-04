@@ -402,7 +402,12 @@ function renderMonthGrid() {
     );
   }
 
-  els.monthGrid.innerHTML = cells.join('');
+  const rows = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    rows.push(`<div class="week-row">${cells.slice(i, i + 7).join('')}</div>`);
+  }
+
+  els.monthGrid.innerHTML = rows.join('');
 }
 
 function loadBootstrap() {
