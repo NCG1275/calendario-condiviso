@@ -270,7 +270,7 @@ function renderMonthGrid() {
 
     const more = dayEvents.length > 3
       ? `<div class="day-count">+${dayEvents.length - 3} altri</div>`
-      : `<div class="day-count">${dayEvents.length ? `${dayEvents.length} eventi` : ''}</div>`;
+      : `<div class="day-count">${dayEvents.length ? `${dayEvents.length} eventi` : '\u00a0'}</div>`;
 
     cells.push(
       `<div class="${classes}" data-action="new-on-date" data-date="${key}">` +
