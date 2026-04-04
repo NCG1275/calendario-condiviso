@@ -13,6 +13,8 @@ const state = {
 const els = {
   signin: document.getElementById('signin'),
   status: document.getElementById('status'),
+  welcomeScreen: document.getElementById('welcomeScreen'),
+  appScreen: document.getElementById('appScreen'),
   logoutButton: document.getElementById('logoutButton'),
   userCard: document.getElementById('userCard'),
   userPicture: document.getElementById('userPicture'),
@@ -47,8 +49,9 @@ function setBusy(isBusy) {
 }
 
 function setSignedInUi(isSignedIn) {
+  els.welcomeScreen.classList.toggle('hidden', isSignedIn);
+  els.appScreen.classList.toggle('hidden', !isSignedIn);
   els.logoutButton.classList.toggle('hidden', !isSignedIn);
-  els.signin.classList.toggle('hidden', isSignedIn);
   els.userCard.classList.toggle('hidden', !isSignedIn);
 }
 

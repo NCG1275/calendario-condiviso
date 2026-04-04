@@ -28,6 +28,45 @@ body {
   padding: 10px 16px 40px;
 }
 
+.welcome-screen {
+  min-height: calc(100vh - 50px);
+  display: grid;
+  place-items: center;
+}
+
+.welcome-card {
+  width: min(760px, 100%);
+  padding: 38px 34px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(101, 182, 214, 0.16), transparent 24%),
+    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(251,255,254,0.92));
+  box-shadow: 0 18px 50px rgba(50, 106, 106, 0.14);
+}
+
+.welcome-points {
+  margin: 22px 0 26px;
+  display: grid;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.welcome-points div {
+  padding: 12px 14px;
+  border: 1px solid #d8ece9;
+  border-radius: 14px;
+  background: rgba(234, 247, 245, 0.9);
+}
+
+.welcome-signin {
+  justify-items: start;
+}
+
+.welcome-status {
+  margin-top: 10px;
+}
+
 .hero {
   margin-bottom: 18px;
 }
@@ -415,6 +454,10 @@ hr {
 
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .welcome-card {
+    padding: 28px 22px;
   }
 
   .month-grid {

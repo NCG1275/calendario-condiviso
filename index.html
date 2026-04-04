@@ -12,29 +12,43 @@
   </head>
   <body>
     <div class="shell">
-      <section class="hero">
-        <div class="hero-top">
-          <div>
-            <p class="eyebrow">GitHub Pages + Google Calendar</p>
-            <h1>Calendario condiviso</h1>
-            <p class="lead">Tutti vedono gli eventi. Ognuno crea e modifica solo i propri.</p>
+      <section id="welcomeScreen" class="welcome-screen">
+        <div class="welcome-card">
+          <p class="eyebrow">GitHub Pages + Google Calendar</p>
+          <h1>Calendario condiviso</h1>
+          <p class="lead">Una pagina iniziale pulita prima dell’ingresso nel calendario condiviso.</p>
+          <div class="welcome-points">
+            <div>Consulta il mese in un colpo d’occhio.</div>
+            <div>Crea eventi personali visibili a tutti.</div>
+            <div>Modifica solo gli eventi di tua proprieta'.</div>
           </div>
-          <div class="account-panel">
-            <div id="signin" class="signin"></div>
-            <button type="button" id="logoutButton" class="logout-button hidden">Esci</button>
-            <div id="userCard" class="user-card hidden">
-              <img id="userPicture" alt="Profilo">
-              <div>
-                <div id="userName" class="user-name"></div>
-                <div id="userEmail" class="user-email"></div>
-              </div>
-            </div>
-            <p id="status" class="status">Accedi con Google per iniziare.</p>
-          </div>
+          <div id="signin" class="signin welcome-signin"></div>
+          <p id="status" class="status welcome-status">Accedi con Google per continuare.</p>
         </div>
       </section>
 
-      <div class="layout">
+      <section id="appScreen" class="hidden">
+        <section class="hero">
+          <div class="hero-top">
+            <div>
+              <p class="eyebrow">GitHub Pages + Google Calendar</p>
+              <h1>Calendario condiviso</h1>
+              <p class="lead">Tutti vedono gli eventi. Ognuno crea e modifica solo i propri.</p>
+            </div>
+            <div class="account-panel">
+              <button type="button" id="logoutButton" class="logout-button hidden">Esci</button>
+              <div id="userCard" class="user-card hidden">
+                <img id="userPicture" alt="Profilo">
+                <div>
+                  <div id="userName" class="user-name"></div>
+                  <div id="userEmail" class="user-email"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="layout">
         <aside class="panel">
           <h2>Evento</h2>
           <form id="eventForm" class="form">
@@ -87,7 +101,8 @@
             <div class="empty">Nessun evento caricato.</div>
           </div>
         </main>
-      </div>
+        </div>
+      </section>
     </div>
 
     <script src="./app.js"></script>
