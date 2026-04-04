@@ -389,7 +389,7 @@ function renderMonthGrid() {
       const event = entry.event;
       const mineClass = event.canEdit ? ' mine' : '';
       const segmentClass = ` segment-${entry.segmentType}`;
-      return `<div class="mini-event${mineClass}${segmentClass}" data-action="edit" data-id="${event.id}">${escapeHtml(formatMiniEvent(event, entry.segmentType))}</div>`;
+      return `<button type="button" class="mini-event${mineClass}${segmentClass}" data-action="edit" data-id="${event.id}">${escapeHtml(formatMiniEvent(event, entry.segmentType))}</button>`;
     }).join('');
 
     cells.push(
