@@ -20,7 +20,6 @@ const els = {
   userCard: document.getElementById('userCard'),
   userPicture: document.getElementById('userPicture'),
   userName: document.getElementById('userName'),
-  userEmail: document.getElementById('userEmail'),
   events: document.getElementById('events'),
   monthGrid: document.getElementById('monthGrid'),
   calendarTitle: document.getElementById('calendarTitle'),
@@ -274,13 +273,12 @@ function fillForm(event) {
   els.start.value = toInputDate(event.start);
   els.end.value = toInclusiveEndInputDate(event.end);
   els.description.value = event.description || '';
-  const owner = event.ownerName || event.ownerEmail || 'Utente';
   els.saveButton.textContent = 'Aggiorna';
   els.modalEyebrow.textContent = event.canEdit ? 'Richiesta esistente' : 'Sola lettura';
   els.modalTitle.textContent = event.canEdit ? 'Modifica evento' : 'Evento in sola lettura';
   els.modalMeta.textContent = event.canEdit
-    ? `Autore: ${owner}. Puoi modificare questa richiesta.`
-    : `Autore: ${owner}. Puoi solo visualizzare questa richiesta.`;
+    ? 'Questa richiesta è tua. Puoi modificarla.'
+    : 'Questa richiesta appartiene a un altro utente. Puoi solo visualizzarla.';
   els.modalMeta.classList.remove('hidden');
   const stamps = [];
   if (event.created) {
@@ -323,15 +321,13 @@ function renderEvents() {
   }
 
   els.events.innerHTML = monthEvents.map((event) => {
-    const owner = event.ownerName || event.ownerEmail || 'Utente';
     return (
       '<article class="event">' +
         '<h3>' + escapeHtml(event.summary) + '</h3>' +
         '<div class="meta">' +
-          '<div><span class="pill">' + (event.canEdit ? 'Tuo evento' : 'Solo lettura') + '</span></div>' +
+          '<div><span class="pill">' + (event.canEdit ? 'Tua richiesta' : 'Solo lettura') + '</span></div>' +
           '<div><strong>Dal:</strong> ' + escapeHtml(formatDateTime(event.start)) + '</div>' +
           '<div><strong>Al:</strong> ' + escapeHtml(formatDateTime(eventLastDate(event).toISOString())) + '</div>' +
-          '<div><strong>Proprietario:</strong> ' + escapeHtml(owner) + '</div>' +
         '</div>' +
         (event.description ? '<div>' + escapeHtml(event.description) + '</div>' : '') +
         (event.canEdit ? '<div class="actions"><button type="button" data-action="edit" data-id="' + event.id + '">Modifica</button></div>' : '') +
@@ -423,7 +419,6 @@ function loadBootstrap() {
       showApp();
       els.userPicture.src = data.user.picture || '';
       els.userName.textContent = data.user.name || 'Utente';
-      els.userEmail.textContent = data.user.email || '';
       if (!hadEventsLoaded) {
         state.visibleMonth = startOfMonth(new Date());
       }
