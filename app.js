@@ -85,7 +85,6 @@ function escapeHtml(value) {
 function formatDateTime(value) {
   return new Intl.DateTimeFormat('it-IT', {
     dateStyle: 'medium',
-    timeStyle: 'short',
   }).format(new Date(value));
 }
 
@@ -121,30 +120,45 @@ function eventStartDate(event) {
   return new Date(event.start);
 }
 
-function formatMiniEvent(event) {
-  const start = eventStartDate(event);
-  const time = new Intl.DateTimeFormat('it-IT', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(start);
-  return `${time} ${event.summary}`;
+function eventLastDate(event) {
+  const date = new Date(event.end);
+  date.setDate(date.getDate() - 1);
+  return date;
 }
 
-function toInputDateTime(value) {
+function formatMiniEvent(event, segmentType) {
+  if (segmentType === 'middle') {
+    return '';
+  }
+  if (segmentType === 'end') {
+    return event.summary;
+  }
+  return event.summary;
+}
+
+function toInputDate(value) {
   if (!value) return '';
   const date = new Date(value);
-  const pad = (n) => String(n).padStart(2, '0');
-  return [
-    date.getFullYear(), '-',
-    pad(date.getMonth() + 1), '-',
-    pad(date.getDate()), 'T',
-    pad(date.getHours()), ':',
-    pad(date.getMinutes()),
-  ].join('');
+  return dayKeyFromDate(date);
 }
 
-function fromInputDateTime(value) {
-  return value ? new Date(value).toISOString() : '';
+function toInclusiveEndInputDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  date.setDate(date.getDate() - 1);
+  return dayKeyFromDate(date);
+}
+
+function fromInputDateStart(value) {
+  if (!value) return '';
+  return new Date(`${value}T00:00:00`).toISOString();
+}
+
+function fromInputDateEndExclusive(value) {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00`);
+  date.setDate(date.getDate() + 1);
+  return date.toISOString();
 }
 
 function encodePayload(payload) {
@@ -234,8 +248,8 @@ function closeModal() {
 function fillForm(event) {
   els.eventId.value = event.id;
   els.summary.value = event.summary || '';
-  els.start.value = toInputDateTime(event.start);
-  els.end.value = toInputDateTime(event.end);
+  els.start.value = toInputDate(event.start);
+  els.end.value = toInclusiveEndInputDate(event.end);
   els.location.value = event.location || '';
   els.description.value = event.description || '';
   els.saveButton.textContent = 'Aggiorna';
@@ -247,10 +261,9 @@ function fillForm(event) {
 
 function prepareNewEventForDate(date) {
   resetForm();
-  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 9, 0, 0);
-  const end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 10, 0, 0);
-  els.start.value = toInputDateTime(start.toISOString());
-  els.end.value = toInputDateTime(end.toISOString());
+  const key = dayKeyFromDate(date);
+  els.start.value = key;
+  els.end.value = key;
   openModal();
   els.summary.focus();
 }
@@ -275,8 +288,8 @@ function renderEvents() {
         '<h3>' + escapeHtml(event.summary) + '</h3>' +
         '<div class="meta">' +
           '<div><span class="pill">' + (event.canEdit ? 'Tuo evento' : 'Solo lettura') + '</span></div>' +
-          '<div><strong>Da:</strong> ' + escapeHtml(formatDateTime(event.start)) + '</div>' +
-          '<div><strong>A:</strong> ' + escapeHtml(formatDateTime(event.end)) + '</div>' +
+          '<div><strong>Dal:</strong> ' + escapeHtml(formatDateTime(event.start)) + '</div>' +
+          '<div><strong>Al:</strong> ' + escapeHtml(formatDateTime(eventLastDate(event).toISOString())) + '</div>' +
           '<div><strong>Proprietario:</strong> ' + escapeHtml(owner) + '</div>' +
           (event.location ? '<div><strong>Luogo:</strong> ' + escapeHtml(event.location) + '</div>' : '') +
         '</div>' +
@@ -299,11 +312,24 @@ function renderMonthGrid() {
   const today = new Date();
   const eventsByDay = new Map();
   state.events.forEach((event) => {
-    const key = dayKeyFromDate(eventStartDate(event));
-    if (!eventsByDay.has(key)) {
-      eventsByDay.set(key, []);
+    const start = new Date(event.start);
+    const endExclusive = new Date(event.end);
+    const lastDay = eventLastDate(event);
+    let cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    while (cursor <= lastDay) {
+      const key = dayKeyFromDate(cursor);
+      if (!eventsByDay.has(key)) {
+        eventsByDay.set(key, []);
+      }
+      let segmentType = 'middle';
+      const isStart = sameDay(cursor, start);
+      const isEnd = sameDay(cursor, lastDay);
+      if (isStart && isEnd) segmentType = 'single';
+      else if (isStart) segmentType = 'start';
+      else if (isEnd) segmentType = 'end';
+      eventsByDay.get(key).push({ event, segmentType, startTime: new Date(event.start).getTime() });
+      cursor.setDate(cursor.getDate() + 1);
     }
-    eventsByDay.get(key).push(event);
   });
 
   const cells = [];
@@ -313,7 +339,7 @@ function renderMonthGrid() {
     const key = dayKeyFromDate(cellDate);
     const dayEvents = (eventsByDay.get(key) || [])
       .slice()
-      .sort((a, b) => new Date(a.start) - new Date(b.start));
+      .sort((a, b) => a.startTime - b.startTime);
     const otherMonth = cellDate.getMonth() !== monthStart.getMonth();
     const classes = [
       'day-cell',
@@ -321,9 +347,11 @@ function renderMonthGrid() {
       sameDay(cellDate, today) ? 'today' : '',
     ].filter(Boolean).join(' ');
 
-    const previews = dayEvents.slice(0, 3).map((event) => {
+    const previews = dayEvents.slice(0, 3).map((entry) => {
+      const event = entry.event;
       const mineClass = event.canEdit ? ' mine' : '';
-      return `<div class="mini-event${mineClass}" data-action="edit" data-id="${event.id}">${escapeHtml(formatMiniEvent(event))}</div>`;
+      const segmentClass = ` segment-${entry.segmentType}`;
+      return `<div class="mini-event${mineClass}${segmentClass}" data-action="edit" data-id="${event.id}">${escapeHtml(formatMiniEvent(event, entry.segmentType))}</div>`;
     }).join('');
 
     const more = dayEvents.length > 3
@@ -375,8 +403,8 @@ function getFormPayload() {
   return {
     id: els.eventId.value,
     summary: els.summary.value,
-    start: fromInputDateTime(els.start.value),
-    end: fromInputDateTime(els.end.value),
+    start: fromInputDateStart(els.start.value),
+    end: fromInputDateEndExclusive(els.end.value),
     location: els.location.value,
     description: els.description.value,
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Rome',
