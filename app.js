@@ -273,12 +273,13 @@ function fillForm(event) {
   els.start.value = toInputDate(event.start);
   els.end.value = toInclusiveEndInputDate(event.end);
   els.description.value = event.description || '';
+  const owner = event.ownerName || 'Utente';
   els.saveButton.textContent = 'Aggiorna';
   els.modalEyebrow.textContent = event.canEdit ? 'Richiesta esistente' : 'Sola lettura';
   els.modalTitle.textContent = event.canEdit ? 'Modifica evento' : 'Evento in sola lettura';
   els.modalMeta.textContent = event.canEdit
-    ? 'Questa richiesta è tua. Puoi modificarla.'
-    : 'Questa richiesta appartiene a un altro utente. Puoi solo visualizzarla.';
+    ? `Autore: ${owner}. Puoi modificare questa richiesta.`
+    : `Autore: ${owner}. Puoi solo visualizzare questa richiesta.`;
   els.modalMeta.classList.remove('hidden');
   const stamps = [];
   if (event.created) {
@@ -321,6 +322,7 @@ function renderEvents() {
   }
 
   els.events.innerHTML = monthEvents.map((event) => {
+    const owner = event.ownerName || 'Utente';
     return (
       '<article class="event">' +
         '<h3>' + escapeHtml(event.summary) + '</h3>' +
@@ -328,6 +330,7 @@ function renderEvents() {
           '<div><span class="pill">' + (event.canEdit ? 'Tua richiesta' : 'Solo lettura') + '</span></div>' +
           '<div><strong>Dal:</strong> ' + escapeHtml(formatDateTime(event.start)) + '</div>' +
           '<div><strong>Al:</strong> ' + escapeHtml(formatDateTime(eventLastDate(event).toISOString())) + '</div>' +
+          '<div><strong>Autore:</strong> ' + escapeHtml(owner) + '</div>' +
         '</div>' +
         (event.description ? '<div>' + escapeHtml(event.description) + '</div>' : '') +
         (event.canEdit ? '<div class="actions"><button type="button" data-action="edit" data-id="' + event.id + '">Modifica</button></div>' : '') +
