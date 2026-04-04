@@ -212,6 +212,7 @@ button:disabled { opacity: 0.55; cursor: default; }
 
 .month-grid {
   grid-auto-rows: minmax(138px, 1fr);
+  gap: 0;
 }
 
 .day-cell {
