@@ -13,6 +13,7 @@ const state = {
 const els = {
   signin: document.getElementById('signin'),
   status: document.getElementById('status'),
+  logoutButton: document.getElementById('logoutButton'),
   userCard: document.getElementById('userCard'),
   userPicture: document.getElementById('userPicture'),
   userName: document.getElementById('userName'),
@@ -43,6 +44,12 @@ function setStatus(message, tone) {
 function setBusy(isBusy) {
   els.saveButton.disabled = isBusy || !state.idToken;
   els.refreshButton.disabled = isBusy || !state.idToken;
+}
+
+function setSignedInUi(isSignedIn) {
+  els.logoutButton.classList.toggle('hidden', !isSignedIn);
+  els.signin.classList.toggle('hidden', isSignedIn);
+  els.userCard.classList.toggle('hidden', !isSignedIn);
 }
 
 function escapeHtml(value) {
@@ -177,6 +184,20 @@ function resetForm() {
   els.deleteButton.disabled = true;
 }
 
+function logout() {
+  state.idToken = '';
+  state.user = null;
+  state.events = [];
+  setSignedInUi(false);
+  resetForm();
+  els.events.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
+  els.monthGrid.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
+  setStatus('Accesso disconnesso.');
+  els.saveButton.disabled = true;
+  els.refreshButton.disabled = true;
+  google.accounts.id.disableAutoSelect();
+}
+
 function fillForm(event) {
   els.eventId.value = event.id;
   els.summary.value = event.summary || '';
@@ -295,7 +316,7 @@ function loadBootstrap() {
       const hadEventsLoaded = state.events.length > 0;
       state.user = data.user;
       state.events = data.events || [];
-      els.userCard.classList.remove('hidden');
+      setSignedInUi(true);
       els.userPicture.src = data.user.picture || '';
       els.userName.textContent = data.user.name || 'Utente';
       els.userEmail.textContent = data.user.email || '';
@@ -409,6 +430,7 @@ els.eventForm.addEventListener('submit', saveEvent);
 els.deleteButton.addEventListener('click', deleteCurrentEvent);
 els.refreshButton.addEventListener('click', loadBootstrap);
 els.resetButton.addEventListener('click', resetForm);
+els.logoutButton.addEventListener('click', logout);
 els.prevMonthButton.addEventListener('click', () => {
   state.visibleMonth = addMonths(state.visibleMonth, -1);
   renderMonthGrid();

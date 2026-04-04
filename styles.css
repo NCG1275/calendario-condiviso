@@ -85,6 +85,10 @@ h1 {
   justify-items: end;
 }
 
+.logout-button {
+  display: inline-flex;
+}
+
 .account-panel .user-card {
   max-width: 340px;
 }
