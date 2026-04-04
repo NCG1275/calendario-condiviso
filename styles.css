@@ -24,7 +24,7 @@ body {
 .shell {
   max-width: 1140px;
   margin: 0 auto;
-  padding: 24px 16px 40px;
+  padding: 10px 16px 40px;
 }
 
 .hero {
@@ -76,12 +76,23 @@ h1 {
   min-width: 300px;
   max-width: 340px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   justify-items: end;
+  margin-top: 0;
+}
+
+.account-panel .signin {
+  justify-items: end;
+}
+
+.account-panel .user-card {
+  max-width: 340px;
 }
 
 .account-panel .status {
   text-align: right;
+  font-size: 0.82rem;
+  max-width: 320px;
 }
 
 h2 {
