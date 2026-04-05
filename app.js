@@ -257,6 +257,7 @@ function jsonpRequest(action, params = {}) {
 function resetForm() {
   els.eventForm.reset();
   els.eventId.value = '';
+  els.summary.value = '';
   els.saveButton.textContent = 'Salva';
   els.deleteButton.disabled = true;
   els.modalEyebrow.textContent = 'Nuova richiesta';
@@ -442,7 +443,7 @@ function loadBootstrap() {
 function getFormPayload() {
   return {
     id: els.eventId.value,
-    summary: els.summary.value,
+    summary: String(els.summary.value || '').trim(),
     start: fromInputDateStart(els.start.value),
     end: fromInputDateEndExclusive(els.end.value),
     description: els.description.value,
@@ -454,6 +455,14 @@ function saveEvent(event) {
   event.preventDefault();
   registerActivity();
   const payload = getFormPayload();
+  if (!payload.summary) {
+    setStatus('Seleziona un tipo di richiesta.', 'error');
+    return;
+  }
+  if (!payload.start || !payload.end) {
+    setStatus('Seleziona il giorno iniziale e finale.', 'error');
+    return;
+  }
   const action = payload.id ? 'update' : 'create';
   setBusy(true);
   setStatus(action === 'create' ? 'Creazione evento...' : 'Aggiornamento evento...');
