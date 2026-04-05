@@ -188,13 +188,17 @@ input, textarea, button {
   font: inherit;
 }
 
-input, textarea {
+input, textarea, select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: #fff;
   color: var(--ink);
+}
+
+select {
+  appearance: none;
 }
 
 textarea {
@@ -225,6 +229,10 @@ textarea {
   justify-items: start;
   gap: 8px;
   margin-bottom: 18px;
+}
+
+.app-status {
+  margin: -4px 0 14px;
 }
 
 #openCreateModalButton {

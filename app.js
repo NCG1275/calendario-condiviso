@@ -16,6 +16,7 @@ const state = {
 const els = {
   signin: document.getElementById('signin'),
   status: document.getElementById('status'),
+  appStatus: document.getElementById('appStatus'),
   welcomeScreen: document.getElementById('welcomeScreen'),
   appScreen: document.getElementById('appScreen'),
   logoutButton: document.getElementById('logoutButton'),
@@ -46,8 +47,12 @@ const els = {
 };
 
 function setStatus(message, tone) {
-  els.status.textContent = message;
-  els.status.className = 'status' + (tone ? ' ' + tone : '');
+  const className = 'status' + (tone ? ' ' + tone : '');
+  [els.status, els.appStatus].forEach((element) => {
+    if (!element) return;
+    element.textContent = message;
+    element.className = className + (element === els.appStatus ? ' app-status' : '');
+  });
 }
 
 function resolveEventElement(target) {

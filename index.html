@@ -45,6 +45,7 @@
             <button type="button" id="openCreateModalButton" class="primary" disabled>Aggiungi richiesta</button>
             <div class="side-note">Apri una nuova richiesta da qui oppure clicca direttamente un giorno del calendario.</div>
           </div>
+          <p id="appStatus" class="status app-status">Autentica per continuare.</p>
           <div class="toolbar">
             <div class="calendar-nav">
               <div class="calendar-heading">
@@ -91,7 +92,31 @@
         </div>
         <form id="eventForm" class="form modal-form">
           <input type="hidden" id="eventId">
-          <label>Titolo<input id="summary" required></label>
+          <label>Richiesta
+            <select id="summary" required>
+              <option value="">Seleziona un tipo</option>
+              <option value="FERIE">FERIE</option>
+              <option value="M">M</option>
+              <option value="F">F</option>
+              <option value="RF">RF</option>
+              <option value="RO">RO</option>
+              <option value="PT">PT</option>
+              <option value="RS">RS</option>
+              <option value="C">C</option>
+              <option value="CS">CS</option>
+              <option value="CSM">CSM</option>
+              <option value="CSNM">CSNM</option>
+              <option value="AGGPO">AGGPO</option>
+              <option value="AGGPF">AGGPF</option>
+              <option value="8-14">8-14</option>
+              <option value="8-15">8-15</option>
+              <option value="14-20">14-20</option>
+              <option value="8-16">8-16</option>
+              <option value="8-20">8-20</option>
+              <option value="20-24">20-24</option>
+              <option value="0-8">0-8</option>
+            </select>
+          </label>
           <div class="two-cols">
             <label>Dal giorno<input id="start" type="date" required></label>
             <label>Al giorno<input id="end" type="date" required></label>
