@@ -241,7 +241,7 @@ function jsonpRequest(action, params = {}) {
     script.onerror = () => {
       if (settled) return;
       cleanup();
-      reject(new Error('Impossibile raggiungere il backend Apps Script.'));
+      reject(new Error('Calendario Google momentaneamente non raggiungibile.'));
     };
 
     function cleanup() {
@@ -430,7 +430,7 @@ function loadBootstrap() {
         state.visibleMonth = startOfMonth(new Date());
       }
       renderMonthGrid();
-      setStatus('Eventi caricati.', 'ok');
+      setStatus('');
       setBusy(false);
     })
     .catch((error) => {
