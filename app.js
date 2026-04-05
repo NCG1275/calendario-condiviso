@@ -1,5 +1,5 @@
 const CONFIG = {
-  APPS_SCRIPT_API_URL: 'https://script.google.com/a/*/macros/s/AKfycbzkj-7klqFky_54Y0a2S6tDqRdMewMlNyvVdmXF72Y_uY5g8afu9DAflmhILIMSkRUEjg/exec',
+  APPS_SCRIPT_API_URL: 'https://script.google.com/a/*/macros/s/AKfycbz5iyDSSuc6lVonnYRwBj9ClXOttKjKRES_2swO5czP3Sgyv44odv6_a9-NWDBm2HzBKA/exec',
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
 };
 
