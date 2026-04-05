@@ -1,6 +1,7 @@
 const CONFIG = {
   APPS_SCRIPT_API_URL: 'https://script.google.com/a/*/macros/s/AKfycbxJcrQ2QzPtH8HhubTqzXeXqrnHGrv9XB56zUXu9pycy-X68QhlmYliAmXh_EINvWBFfw/exec',
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
+  INACTIVITY_TIMEOUT_MS: 60 * 1000,
 };
 
 const state = {
@@ -9,6 +10,7 @@ const state = {
   events: [],
   visibleMonth: startOfMonth(new Date()),
   isAuthenticated: false,
+  inactivityTimer: null,
 };
 
 const els = {
@@ -67,8 +69,29 @@ function setSignedInUi(isSignedIn) {
   els.userCard.classList.toggle('hidden', !isSignedIn);
 }
 
+function clearInactivityTimer() {
+  if (state.inactivityTimer) {
+    window.clearTimeout(state.inactivityTimer);
+    state.inactivityTimer = null;
+  }
+}
+
+function armInactivityTimer() {
+  clearInactivityTimer();
+  if (!state.isAuthenticated || !state.idToken) return;
+  state.inactivityTimer = window.setTimeout(() => {
+    logout('Sessione scaduta per inattività.');
+  }, CONFIG.INACTIVITY_TIMEOUT_MS);
+}
+
+function registerActivity() {
+  if (!state.isAuthenticated || !state.idToken) return;
+  armInactivityTimer();
+}
+
 function showWelcome() {
   state.isAuthenticated = false;
+  clearInactivityTimer();
   setSignedInUi(false);
   closeModal();
 }
@@ -76,6 +99,7 @@ function showWelcome() {
 function showApp() {
   state.isAuthenticated = true;
   setSignedInUi(true);
+  armInactivityTimer();
 }
 
 function escapeHtml(value) {
@@ -239,7 +263,7 @@ function resetForm() {
   setFormEditable(true);
 }
 
-function logout() {
+function logout(message) {
   state.idToken = '';
   state.user = null;
   state.events = [];
@@ -247,7 +271,7 @@ function logout() {
   resetForm();
   els.events.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
   els.monthGrid.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
-  setStatus('Accesso disconnesso.');
+  setStatus(message || 'Accesso disconnesso.');
   els.saveButton.disabled = true;
   els.refreshButton.disabled = true;
   els.openCreateModalButton.disabled = true;
@@ -386,6 +410,7 @@ function renderMonthGrid() {
 
 function loadBootstrap() {
   if (!state.idToken) return;
+  registerActivity();
   setBusy(true);
   setStatus('Caricamento eventi...');
   jsonpRequest('bootstrap', { idToken: state.idToken })
@@ -422,6 +447,7 @@ function getFormPayload() {
 
 function saveEvent(event) {
   event.preventDefault();
+  registerActivity();
   const payload = getFormPayload();
   const action = payload.id ? 'update' : 'create';
   setBusy(true);
@@ -445,6 +471,7 @@ function deleteCurrentEvent() {
   const eventId = els.eventId.value;
   if (!eventId) return;
   if (!confirm('Eliminare questo evento?')) return;
+  registerActivity();
   setBusy(true);
   setStatus('Eliminazione evento...');
   jsonpRequest('delete', {
@@ -492,6 +519,7 @@ function initGoogleIdentity() {
 }
 
 document.addEventListener('click', (event) => {
+  registerActivity();
   const target = resolveEventElement(event.target);
   if (!target) return;
   const button = target.closest('[data-action="edit"]');
@@ -512,6 +540,7 @@ document.addEventListener('click', (event) => {
 });
 
 document.addEventListener('keydown', (event) => {
+  registerActivity();
   const targetElement = resolveEventElement(event.target);
   const target = targetElement ? targetElement.closest('[data-action="edit"]') : null;
   if (!target) return;
@@ -522,6 +551,10 @@ document.addEventListener('keydown', (event) => {
   fillForm(selected);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
+
+document.addEventListener('input', registerActivity, true);
+document.addEventListener('pointerdown', registerActivity, true);
+document.addEventListener('touchstart', registerActivity, { passive: true });
 
 els.eventForm.addEventListener('submit', saveEvent);
 els.deleteButton.addEventListener('click', deleteCurrentEvent);
