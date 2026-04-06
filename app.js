@@ -4,6 +4,21 @@ const CONFIG = {
   INACTIVITY_TIMEOUT_MS: 60 * 1000,
 };
 
+const REQUEST_OPTIONS = [
+  { value: 'FERIE', label: 'FERIE' },
+  { value: 'L.104', label: 'L.104 : Legge 104' },
+  { value: 'EMO', label: 'EMO : Emodinamica' },
+  { value: 'PT', label: 'PT : Part-time' },
+  { value: 'RS', label: 'RS : Riposo settimanale' },
+  { value: 'CS', label: 'CS : Congedo straordinario' },
+  { value: 'AGGPO', label: 'AGGPO : Aggiornamento Professionale Obbligatorio' },
+  { value: 'AGGPF', label: 'AGGPF : Aggiornamento Professionale Facoltativo' },
+  { value: '8-14 Lib.', label: '8-14 Lib. : Libero in fascia oraria' },
+  { value: '14-20 Lib.', label: '14-20 Lib. : Libero in fascia oraria' },
+  { value: '8-20 Lib.', label: '8-20 Lib. : Libero in fascia oraria' },
+  { value: '20-08 Lib.', label: '20-08 Lib. : Libero in fascia oraria' },
+];
+
 const state = {
   idToken: '',
   user: null,
@@ -36,6 +51,10 @@ const els = {
   eventForm: document.getElementById('eventForm'),
   eventId: document.getElementById('eventId'),
   summary: document.getElementById('summary'),
+  summaryPickerButton: document.getElementById('summaryPickerButton'),
+  summaryPicker: document.getElementById('summaryPicker'),
+  summaryPickerOptions: document.getElementById('summaryPickerOptions'),
+  summaryPickerClose: document.getElementById('summaryPickerClose'),
   start: document.getElementById('start'),
   end: document.getElementById('end'),
   description: document.getElementById('description'),
@@ -97,6 +116,29 @@ function registerActivity() {
   armInactivityTimer();
 }
 
+function renderSummaryPickerOptions() {
+  els.summaryPickerOptions.innerHTML = REQUEST_OPTIONS.map((item) => (
+    `<button type="button" class="picker-option${item.value === els.summary.value ? ' selected' : ''}" data-value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</button>`
+  )).join('');
+}
+
+function openSummaryPicker() {
+  if (els.summaryPickerButton.disabled) return;
+  renderSummaryPickerOptions();
+  els.summaryPicker.classList.remove('hidden');
+}
+
+function closeSummaryPicker() {
+  els.summaryPicker.classList.add('hidden');
+}
+
+function setSummaryValue(value) {
+  els.summary.value = value;
+  syncSummaryPickerButton();
+  updateSaveButtonState();
+  closeSummaryPicker();
+}
+
 function showWelcome() {
   state.isAuthenticated = false;
   clearInactivityTimer();
@@ -117,6 +159,17 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function getRequestLabel(value) {
+  const match = REQUEST_OPTIONS.find((item) => item.value === value);
+  return match ? match.label : '';
+}
+
+function syncSummaryPickerButton() {
+  const label = getRequestLabel(els.summary.value) || 'Seleziona un tipo';
+  els.summaryPickerButton.textContent = label;
+  els.summaryPickerButton.classList.toggle('placeholder', !els.summary.value);
 }
 
 function formatDateTime(value) {
@@ -271,6 +324,7 @@ function resetForm() {
   els.eventId.value = '';
   els.summary.value = '';
   state.modalOriginalPayload = null;
+  syncSummaryPickerButton();
   els.saveButton.textContent = 'Salva';
   els.deleteButton.disabled = true;
   els.modalEyebrow.textContent = 'Nuova richiesta';
@@ -303,11 +357,13 @@ function openModal() {
 }
 
 function closeModal() {
+  closeSummaryPicker();
   els.requestModal.classList.add('hidden');
 }
 
 function setFormEditable(editable) {
   els.summary.disabled = !editable;
+  els.summaryPickerButton.disabled = !editable || !state.idToken;
   els.start.disabled = !editable;
   els.end.disabled = !editable;
   els.description.disabled = !editable;
@@ -318,6 +374,7 @@ function setFormEditable(editable) {
 function fillForm(event) {
   els.eventId.value = event.id;
   els.summary.value = event.summary || '';
+  syncSummaryPickerButton();
   els.start.value = toInputDate(event.start);
   els.end.value = toInclusiveEndInputDate(event.end);
   els.description.value = event.description || '';
@@ -563,6 +620,7 @@ function onGoogleCredential(response) {
 function initGoogleIdentity() {
   showWelcome();
   resetForm();
+  renderSummaryPickerOptions();
   closeModal();
   els.saveButton.disabled = true;
   els.openCreateModalButton.disabled = true;
@@ -620,10 +678,21 @@ document.addEventListener('touchstart', registerActivity, { passive: true });
 
 els.eventForm.addEventListener('submit', saveEvent);
 ['input', 'change'].forEach((eventName) => {
-  els.summary.addEventListener(eventName, updateSaveButtonState);
   els.start.addEventListener(eventName, updateSaveButtonState);
   els.end.addEventListener(eventName, updateSaveButtonState);
   els.description.addEventListener(eventName, updateSaveButtonState);
+});
+els.summaryPickerButton.addEventListener('click', openSummaryPicker);
+els.summaryPickerClose.addEventListener('click', closeSummaryPicker);
+els.summaryPicker.addEventListener('click', (event) => {
+  if (event.target === els.summaryPicker) {
+    closeSummaryPicker();
+    return;
+  }
+  const option = resolveEventElement(event.target)?.closest('.picker-option');
+  if (option) {
+    setSummaryValue(option.dataset.value || '');
+  }
 });
 els.deleteButton.addEventListener('click', deleteCurrentEvent);
 els.resetButton.addEventListener('click', () => {

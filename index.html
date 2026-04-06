@@ -95,21 +95,8 @@
               <span class="field-label">
                 <span>Richiesta</span>
               </span>
-              <select id="summary" required>
-                <option value="">Seleziona un tipo</option>
-                <option value="FERIE">FERIE</option>
-                <option value="L.104">L.104 : Legge 104</option>
-                <option value="EMO">EMO : Emodinamica</option>
-                <option value="PT">PT : Part-time</option>
-                <option value="RS">RS : Riposo settimanale</option>
-                <option value="CS">CS : Congedo straordinario</option>
-                <option value="AGGPO">AGGPO : Aggiornamento Professionale Obbligatorio</option>
-                <option value="AGGPF">AGGPF : Aggiornamento Professionale Facoltativo</option>
-                <option value="8-14 Lib.">8-14 Lib. : Libero in fascia oraria</option>
-                <option value="14-20 Lib.">14-20 Lib. : Libero in fascia oraria</option>
-                <option value="8-20 Lib.">8-20 Lib. : Libero in fascia oraria</option>
-                <option value="20-08 Lib.">20-08 Lib. : Libero in fascia oraria</option>
-              </select>
+              <input type="hidden" id="summary">
+              <button type="button" id="summaryPickerButton" class="picker-trigger placeholder">Seleziona un tipo</button>
             </label>
           <div class="two-cols">
             <label>Dal giorno<input id="start" type="date" required></label>
@@ -122,6 +109,15 @@
             <button type="button" id="deleteButton" class="danger" disabled>Elimina</button>
           </div>
         </form>
+        <div id="summaryPicker" class="picker-backdrop hidden">
+          <div class="picker-card">
+            <div class="picker-head">
+              <h3 class="picker-title">Seleziona richiesta</h3>
+              <button type="button" id="summaryPickerClose" class="picker-close" aria-label="Chiudi">×</button>
+            </div>
+            <div id="summaryPickerOptions" class="picker-options"></div>
+          </div>
+        </div>
       </div>
     </div>
 
