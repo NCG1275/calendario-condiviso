@@ -627,6 +627,10 @@ hr {
 }
 
 @media (max-width: 900px) {
+  .modal-backdrop {
+    padding: 6px;
+  }
+
   .calendar-stack {
     display: block;
   }
@@ -656,6 +660,9 @@ hr {
   }
 
   .modal-card {
+    width: calc(100vw - 12px);
+    max-width: none;
+    max-height: calc(100vh - 12px);
     padding: 18px;
     border-radius: 20px;
   }
