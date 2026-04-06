@@ -91,39 +91,26 @@
         </div>
         <form id="eventForm" class="form modal-form">
           <input type="hidden" id="eventId">
-          <label>
-            <span class="field-label">
-              <span>Richiesta</span>
-              <span class="help-tip" tabindex="0" aria-label="Legenda causali">
-                ?
-                <span class="help-tip-popup">
-                  L.104: legge 104<br>
-                  PT: part-time<br>
-                  RS: riposo settimanale<br>
-                  CS: congedo straordinario<br>
-                  AGGPO: aggiornamento professionale obbligatorio<br>
-                  AGGPF: aggiornamento professionale facoltativo<br>
-                  EMO: emodinamica<br>
-                  Lib.: libero
-                </span>
+            <label>
+              <span class="field-label">
+                <span>Richiesta</span>
               </span>
-            </span>
-            <select id="summary" required>
-              <option value="">Seleziona un tipo</option>
-              <option value="FERIE">FERIE</option>
-              <option value="L.104">L.104</option>
-              <option value="EMO">EMO</option>
-              <option value="PT">PT</option>
-              <option value="RS">RS</option>
-              <option value="CS">CS</option>
-              <option value="AGGPO">AGGPO</option>
-              <option value="AGGPF">AGGPF</option>
-              <option value="8-14 Lib.">8-14 Lib.</option>
-              <option value="14-20 Lib.">14-20 Lib.</option>
-              <option value="8-20 Lib.">8-20 Lib.</option>
-              <option value="20-08 Lib.">20-08 Lib.</option>
-            </select>
-          </label>
+              <select id="summary" required>
+                <option value="">Seleziona un tipo</option>
+                <option value="FERIE">FERIE : Ferie</option>
+                <option value="L.104">L.104 : Legge 104</option>
+                <option value="EMO">EMO : Emodinamica</option>
+                <option value="PT">PT : Part-time</option>
+                <option value="RS">RS : Riposo settimanale</option>
+                <option value="CS">CS : Congedo straordinario</option>
+                <option value="AGGPO">AGGPO : Aggiornamento Professionale Obbligatorio</option>
+                <option value="AGGPF">AGGPF : Aggiornamento Professionale Facoltativo</option>
+                <option value="8-14 Lib.">8-14 Lib. : Libero</option>
+                <option value="14-20 Lib.">14-20 Lib. : Libero</option>
+                <option value="8-20 Lib.">8-20 Lib. : Libero</option>
+                <option value="20-08 Lib.">20-08 Lib. : Libero</option>
+              </select>
+            </label>
           <div class="two-cols">
             <label>Dal giorno<input id="start" type="date" required></label>
             <label>Al giorno<input id="end" type="date" required></label>
