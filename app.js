@@ -317,11 +317,13 @@ function fillForm(event) {
     : `Autore: ${owner}. Puoi solo visualizzare questa richiesta.`;
   els.modalMeta.classList.remove('hidden');
   const stamps = [];
+  const createdStamp = event.created ? formatDateTime(event.created) : '';
+  const updatedStamp = event.updated ? formatDateTime(event.updated) : '';
   if (event.created) {
-    stamps.push(`Creata: ${formatDateTime(event.created)}`);
+    stamps.push(`Creata: ${createdStamp}`);
   }
   if (event.updated) {
-    stamps.push(`Aggiornata: ${formatDateTime(event.updated)}`);
+    stamps.push(`Aggiornata: ${updatedStamp === createdStamp ? 'Nessuna' : updatedStamp}`);
   }
   if (stamps.length) {
     els.modalTimestamps.textContent = stamps.join(' • ');
