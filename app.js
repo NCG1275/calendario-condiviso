@@ -41,7 +41,6 @@ const els = {
   description: document.getElementById('description'),
   saveButton: document.getElementById('saveButton'),
   deleteButton: document.getElementById('deleteButton'),
-  refreshButton: document.getElementById('refreshButton'),
   resetButton: document.getElementById('resetButton'),
   prevMonthButton: document.getElementById('prevMonthButton'),
   nextMonthButton: document.getElementById('nextMonthButton'),
@@ -68,7 +67,6 @@ function setBusy(isBusy) {
   } else {
     updateSaveButtonState();
   }
-  els.refreshButton.disabled = isBusy || !state.idToken;
   els.openCreateModalButton.disabled = isBusy || !state.idToken;
 }
 
@@ -295,7 +293,6 @@ function logout(message) {
   els.monthGrid.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
   setStatus(message || 'Accesso disconnesso.');
   els.saveButton.disabled = true;
-  els.refreshButton.disabled = true;
   els.openCreateModalButton.disabled = true;
   closeModal();
   google.accounts.id.disableAutoSelect();
@@ -559,7 +556,6 @@ function deleteCurrentEvent() {
 function onGoogleCredential(response) {
   state.idToken = response.credential;
   els.saveButton.disabled = false;
-  els.refreshButton.disabled = false;
   els.openCreateModalButton.disabled = false;
   loadBootstrap();
 }
@@ -569,7 +565,6 @@ function initGoogleIdentity() {
   resetForm();
   closeModal();
   els.saveButton.disabled = true;
-  els.refreshButton.disabled = true;
   els.openCreateModalButton.disabled = true;
   google.accounts.id.initialize({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
@@ -631,7 +626,6 @@ els.eventForm.addEventListener('submit', saveEvent);
   els.description.addEventListener(eventName, updateSaveButtonState);
 });
 els.deleteButton.addEventListener('click', deleteCurrentEvent);
-els.refreshButton.addEventListener('click', loadBootstrap);
 els.resetButton.addEventListener('click', () => {
   resetForm();
   openModal();
