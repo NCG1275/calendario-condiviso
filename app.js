@@ -119,6 +119,7 @@ function escapeHtml(value) {
 function formatDateTime(value) {
   return new Intl.DateTimeFormat('it-IT', {
     dateStyle: 'medium',
+    timeStyle: 'short',
   }).format(parseCalendarDate(value));
 }
 
@@ -319,11 +320,13 @@ function fillForm(event) {
   const stamps = [];
   const createdStamp = event.created ? formatDateTime(event.created) : '';
   const updatedStamp = event.updated ? formatDateTime(event.updated) : '';
+  const createdRaw = event.created || '';
+  const updatedRaw = event.updated || '';
   if (event.created) {
     stamps.push(`Creata: ${createdStamp}`);
   }
   if (event.updated) {
-    stamps.push(`Aggiornata: ${updatedStamp === createdStamp ? 'Nessuna' : updatedStamp}`);
+    stamps.push(`Aggiornata: ${updatedRaw === createdRaw ? 'Nessuna' : updatedStamp}`);
   }
   if (stamps.length) {
     els.modalTimestamps.textContent = stamps.join(' • ');
