@@ -184,6 +184,52 @@ label {
   font-size: 0.92rem;
 }
 
+.field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #dcefed;
+  color: var(--accent-dark);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: help;
+}
+
+.help-tip-popup {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 10px);
+  transform: translateX(-50%);
+  width: min(280px, 70vw);
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(23, 49, 51, 0.96);
+  color: #f5fbfb;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  box-shadow: 0 10px 24px rgba(16, 34, 36, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+  z-index: 20;
+}
+
+.help-tip:hover .help-tip-popup,
+.help-tip:focus .help-tip-popup,
+.help-tip:focus-visible .help-tip-popup {
+  opacity: 1;
+}
+
 input, textarea, button {
   font: inherit;
 }
