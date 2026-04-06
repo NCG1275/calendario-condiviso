@@ -207,9 +207,9 @@ label {
 
 .help-tip-popup {
   position: absolute;
-  left: 50%;
+  left: 0;
   top: calc(100% + 10px);
-  transform: translateX(-50%);
+  transform: none;
   width: min(280px, 70vw);
   padding: 10px 12px;
   border-radius: 12px;
