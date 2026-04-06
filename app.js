@@ -326,7 +326,7 @@ function fillForm(event) {
     stamps.push(`Creata: ${createdStamp}`);
   }
   if (event.updated) {
-    stamps.push(`Aggiornata: ${updatedRaw === createdRaw ? 'Nessuna' : updatedStamp}`);
+    stamps.push(`Modifica: ${updatedRaw === createdRaw ? 'Nessuna' : updatedStamp}`);
   }
   if (stamps.length) {
     els.modalTimestamps.textContent = stamps.join(' • ');
