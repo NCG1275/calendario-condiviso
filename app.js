@@ -125,10 +125,10 @@ function formatDateTime(value) {
 
 function normalizeDateTimeValue(value) {
   const raw = String(value || '').trim();
-  if (!raw) return '';
+  if (!raw) return null;
   const parsed = parseCalendarDate(raw);
   const time = parsed.getTime();
-  return Number.isNaN(time) ? raw : String(time);
+  return Number.isNaN(time) ? null : time;
 }
 
 function formatMonthTitle(date) {
@@ -334,7 +334,8 @@ function fillForm(event) {
     stamps.push(`Creata: ${createdStamp}`);
   }
   if (event.updated) {
-    stamps.push(`Modifica: ${updatedRaw === createdRaw ? 'Nessuna' : updatedStamp}`);
+    const noRealModification = createdRaw !== null && updatedRaw !== null && Math.abs(updatedRaw - createdRaw) < 60000;
+    stamps.push(`Modifica: ${noRealModification ? 'Nessuna' : updatedStamp}`);
   }
   if (stamps.length) {
     els.modalTimestamps.textContent = stamps.join(' • ');
