@@ -11,6 +11,7 @@ const state = {
   visibleMonth: startOfMonth(new Date()),
   isAuthenticated: false,
   inactivityTimer: null,
+  modalOriginalPayload: null,
 };
 
 const els = {
@@ -62,7 +63,11 @@ function resolveEventElement(target) {
 }
 
 function setBusy(isBusy) {
-  els.saveButton.disabled = isBusy || !state.idToken;
+  if (isBusy) {
+    els.saveButton.disabled = true;
+  } else {
+    updateSaveButtonState();
+  }
   els.refreshButton.disabled = isBusy || !state.idToken;
   els.openCreateModalButton.disabled = isBusy || !state.idToken;
 }
@@ -267,6 +272,7 @@ function resetForm() {
   els.eventForm.reset();
   els.eventId.value = '';
   els.summary.value = '';
+  state.modalOriginalPayload = null;
   els.saveButton.textContent = 'Salva';
   els.deleteButton.disabled = true;
   els.modalEyebrow.textContent = 'Nuova richiesta';
@@ -276,6 +282,7 @@ function resetForm() {
   els.modalTimestamps.textContent = '';
   els.modalTimestamps.classList.add('hidden');
   setFormEditable(true);
+  updateSaveButtonState();
 }
 
 function logout(message) {
@@ -307,8 +314,8 @@ function setFormEditable(editable) {
   els.start.disabled = !editable;
   els.end.disabled = !editable;
   els.description.disabled = !editable;
-  els.saveButton.disabled = !editable || !state.idToken;
   els.deleteButton.disabled = !editable || !els.eventId.value;
+  updateSaveButtonState();
 }
 
 function fillForm(event) {
@@ -317,6 +324,7 @@ function fillForm(event) {
   els.start.value = toInputDate(event.start);
   els.end.value = toInclusiveEndInputDate(event.end);
   els.description.value = event.description || '';
+  state.modalOriginalPayload = getFormPayload();
   const owner = event.ownerName || 'Utente';
   els.saveButton.textContent = 'Aggiorna';
   els.modalEyebrow.textContent = event.canEdit ? 'Richiesta esistente' : 'Sola lettura';
@@ -465,6 +473,33 @@ function getFormPayload() {
   };
 }
 
+function comparablePayload(payload) {
+  return JSON.stringify({
+    id: String(payload.id || ''),
+    summary: String(payload.summary || '').trim(),
+    start: String(payload.start || ''),
+    end: String(payload.end || ''),
+    description: String(payload.description || '').trim(),
+  });
+}
+
+function formHasRealChanges() {
+  if (!els.eventId.value || !state.modalOriginalPayload) return true;
+  return comparablePayload(getFormPayload()) !== comparablePayload(state.modalOriginalPayload);
+}
+
+function updateSaveButtonState() {
+  if (!state.idToken || els.summary.disabled) {
+    els.saveButton.disabled = true;
+    return;
+  }
+  if (!els.eventId.value) {
+    els.saveButton.disabled = false;
+    return;
+  }
+  els.saveButton.disabled = !formHasRealChanges();
+}
+
 function saveEvent(event) {
   event.preventDefault();
   registerActivity();
@@ -475,6 +510,10 @@ function saveEvent(event) {
   }
   if (!payload.start || !payload.end) {
     setStatus('Seleziona il giorno iniziale e finale.', 'error');
+    return;
+  }
+  if (payload.id && !formHasRealChanges()) {
+    setStatus('');
     return;
   }
   const action = payload.id ? 'update' : 'create';
@@ -585,6 +624,12 @@ document.addEventListener('pointerdown', registerActivity, true);
 document.addEventListener('touchstart', registerActivity, { passive: true });
 
 els.eventForm.addEventListener('submit', saveEvent);
+['input', 'change'].forEach((eventName) => {
+  els.summary.addEventListener(eventName, updateSaveButtonState);
+  els.start.addEventListener(eventName, updateSaveButtonState);
+  els.end.addEventListener(eventName, updateSaveButtonState);
+  els.description.addEventListener(eventName, updateSaveButtonState);
+});
 els.deleteButton.addEventListener('click', deleteCurrentEvent);
 els.refreshButton.addEventListener('click', loadBootstrap);
 els.resetButton.addEventListener('click', () => {
