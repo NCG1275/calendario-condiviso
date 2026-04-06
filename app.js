@@ -123,6 +123,14 @@ function formatDateTime(value) {
   }).format(parseCalendarDate(value));
 }
 
+function normalizeDateTimeValue(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const parsed = parseCalendarDate(raw);
+  const time = parsed.getTime();
+  return Number.isNaN(time) ? raw : String(time);
+}
+
 function formatMonthTitle(date) {
   return new Intl.DateTimeFormat('it-IT', {
     month: 'long',
@@ -320,8 +328,8 @@ function fillForm(event) {
   const stamps = [];
   const createdStamp = event.created ? formatDateTime(event.created) : '';
   const updatedStamp = event.updated ? formatDateTime(event.updated) : '';
-  const createdRaw = event.created || '';
-  const updatedRaw = event.updated || '';
+  const createdRaw = normalizeDateTimeValue(event.created);
+  const updatedRaw = normalizeDateTimeValue(event.updated);
   if (event.created) {
     stamps.push(`Creata: ${createdStamp}`);
   }
