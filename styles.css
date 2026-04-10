@@ -80,6 +80,10 @@ h1 {
   line-height: 1;
 }
 
+.brand-title {
+  color: #4a8df6;
+}
+
 .lead {
   margin: 0;
   color: var(--muted);
