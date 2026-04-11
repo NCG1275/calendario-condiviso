@@ -1,5 +1,5 @@
 const CONFIG = {
-  APPS_SCRIPT_API_URL: 'https://script.google.com/a/*/macros/s/AKfycbz1uwgHv-_YRLzG_-6_znPQp3bGZE7GX4gUnqr8zlkbs6gthPG9XXf8NTlWMYyupkkM-A/exec',
+  APPS_SCRIPT_API_URL: 'https://script.google.com/a/*/macros/s/AKfycbxGK9yH9Lus0TTouJ36ipMjZLkz8VHhKctudIty463Nw30Ago-4M0MZeq6RLJpb0hfcog/exec',
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
   INACTIVITY_TIMEOUT_MS: 60 * 1000,
 };
