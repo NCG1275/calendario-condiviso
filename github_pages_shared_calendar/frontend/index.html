@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Calendario condiviso</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <div class="shell">
+      <section id="welcomeScreen" class="welcome-screen">
+        <div class="welcome-card">
+          <h1>Calendario condiviso</h1>
+          <div id="signin" class="signin welcome-signin"></div>
+          <p id="status" class="status welcome-status">Autentica per continuare.</p>
+        </div>
+      </section>
+
+      <section id="appScreen" class="hidden">
+        <section class="hero">
+          <div class="hero-top">
+            <div>
+              <p class="eyebrow">Calendario condiviso v.1.2.8 by GN</p>
+              <h1 class="brand-title">Calendario Anestesia</h1>
+            </div>
+            <div class="account-panel">
+              <button type="button" id="logoutButton" class="logout-button hidden">Esci</button>
+              <div id="userCard" class="user-card hidden">
+                <img id="userPicture" alt="Profilo">
+                <div>
+                  <div id="userName" class="user-name"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="calendar-stack">
+        <main class="panel">
+          <div class="calendar-actions">
+            <button type="button" id="openCreateModalButton" class="primary" disabled>Aggiungi richiesta</button>
+            <div class="side-note">Apri una nuova richiesta da qui oppure clicca direttamente un giorno del calendario.</div>
+          </div>
+          <p id="appStatus" class="status app-status">Autentica per continuare.</p>
+          <div class="toolbar">
+            <div class="calendar-nav">
+              <div class="calendar-heading">
+                <div class="calendar-title-row">
+                  <button type="button" id="prevMonthButton" class="month-arrow" aria-label="Mese precedente">‹</button>
+                  <h2 id="calendarTitle" class="calendar-title">Calendario</h2>
+                  <button type="button" id="nextMonthButton" class="month-arrow" aria-label="Mese successivo">›</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="month-grid-wrap">
+            <div class="calendar-shell">
+              <div class="weekdays">
+                <div>Lun</div>
+                <div>Mar</div>
+                <div>Mer</div>
+                <div>Gio</div>
+                <div>Ven</div>
+                <div>Sab</div>
+                <div>Dom</div>
+              </div>
+            <div id="monthGrid" class="month-grid">
+              <div class="empty">Nessun evento caricato.</div>
+            </div>
+            </div>
+          </div>
+        </main>
+        </div>
+      </section>
+    </div>
+
+    <div id="requestModal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <div>
+            <div id="modalEyebrow" class="modal-eyebrow">Nuova richiesta</div>
+            <h2 id="modalTitle" class="modal-title">Inserisci evento</h2>
+            <div id="modalMeta" class="modal-meta hidden"></div>
+            <div id="modalTimestamps" class="modal-meta hidden"></div>
+          </div>
+          <button type="button" id="closeModalButton" class="modal-close" aria-label="Chiudi">×</button>
+        </div>
+        <form id="eventForm" class="form modal-form">
+          <input type="hidden" id="eventId">
+            <label>
+              <span class="field-label">
+                <span>Richiesta</span>
+              </span>
+              <input type="hidden" id="summary">
+              <button type="button" id="summaryPickerButton" class="picker-trigger placeholder">Seleziona un tipo</button>
+            </label>
+          <div class="two-cols">
+            <label>Dal giorno<input id="start" type="date" required></label>
+            <label>Al giorno<input id="end" type="date" required></label>
+          </div>
+          <label>Descrizione<textarea id="description"></textarea></label>
+          <div class="actions">
+            <button type="submit" id="saveButton" class="primary" disabled>Salva</button>
+            <button type="button" id="resetButton">Nuovo</button>
+            <button type="button" id="deleteButton" class="danger" disabled>Elimina</button>
+          </div>
+        </form>
+        <div id="summaryPicker" class="picker-backdrop hidden">
+          <div class="picker-card">
+            <div class="picker-head">
+              <h3 class="picker-title">Seleziona richiesta</h3>
+              <button type="button" id="summaryPickerClose" class="picker-close" aria-label="Chiudi">×</button>
+            </div>
+            <div id="summaryPickerOptions" class="picker-options"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
