@@ -1,5 +1,5 @@
 const CONFIG = {
-  APPS_SCRIPT_API_URL: 'https://script.google.com/macros/s/AKfycbx3_AiLCEDaMSZgjV99OABCd6YG_wD8o3YZvsucnmZf1qYd6znYBBJdBOEkZEbRgXJD2A/exec',
+  APPS_SCRIPT_API_URL: 'https://script.google.com/macros/s/AKfycbylFnGF9acpZqT9B5liuX8UqekeYmuFUy1Weh5V04HbYUA32-nUun0Da3EGhHZyELnPZQ/exec',
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
   INACTIVITY_TIMEOUT_MS: 60 * 1000,
 };
@@ -719,4 +719,3 @@ els.requestModal.addEventListener('click', (event) => {
   }
 });
 window.addEventListener('load', initGoogleIdentity);
-
