@@ -703,6 +703,12 @@ hr {
   font-size: 0.9rem;
 }
 
+.modal-status {
+  color: var(--accent);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
 .modal-close {
   width: 40px;
   height: 40px;

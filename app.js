@@ -48,6 +48,7 @@ const els = {
   modalEyebrow: document.getElementById('modalEyebrow'),
   modalMeta: document.getElementById('modalMeta'),
   modalTimestamps: document.getElementById('modalTimestamps'),
+  modalStatus: document.getElementById('modalStatus'),
   openCreateModalButton: document.getElementById('openCreateModalButton'),
   closeModalButton: document.getElementById('closeModalButton'),
   eventForm: document.getElementById('eventForm'),
@@ -85,10 +86,17 @@ function resolveEventElement(target) {
 function setBusy(isBusy) {
   if (isBusy) {
     els.saveButton.disabled = true;
+    els.deleteButton.disabled = true;
   } else {
     updateSaveButtonState();
+    els.deleteButton.disabled = !els.eventId.value || els.summary.disabled;
   }
   els.openCreateModalButton.disabled = isBusy || !state.idToken;
+}
+
+function setModalStatus(message) {
+  els.modalStatus.textContent = message || '';
+  els.modalStatus.classList.toggle('hidden', !message);
 }
 
 function setSignedInUi(isSignedIn) {
@@ -335,6 +343,7 @@ function resetForm() {
   els.modalMeta.classList.add('hidden');
   els.modalTimestamps.textContent = '';
   els.modalTimestamps.classList.add('hidden');
+  setModalStatus('');
   setFormEditable(true);
   updateSaveButtonState();
 }
@@ -492,12 +501,12 @@ function renderMonthGrid() {
   els.monthGrid.innerHTML = rows.join('');
 }
 
-function loadBootstrap() {
-  if (!state.idToken) return;
+function loadBootstrap(options = {}) {
+  if (!state.idToken) return Promise.resolve();
   registerActivity();
   setBusy(true);
   setStatus('Caricamento eventi...');
-  jsonpRequest('bootstrap', { idToken: state.idToken })
+  return jsonpRequest('bootstrap', { idToken: state.idToken })
     .then((data) => {
       const hadEventsLoaded = state.events.length > 0;
       state.user = data.user;
@@ -515,6 +524,9 @@ function loadBootstrap() {
     .catch((error) => {
       setBusy(false);
       setStatus(error.message, 'error');
+      if (options.rethrow) {
+        throw error;
+      }
     });
 }
 
@@ -574,18 +586,20 @@ function saveEvent(event) {
   }
   const action = payload.id ? 'update' : 'create';
   setBusy(true);
-  setStatus(action === 'create' ? 'Creazione evento...' : 'Aggiornamento evento...');
+  setModalStatus(action === 'create' ? 'Inserimento evento in corso...' : 'Modifica evento in corso...');
+  setStatus('');
   jsonpRequest(action, {
     idToken: state.idToken,
     payload: encodePayload(payload),
   })
+    .then(() => loadBootstrap({ rethrow: true }))
     .then(() => {
       closeModal();
       resetForm();
-      loadBootstrap();
     })
     .catch((error) => {
       setBusy(false);
+      setModalStatus('');
       setStatus(error.message, 'error');
     });
 }
@@ -596,18 +610,20 @@ function deleteCurrentEvent() {
   if (!confirm('Eliminare questo evento?')) return;
   registerActivity();
   setBusy(true);
-  setStatus('Eliminazione evento...');
+  setModalStatus('Cancellazione evento in corso...');
+  setStatus('');
   jsonpRequest('delete', {
     idToken: state.idToken,
     eventId: eventId,
   })
+    .then(() => loadBootstrap({ rethrow: true }))
     .then(() => {
       closeModal();
       resetForm();
-      loadBootstrap();
     })
     .catch((error) => {
       setBusy(false);
+      setModalStatus('');
       setStatus(error.message, 'error');
     });
 }
