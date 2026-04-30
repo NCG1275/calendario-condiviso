@@ -8,6 +8,8 @@ const REQUEST_OPTIONS = [
   { value: 'FERIE', label: 'FERIE' },
   { value: 'L.104', label: 'L.104 : Legge 104' },
   { value: 'EMO', label: 'EMO : Emodinamica' },
+  { value: 'Isili', label: 'Isili' },
+  { value: 'ELI', label: 'ELI : Elisoccorso' },
   { value: 'PT', label: 'PT : Part-time' },
   { value: 'RS', label: 'RS : Riposo settimanale' },
   { value: 'CS', label: 'CS : Congedo straordinario' },
