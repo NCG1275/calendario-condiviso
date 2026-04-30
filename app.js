@@ -580,8 +580,8 @@ function saveEvent(event) {
     payload: encodePayload(payload),
   })
     .then(() => {
-      resetForm();
       closeModal();
+      resetForm();
       loadBootstrap();
     })
     .catch((error) => {
@@ -602,8 +602,8 @@ function deleteCurrentEvent() {
     eventId: eventId,
   })
     .then(() => {
-      resetForm();
       closeModal();
+      resetForm();
       loadBootstrap();
     })
     .catch((error) => {
