@@ -21,6 +21,8 @@ const REQUEST_OPTIONS = [
   { value: '20-08 Lib.', label: '20-08 Lib. : Libero in fascia oraria' },
 ];
 
+const DATE_RANGE_WARNING = 'La data "Al giorno" non può essere antecedente alla data "Dal giorno".';
+
 const state = {
   idToken: '',
   user: null,
@@ -556,8 +558,26 @@ function formHasRealChanges() {
   return comparablePayload(getFormPayload()) !== comparablePayload(state.modalOriginalPayload);
 }
 
+function isDateRangeInvalid() {
+  return !!(els.start.value && els.end.value && els.end.value < els.start.value);
+}
+
+function validateDateRange() {
+  const invalid = isDateRangeInvalid();
+  if (invalid) {
+    setModalStatus(DATE_RANGE_WARNING);
+  } else if (els.modalStatus.textContent === DATE_RANGE_WARNING) {
+    setModalStatus('');
+  }
+  return !invalid;
+}
+
 function updateSaveButtonState() {
   if (!state.idToken || els.summary.disabled) {
+    els.saveButton.disabled = true;
+    return;
+  }
+  if (!validateDateRange()) {
     els.saveButton.disabled = true;
     return;
   }
@@ -578,6 +598,10 @@ function saveEvent(event) {
   }
   if (!payload.start || !payload.end) {
     setStatus('Seleziona il giorno iniziale e finale.', 'error');
+    return;
+  }
+  if (!validateDateRange()) {
+    setStatus('');
     return;
   }
   if (payload.id && !formHasRealChanges()) {
