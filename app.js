@@ -363,10 +363,11 @@ function logout(message) {
   state.idToken = '';
   state.user = null;
   state.events = [];
+  const statusMessage = typeof message === 'string' ? message : 'Accesso disconnesso.';
   showWelcome();
   resetForm();
   els.monthGrid.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
-  setStatus(message || 'Accesso disconnesso.');
+  setStatus(statusMessage);
   els.saveButton.disabled = true;
   els.openCreateModalButton.disabled = true;
   closeModal();
@@ -754,7 +755,7 @@ els.openCreateModalButton.addEventListener('click', () => {
   openModal();
 });
 els.closeModalButton.addEventListener('click', closeModal);
-els.logoutButton.addEventListener('click', logout);
+els.logoutButton.addEventListener('click', () => logout());
 els.prevMonthButton.addEventListener('click', () => {
   state.visibleMonth = addMonths(state.visibleMonth, -1);
   renderMonthGrid();
