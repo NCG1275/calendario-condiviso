@@ -2,6 +2,7 @@ const CONFIG = {
   APPS_SCRIPT_API_URL: 'https://script.google.com/macros/s/AKfycbyOEuEFx70o0NRx4Caseht8gUNdMOHDYvYUbCdcaJBQEaREslUrfa5eV7GTXkDRvQcIUw/exec',
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
   INACTIVITY_TIMEOUT_MS: 60 * 1000,
+  JSONP_TIMEOUT_MS: 20000,
 };
 
 const REQUEST_OPTIONS = [
@@ -305,6 +306,12 @@ function jsonpRequest(action, params = {}) {
     });
 
     let settled = false;
+    const timeoutId = window.setTimeout(() => {
+      if (settled) return;
+      cleanup();
+      reject(new Error('Richiesta scaduta. Verifica la connessione e riprova.'));
+    }, CONFIG.JSONP_TIMEOUT_MS);
+
     window[callbackName] = (response) => {
       settled = true;
       cleanup();
@@ -322,6 +329,8 @@ function jsonpRequest(action, params = {}) {
     };
 
     function cleanup() {
+      settled = true;
+      window.clearTimeout(timeoutId);
       delete window[callbackName];
       script.remove();
     }
@@ -356,7 +365,6 @@ function logout(message) {
   state.events = [];
   showWelcome();
   resetForm();
-  els.events.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
   els.monthGrid.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
   setStatus(message || 'Accesso disconnesso.');
   els.saveButton.disabled = true;
