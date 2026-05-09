@@ -13,6 +13,7 @@ const REQUEST_OPTIONS = [
   { value: 'PT', label: 'PT : Part-time' },
   { value: 'RS', label: 'RS : Riposo settimanale' },
   { value: 'CS', label: 'CS : Congedo straordinario' },
+  { value: 'CF', label: 'CF : Congedo Familiare' },
   { value: 'AGGPO', label: 'AGGPO : Aggiornamento Professionale Obbligatorio' },
   { value: 'AGGPF', label: 'AGGPF : Aggiornamento Professionale Facoltativo' },
   { value: '8-14 Lib.', label: '8-14 Lib. : Libero in fascia oraria' },
