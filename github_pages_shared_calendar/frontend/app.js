@@ -497,9 +497,14 @@ function renderMonthGrid() {
 
     const previews = dayEvents.slice(0, 8).map((entry) => {
       const event = entry.event;
-      const mineClass = event.canEdit ? ' mine' : '';
+      const isMine = eventBelongsToUser(event);
+      const mineClass = isMine ? ' mine' : ' readonly';
       const segmentClass = ` segment-${entry.segmentType}`;
-      return `<div role="button" tabindex="0" class="mini-event${mineClass}${segmentClass}" data-action="edit" data-id="${event.id}">${escapeHtml(formatMiniEvent(event, entry.segmentType))}</div>`;
+      const label = escapeHtml(formatMiniEvent(event, entry.segmentType));
+      if (!isMine) {
+        return `<div class="mini-event${mineClass}${segmentClass}">${label}</div>`;
+      }
+      return `<div role="button" tabindex="0" class="mini-event${mineClass}${segmentClass}" data-action="edit" data-id="${event.id}">${label}</div>`;
     }).join('');
 
     cells.push(
@@ -529,7 +534,7 @@ function loadBootstrap(options = {}) {
     .then((data) => {
       const hadEventsLoaded = state.events.length > 0;
       state.user = data.user || null;
-      state.events = (data.events || []).filter((event) => eventBelongsToUser(event, state.user));
+      state.events = data.events || [];
       showApp();
       els.userPicture.src = data.user.picture || '';
       els.userName.textContent = data.user.name || 'Utente';

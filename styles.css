@@ -579,6 +579,10 @@ button:disabled { opacity: 0.55; cursor: default; }
   color: #8a4417;
 }
 
+.mini-event.readonly {
+  cursor: default;
+}
+
 .mini-event.segment-single {
   border-radius: 6px;
   margin-left: 0;
