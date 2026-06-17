@@ -502,7 +502,7 @@ function renderMonthGrid() {
       const segmentClass = ` segment-${entry.segmentType}`;
       const label = escapeHtml(formatMiniEvent(event, entry.segmentType));
       if (!isMine) {
-        return `<div class="mini-event${mineClass}${segmentClass}">${label}</div>`;
+        return `<div class="mini-event${mineClass}${segmentClass}" data-action="locked-event">${label}</div>`;
       }
       return `<div role="button" tabindex="0" class="mini-event${mineClass}${segmentClass}" data-action="edit" data-id="${event.id}">${label}</div>`;
     }).join('');
@@ -706,6 +706,12 @@ document.addEventListener('click', (event) => {
   registerActivity();
   const target = resolveEventElement(event.target);
   if (!target) return;
+  const lockedEvent = target.closest('[data-action="locked-event"]');
+  if (lockedEvent) {
+    event.stopPropagation();
+    setStatus('Puoi consultare esclusivamente le tue richieste.', 'error');
+    return;
+  }
   const button = target.closest('[data-action="edit"]');
   if (button) {
     event.stopPropagation();
