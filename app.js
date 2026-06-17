@@ -180,6 +180,18 @@ function getRequestLabel(value) {
   return match ? match.label : '';
 }
 
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function eventBelongsToUser(event, user = state.user) {
+  if (!event) return false;
+  if (event.canEdit === true) return true;
+  const ownerEmail = normalizeEmail(event.ownerEmail);
+  const userEmail = normalizeEmail(user && user.email);
+  return !!ownerEmail && !!userEmail && ownerEmail === userEmail;
+}
+
 function syncSummaryPickerButton() {
   const label = getRequestLabel(els.summary.value) || 'Seleziona un tipo';
   els.summaryPickerButton.textContent = label;
@@ -395,6 +407,10 @@ function setFormEditable(editable) {
 }
 
 function fillForm(event) {
+  if (!eventBelongsToUser(event)) {
+    setStatus('Puoi consultare esclusivamente le tue richieste.', 'error');
+    return;
+  }
   els.eventId.value = event.id;
   els.summary.value = event.summary || '';
   syncSummaryPickerButton();
@@ -521,8 +537,8 @@ function loadBootstrap(options = {}) {
   return jsonpRequest('bootstrap', { idToken: state.idToken })
     .then((data) => {
       const hadEventsLoaded = state.events.length > 0;
-      state.user = data.user;
-      state.events = data.events || [];
+      state.user = data.user || null;
+      state.events = (data.events || []).filter((event) => eventBelongsToUser(event, state.user));
       showApp();
       els.userPicture.src = data.user.picture || '';
       els.userName.textContent = data.user.name || 'Utente';
@@ -771,4 +787,3 @@ els.requestModal.addEventListener('click', (event) => {
   }
 });
 window.addEventListener('load', initGoogleIdentity);
-

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 APP_NAME = "Planner Turni Medici"
-APP_VERSION = "3.0.0"
+APP_VERSION = "170626"
 APP_AUTHOR = "GN Aru"
 APP_SETTINGS_ORG = "PlannerTurni"
 APP_SETTINGS_APP = "PlannerTurniMedici"
