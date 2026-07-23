@@ -107,22 +107,26 @@ function createOwnedEvent_(payload, idToken) {
   validatePayload_(payload);
   const ownerName = resolveOwnerName_(user.email, user.name);
 
-  const event = {
-    summary: payload.summary.trim(),
-    description: String(payload.description || '').trim(),
-    location: String(payload.location || '').trim(),
-    start: buildAllDayDateObject_(payload.start),
-    end: buildAllDayDateObject_(payload.end),
-    extendedProperties: {
-      private: {
-        ownerEmail: user.email,
-        ownerName: ownerName,
-      },
-    },
-  };
+  return withRequestLock_(function() {
+    assertNoDuplicateRequest_(payload, user.email);
 
-  const created = Calendar.Events.insert(event, CONFIG.SHARED_CALENDAR_ID);
-  return mapEventForClient_(created, user.email);
+    const event = {
+      summary: payload.summary.trim(),
+      description: String(payload.description || '').trim(),
+      location: String(payload.location || '').trim(),
+      start: buildAllDayDateObject_(payload.start),
+      end: buildAllDayDateObject_(payload.end),
+      extendedProperties: {
+        private: {
+          ownerEmail: user.email,
+          ownerName: ownerName,
+        },
+      },
+    };
+
+    const created = Calendar.Events.insert(event, CONFIG.SHARED_CALENDAR_ID);
+    return mapEventForClient_(created, user.email);
+  });
 }
 
 function updateOwnedEvent_(payload, idToken) {
@@ -130,28 +134,31 @@ function updateOwnedEvent_(payload, idToken) {
   validatePayload_(payload, true);
   const ownerName = resolveOwnerName_(user.email, user.name);
 
-  const existing = Calendar.Events.get(CONFIG.SHARED_CALENDAR_ID, payload.id);
-  assertOwnership_(existing, user.email);
+  return withRequestLock_(function() {
+    const existing = Calendar.Events.get(CONFIG.SHARED_CALENDAR_ID, payload.id);
+    assertOwnership_(existing, user.email);
+    assertNoDuplicateRequest_(payload, user.email, payload.id);
 
-  const updatedEvent = {
-    summary: payload.summary.trim(),
-    description: String(payload.description || '').trim(),
-    location: String(payload.location || '').trim(),
-    start: buildAllDayDateObject_(payload.start),
-    end: buildAllDayDateObject_(payload.end),
-    extendedProperties: existing.extendedProperties || {
-      private: {
-        ownerEmail: user.email,
-        ownerName: ownerName,
+    const updatedEvent = {
+      summary: payload.summary.trim(),
+      description: String(payload.description || '').trim(),
+      location: String(payload.location || '').trim(),
+      start: buildAllDayDateObject_(payload.start),
+      end: buildAllDayDateObject_(payload.end),
+      extendedProperties: existing.extendedProperties || {
+        private: {
+          ownerEmail: user.email,
+          ownerName: ownerName,
+        },
       },
-    },
-  };
-  updatedEvent.extendedProperties.private = updatedEvent.extendedProperties.private || {};
-  updatedEvent.extendedProperties.private.ownerEmail = user.email;
-  updatedEvent.extendedProperties.private.ownerName = ownerName;
+    };
+    updatedEvent.extendedProperties.private = updatedEvent.extendedProperties.private || {};
+    updatedEvent.extendedProperties.private.ownerEmail = user.email;
+    updatedEvent.extendedProperties.private.ownerName = ownerName;
 
-  const updated = Calendar.Events.update(updatedEvent, CONFIG.SHARED_CALENDAR_ID, payload.id);
-  return mapEventForClient_(updated, user.email);
+    const updated = Calendar.Events.update(updatedEvent, CONFIG.SHARED_CALENDAR_ID, payload.id);
+    return mapEventForClient_(updated, user.email);
+  });
 }
 
 function deleteOwnedEvent_(eventId, idToken) {
@@ -286,6 +293,83 @@ function assertOwnership_(event, email) {
   if (!ownerEmail || ownerEmail !== String(email || '').toLowerCase()) {
     throw new Error('Puoi modificare solo i tuoi eventi.');
   }
+}
+
+function withRequestLock_(callback) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    return callback();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function assertNoDuplicateRequest_(payload, ownerEmail, excludedEventId) {
+  const requestedType = normalizeRequestType_(payload.summary);
+  const requestedStart = isoDateOnly_(payload.start);
+  const requestedEnd = isoDateOnly_(payload.end);
+  const normalizedOwnerEmail = String(ownerEmail || '').trim().toLowerCase();
+  const excludedId = String(excludedEventId || '').trim();
+  let pageToken = '';
+
+  do {
+    const options = {
+      singleEvents: true,
+      timeMin: new Date(requestedStart + 'T00:00:00Z').toISOString(),
+      timeMax: new Date(requestedEnd + 'T00:00:00Z').toISOString(),
+      maxResults: 2500,
+      showDeleted: false,
+    };
+    if (pageToken) {
+      options.pageToken = pageToken;
+    }
+
+    const response = Calendar.Events.list(CONFIG.SHARED_CALENDAR_ID, options);
+    const items = response.items || [];
+
+    for (let i = 0; i < items.length; i += 1) {
+      const existing = items[i];
+      if (existing.status === 'cancelled') continue;
+      if (excludedId && String(existing.id || '') === excludedId) continue;
+      if (normalizeRequestType_(existing.summary) !== requestedType) continue;
+
+      const existingOwnerEmail =
+        (((existing.extendedProperties || {}).private || {}).ownerEmail || '')
+          .trim()
+          .toLowerCase();
+      if (!existingOwnerEmail || existingOwnerEmail !== normalizedOwnerEmail) continue;
+
+      const existingStartValue =
+        existing.start && (existing.start.date || existing.start.dateTime);
+      const existingEndValue =
+        existing.end && (existing.end.date || existing.end.dateTime);
+      if (!existingStartValue || !existingEndValue) continue;
+
+      const existingStart = isoDateOnly_(existingStartValue);
+      const existingEnd = isoDateOnly_(existingEndValue);
+      if (requestedStart < existingEnd && existingStart < requestedEnd) {
+        const duplicateDay = requestedStart > existingStart ? requestedStart : existingStart;
+        throw new Error(
+          'Richiesta non salvata: una richiesta identica è già stata salvata per il giorno ' +
+          formatItalianDate_(duplicateDay) +
+          '.'
+        );
+      }
+    }
+
+    pageToken = String(response.nextPageToken || '');
+  } while (pageToken);
+}
+
+function normalizeRequestType_(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function formatItalianDate_(isoDate) {
+  const parts = String(isoDate || '').split('-');
+  if (parts.length !== 3) return String(isoDate || '');
+  return parts[2] + '/' + parts[1] + '/' + parts[0];
 }
 
 function validatePayload_(payload, requireId) {

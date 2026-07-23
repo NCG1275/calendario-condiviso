@@ -523,11 +523,23 @@ button:disabled { opacity: 0.55; cursor: default; }
 
 .day-head {
   display: flex;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 6px;
   align-items: center;
   font-size: 0.9rem;
   min-height: 28px;
+}
+
+.day-request-count {
+  min-width: 0;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(45, 143, 135, 0.1);
+  color: #276f69;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .day-number {
@@ -549,6 +561,19 @@ button:disabled { opacity: 0.55; cursor: default; }
   display: grid;
   gap: 2px;
   align-content: start;
+}
+
+.day-overflow-note {
+  min-height: 18px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #eef2f1;
+  color: #566563;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  cursor: default;
 }
 
 .mini-event {

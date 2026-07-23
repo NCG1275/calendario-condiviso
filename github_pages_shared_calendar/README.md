@@ -32,6 +32,20 @@ Con `GitHub Pages` invece:
 4. Il frontend chiama Apps Script tramite `JSONP`
 5. Apps Script verifica il token e controlla l'ownership degli eventi
 
+## Regola anti-duplicato
+
+Lo stesso utente non può salvare due richieste della stessa tipologia sulla stessa
+giornata. La regola vale anche per intervalli di più giorni che si sovrappongono.
+Il frontend segnala subito il conflitto e il backend ripete il controllo sotto lock,
+così due salvataggi simultanei non possono creare il duplicato.
+
+## Giornate con molte richieste
+
+Ogni cella mostra il numero totale di richieste della giornata. Quando le anteprime
+superano la capienza ordinaria, le richieste dell'utente autenticato hanno priorità
+e restano tutte visibili; un indicatore `+N altre` comunica quante richieste altrui
+non sono mostrate nella cella.
+
 ## Nota tecnica importante
 
 Le chiamate tra GitHub Pages e Apps Script vengono fatte via `JSONP` per evitare i problemi CORS/origin del browser con Apps Script.

@@ -24,6 +24,8 @@ const REQUEST_OPTIONS = [
 ];
 
 const DATE_RANGE_WARNING = 'La data "Al giorno" non può essere antecedente alla data "Dal giorno".';
+const DUPLICATE_REQUEST_PREFIX = 'Richiesta non salvata: una richiesta identica è già stata salvata per il giorno ';
+const DAY_PREVIEW_LIMIT = 8;
 
 const state = {
   idToken: '',
@@ -458,6 +460,18 @@ function prepareNewEventForDate(date) {
   els.summary.focus();
 }
 
+function selectDayEventPreviews(dayEvents) {
+  const ownEvents = dayEvents.filter((entry) => eventBelongsToUser(entry.event));
+  const otherEvents = dayEvents.filter((entry) => !eventBelongsToUser(entry.event));
+  const availableOtherSlots = Math.max(0, DAY_PREVIEW_LIMIT - ownEvents.length);
+  const visibleEvents = ownEvents.concat(otherEvents.slice(0, availableOtherSlots));
+
+  return {
+    visibleEvents,
+    hiddenCount: dayEvents.length - visibleEvents.length,
+  };
+}
+
 function renderMonthGrid() {
   const monthStart = state.visibleMonth;
   const gridStart = new Date(monthStart);
@@ -504,24 +518,40 @@ function renderMonthGrid() {
       sameDay(cellDate, today) ? 'today' : '',
     ].filter(Boolean).join(' ');
 
-    const previews = dayEvents.slice(0, 8).map((entry) => {
+    const previewSelection = selectDayEventPreviews(dayEvents);
+    const totalRequests = dayEvents.length;
+    const requestCountLabel = totalRequests === 1
+      ? '1 richiesta'
+      : `${totalRequests} richieste`;
+    const hiddenLabel = previewSelection.hiddenCount === 1
+      ? '1 altra richiesta non visualizzata'
+      : `${previewSelection.hiddenCount} altre richieste non visualizzate`;
+    const previews = previewSelection.visibleEvents.map((entry) => {
       const event = entry.event;
       const isMine = eventBelongsToUser(event);
       const mineClass = isMine ? ' mine' : ' readonly';
       const segmentClass = ` segment-${entry.segmentType}`;
-      const label = escapeHtml(formatMiniEvent(event, entry.segmentType));
+      const formattedLabel = formatMiniEvent(event, entry.segmentType);
+      const label = escapeHtml(formattedLabel || (isMine ? event.summary : ''));
       if (!isMine) {
         return `<div class="mini-event${mineClass}${segmentClass}" data-action="locked-event">${label}</div>`;
       }
       return `<div role="button" tabindex="0" class="mini-event${mineClass}${segmentClass}" data-action="edit" data-id="${event.id}">${label}</div>`;
     }).join('');
+    const overflowNotice = previewSelection.hiddenCount > 0
+      ? `<div class="day-overflow-note" data-action="day-count" aria-label="${escapeHtml(hiddenLabel)}" title="${escapeHtml(hiddenLabel)}">+${previewSelection.hiddenCount} ${previewSelection.hiddenCount === 1 ? 'altra' : 'altre'}</div>`
+      : '';
+    const requestCount = totalRequests > 0
+      ? `<div class="day-request-count" data-action="day-count" aria-label="${escapeHtml(`${requestCountLabel} in questa giornata`)}" title="${escapeHtml(`${requestCountLabel} in questa giornata`)}">${escapeHtml(requestCountLabel)}</div>`
+      : '';
 
     cells.push(
       `<div class="${classes}" data-action="new-on-date" data-date="${key}">` +
         `<div class="day-head">` +
           `<div class="day-number">${cellDate.getDate()}</div>` +
+          requestCount +
         `</div>` +
-        `<div class="day-events">${previews}</div>` +
+        `<div class="day-events">${previews}${overflowNotice}</div>` +
       `</div>`
     );
   }
@@ -589,6 +619,44 @@ function formHasRealChanges() {
   return comparablePayload(getFormPayload()) !== comparablePayload(state.modalOriginalPayload);
 }
 
+function normalizeRequestType(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function findDuplicateRequestDay(payload) {
+  const requestType = normalizeRequestType(payload.summary);
+  const requestStart = String(payload.start || '');
+  const requestEnd = String(payload.end || '');
+  const currentId = String(payload.id || '');
+
+  if (!requestType || !requestStart || !requestEnd) return '';
+
+  for (const existing of state.events) {
+    if (!eventBelongsToUser(existing)) continue;
+    if (currentId && String(existing.id || '') === currentId) continue;
+    if (normalizeRequestType(existing.summary) !== requestType) continue;
+
+    const existingStart = toInputDate(existing.start);
+    const existingEnd = toInputDate(existing.end);
+    if (!existingStart || !existingEnd) continue;
+
+    if (requestStart < existingEnd && existingStart < requestEnd) {
+      return requestStart > existingStart ? requestStart : existingStart;
+    }
+  }
+
+  return '';
+}
+
+function duplicateRequestMessage(day) {
+  const formattedDay = new Intl.DateTimeFormat('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(parseCalendarDate(day));
+  return `${DUPLICATE_REQUEST_PREFIX}${formattedDay}.`;
+}
+
 function isDateRangeInvalid() {
   return !!(els.start.value && els.end.value && els.end.value < els.start.value);
 }
@@ -639,6 +707,13 @@ function saveEvent(event) {
     setStatus('');
     return;
   }
+  const duplicateDay = findDuplicateRequestDay(payload);
+  if (duplicateDay) {
+    const message = duplicateRequestMessage(duplicateDay);
+    setModalStatus(message);
+    setStatus(message, 'error');
+    return;
+  }
   const action = payload.id ? 'update' : 'create';
   setBusy(true);
   setModalStatus(action === 'create' ? 'Inserimento evento in corso...' : 'Modifica evento in corso...');
@@ -654,7 +729,7 @@ function saveEvent(event) {
     })
     .catch((error) => {
       setBusy(false);
-      setModalStatus('');
+      setModalStatus(error.message);
       setStatus(error.message, 'error');
     });
 }
@@ -719,6 +794,11 @@ document.addEventListener('click', (event) => {
   if (lockedEvent) {
     event.stopPropagation();
     setStatus('Puoi consultare esclusivamente le tue richieste.', 'error');
+    return;
+  }
+  const dayCount = target.closest('[data-action="day-count"]');
+  if (dayCount) {
+    event.stopPropagation();
     return;
   }
   const button = target.closest('[data-action="edit"]');
