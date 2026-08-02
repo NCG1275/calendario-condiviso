@@ -50,6 +50,8 @@ const els = {
   monthGrid: document.getElementById('monthGrid'),
   calendarTitle: document.getElementById('calendarTitle'),
   requestModal: document.getElementById('requestModal'),
+  operationModal: document.getElementById('operationModal'),
+  operationMessage: document.getElementById('operationMessage'),
   modalTitle: document.getElementById('modalTitle'),
   modalEyebrow: document.getElementById('modalEyebrow'),
   modalMeta: document.getElementById('modalMeta'),
@@ -386,6 +388,7 @@ function logout(message) {
   els.saveButton.disabled = true;
   els.openCreateModalButton.disabled = true;
   closeModal();
+  hideOperationModal();
   google.accounts.id.disableAutoSelect();
 }
 
@@ -396,6 +399,16 @@ function openModal() {
 function closeModal() {
   closeSummaryPicker();
   els.requestModal.classList.add('hidden');
+}
+
+function showOperationModal(message) {
+  closeModal();
+  els.operationMessage.textContent = message;
+  els.operationModal.classList.remove('hidden');
+}
+
+function hideOperationModal() {
+  els.operationModal.classList.add('hidden');
 }
 
 function setFormEditable(editable) {
@@ -716,7 +729,8 @@ function saveEvent(event) {
   }
   const action = payload.id ? 'update' : 'create';
   setBusy(true);
-  setModalStatus(action === 'create' ? 'Inserimento evento in corso...' : 'Modifica evento in corso...');
+  setModalStatus('');
+  showOperationModal(action === 'create' ? 'Inserimento della richiesta in corso…' : 'Modifica della richiesta in corso…');
   setStatus('');
   jsonpRequest(action, {
     idToken: state.idToken,
@@ -724,13 +738,15 @@ function saveEvent(event) {
   })
     .then(() => loadBootstrap({ rethrow: true }))
     .then(() => {
-      closeModal();
+      hideOperationModal();
       resetForm();
     })
     .catch((error) => {
+      hideOperationModal();
       setBusy(false);
       setModalStatus(error.message);
       setStatus(error.message, 'error');
+      openModal();
     });
 }
 
@@ -740,7 +756,8 @@ function deleteCurrentEvent() {
   if (!confirm('Eliminare questo evento?')) return;
   registerActivity();
   setBusy(true);
-  setModalStatus('Cancellazione evento in corso...');
+  setModalStatus('');
+  showOperationModal('Cancellazione della richiesta in corso…');
   setStatus('');
   jsonpRequest('delete', {
     idToken: state.idToken,
@@ -748,13 +765,15 @@ function deleteCurrentEvent() {
   })
     .then(() => loadBootstrap({ rethrow: true }))
     .then(() => {
-      closeModal();
+      hideOperationModal();
       resetForm();
     })
     .catch((error) => {
+      hideOperationModal();
       setBusy(false);
-      setModalStatus('');
+      setModalStatus(error.message);
       setStatus(error.message, 'error');
+      openModal();
     });
 }
 
