@@ -50,6 +50,7 @@ const els = {
   calendarTitle: document.getElementById('calendarTitle'),
   requestModal: document.getElementById('requestModal'),
   operationModal: document.getElementById('operationModal'),
+  operationTitle: document.getElementById('operationTitle'),
   operationMessage: document.getElementById('operationMessage'),
   modalTitle: document.getElementById('modalTitle'),
   modalEyebrow: document.getElementById('modalEyebrow'),
@@ -392,8 +393,9 @@ function closeModal() {
   els.requestModal.classList.add('hidden');
 }
 
-function showOperationModal(message) {
+function showOperationModal(message, title = 'Operazione in corso') {
   closeModal();
+  els.operationTitle.textContent = title;
   const fullName = String((state.user && state.user.name) || '').trim();
   const firstName = fullName ? fullName.split(/\s+/)[0] : '';
   const personalizedMessage = firstName
@@ -778,7 +780,8 @@ function onGoogleCredential(response) {
   state.idToken = response.credential;
   els.saveButton.disabled = false;
   els.openCreateModalButton.disabled = false;
-  loadBootstrap();
+  showOperationModal('sto verificando il tuo accesso al calendario.', 'Accesso in corso');
+  loadBootstrap().finally(() => hideOperationModal());
 }
 
 function initGoogleIdentity() {
