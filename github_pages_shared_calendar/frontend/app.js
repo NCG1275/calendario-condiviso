@@ -394,7 +394,12 @@ function closeModal() {
 
 function showOperationModal(message) {
   closeModal();
-  els.operationMessage.textContent = message;
+  const fullName = String((state.user && state.user.name) || '').trim();
+  const firstName = fullName ? fullName.split(/\s+/)[0] : '';
+  const personalizedMessage = firstName
+    ? `${firstName}, ${message}`
+    : `${message.charAt(0).toUpperCase()}${message.slice(1)}`;
+  els.operationMessage.textContent = `${personalizedMessage} Un attimo di pazienza.`;
   els.operationModal.classList.remove('hidden');
 }
 
@@ -721,7 +726,9 @@ function saveEvent(event) {
   const action = payload.id ? 'update' : 'create';
   setBusy(true);
   setModalStatus('');
-  showOperationModal(action === 'create' ? 'Inserimento della richiesta in corso…' : 'Modifica della richiesta in corso…');
+  showOperationModal(action === 'create'
+    ? 'sto inserendo la tua richiesta nel calendario.'
+    : 'sto aggiornando la tua richiesta nel calendario.');
   setStatus('');
   jsonpRequest(action, {
     idToken: state.idToken,
@@ -744,11 +751,10 @@ function saveEvent(event) {
 function deleteCurrentEvent() {
   const eventId = els.eventId.value;
   if (!eventId) return;
-  if (!confirm('Eliminare questo evento?')) return;
   registerActivity();
   setBusy(true);
   setModalStatus('');
-  showOperationModal('Cancellazione della richiesta in corso…');
+  showOperationModal('sto cancellando la tua richiesta dal calendario.');
   setStatus('');
   jsonpRequest('delete', {
     idToken: state.idToken,
