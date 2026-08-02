@@ -397,7 +397,9 @@ function showOperationModal(message, title = 'Operazione in corso') {
   closeModal();
   els.operationTitle.textContent = title;
   const fullName = String((state.user && state.user.name) || '').trim();
-  const firstName = fullName ? fullName.split(/\s+/)[0] : '';
+  const firstName = /^gian(?:\s|$)/i.test(fullName)
+    ? 'Nico'
+    : (fullName ? fullName.split(/\s+/)[0] : '');
   const personalizedMessage = firstName
     ? `${firstName}, ${message}`
     : `${message.charAt(0).toUpperCase()}${message.slice(1)}`;
