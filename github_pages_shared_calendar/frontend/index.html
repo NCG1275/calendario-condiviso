@@ -6,14 +6,22 @@
     <title>Calendario condiviso</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css?v=020826.1">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <div class="shell">
       <section id="welcomeScreen" class="welcome-screen">
         <div class="welcome-card">
+          <span class="brand-mark welcome-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M7 3v3M17 3v3M4 9h16"></path>
+              <rect x="4" y="5" width="16" height="16" rx="3"></rect>
+              <path d="M8 13h3M13 13h3M8 17h3M13 17h3"></path>
+            </svg>
+          </span>
+          <p class="welcome-eyebrow">Area riservata</p>
           <h1>Calendario condiviso</h1>
           <div id="signin" class="signin welcome-signin"></div>
           <p id="status" class="status welcome-status">Autentica per continuare.</p>
@@ -23,9 +31,18 @@
       <section id="appScreen" class="hidden">
         <section class="hero">
           <div class="hero-top">
-            <div>
-              <p class="eyebrow">Calendario condiviso v.230726.1 by GN</p>
-              <h1 class="brand-title">Calendario Anestesia</h1>
+            <div class="hero-brand">
+              <span class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M7 3v3M17 3v3M4 9h16"></path>
+                  <rect x="4" y="5" width="16" height="16" rx="3"></rect>
+                  <path d="M8 13h3M13 13h3M8 17h3M13 17h3"></path>
+                </svg>
+              </span>
+              <div>
+                <p class="eyebrow">Calendario condiviso · v.020826.1 · by GN</p>
+                <h1 class="brand-title">Calendario Anestesia</h1>
+              </div>
             </div>
             <div class="account-panel">
               <button type="button" id="logoutButton" class="logout-button hidden">Esci</button>
@@ -122,6 +139,6 @@
       </div>
     </div>
 
-    <script src="./app.js?v=230726.1"></script>
+    <script src="./app.js?v=020826.1"></script>
   </body>
 </html>
