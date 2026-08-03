@@ -516,13 +516,19 @@ button:disabled { opacity: 0.55; cursor: default; }
 .month-grid {
   display: flex;
   flex-direction: column;
+  row-gap: 4px;
+  background: rgba(31, 70, 67, 0.12);
 }
 
 .week-row {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  column-gap: 4px;
-  background: rgba(31, 70, 67, 0.12);
+}
+
+.week-row:not(:last-child) {
+  box-shadow: 0 2px 5px rgba(31, 70, 67, 0.18);
 }
 
 .day-cell {
@@ -537,11 +543,8 @@ button:disabled { opacity: 0.55; cursor: default; }
   cursor: pointer;
 }
 
-.week-row .day-cell {
-  position: relative;
-  z-index: 1;
+.week-row .day-cell:last-child {
   border-right: 0;
-  box-shadow: 2px 0 4px rgba(31, 70, 67, 0.16);
 }
 
 .week-row:last-child .day-cell {
