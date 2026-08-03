@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=030826.6">
+    <link rel="stylesheet" href="./styles.css?v=030826.7">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -40,7 +40,7 @@
                 </svg>
               </span>
               <div>
-                <p class="eyebrow">Calendario condiviso · v.030826.6 · by GN</p>
+                <p class="eyebrow">Calendario condiviso · v.030826.7 · by GN</p>
                 <h1 class="brand-title">Calendario Anestesia</h1>
               </div>
             </div>
@@ -59,7 +59,28 @@
         <div class="calendar-stack">
         <main class="panel">
           <div class="calendar-actions">
-            <button type="button" id="openCreateModalButton" class="primary" disabled>Aggiungi richiesta</button>
+            <button type="button" id="openCreateModalButton" class="primary" aria-label="Aggiungi richiesta" disabled>
+              <span class="request-button-label" aria-hidden="true">
+                <span class="request-button-letter" style="--letter-index: 0">A</span>
+                <span class="request-button-letter" style="--letter-index: 1">g</span>
+                <span class="request-button-letter" style="--letter-index: 2">g</span>
+                <span class="request-button-letter" style="--letter-index: 3">i</span>
+                <span class="request-button-letter" style="--letter-index: 4">u</span>
+                <span class="request-button-letter" style="--letter-index: 5">n</span>
+                <span class="request-button-letter" style="--letter-index: 6">g</span>
+                <span class="request-button-letter" style="--letter-index: 7">i</span>
+                <span class="request-button-space"></span>
+                <span class="request-button-letter" style="--letter-index: 8">r</span>
+                <span class="request-button-letter" style="--letter-index: 9">i</span>
+                <span class="request-button-letter" style="--letter-index: 10">c</span>
+                <span class="request-button-letter" style="--letter-index: 11">h</span>
+                <span class="request-button-letter" style="--letter-index: 12">i</span>
+                <span class="request-button-letter" style="--letter-index: 13">e</span>
+                <span class="request-button-letter" style="--letter-index: 14">s</span>
+                <span class="request-button-letter" style="--letter-index: 15">t</span>
+                <span class="request-button-letter" style="--letter-index: 16">a</span>
+              </span>
+            </button>
             <div class="side-note">Apri una nuova richiesta da qui oppure clicca direttamente un giorno del calendario.</div>
           </div>
           <p id="appStatus" class="status app-status">Autentica per continuare.</p>
@@ -143,6 +164,6 @@
       </div>
     </div>
 
-    <script src="./app.js?v=030826.6"></script>
+    <script src="./app.js?v=030826.7"></script>
   </body>
 </html>

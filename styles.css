@@ -386,32 +386,36 @@ textarea {
   white-space: nowrap;
 }
 
-#openCreateModalButton:not(:disabled)::after {
-  content: "";
-  position: absolute;
-  z-index: 1;
-  inset: -35% auto -35% -45%;
-  width: 34%;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.74), transparent);
-  filter: blur(1px);
-  transform: translateX(-260%) skewX(-18deg);
-  animation: add-request-sheen 2.8s ease-in-out infinite;
+.request-button-label {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
 }
 
-@keyframes add-request-sheen {
-  0%, 18% {
-    opacity: 0;
-    transform: translateX(-260%) skewX(-18deg);
+.request-button-space { width: 0.32em; }
+
+.request-button-letter {
+  display: inline-block;
+  transform-origin: center 75%;
+}
+
+#openCreateModalButton:not(:disabled) .request-button-letter {
+  animation: request-letter-glow 6.4s ease-in-out infinite;
+  animation-delay: calc(var(--letter-index) * 0.18s);
+}
+
+@keyframes request-letter-glow {
+  0%, 11%, 100% {
+    color: inherit;
+    filter: brightness(1);
+    text-shadow: none;
+    transform: scale(1);
   }
-  26% { opacity: 0.9; }
-  52% {
-    opacity: 0.72;
-    transform: translateX(520%) skewX(-18deg);
-  }
-  53%, 100% {
-    opacity: 0;
-    transform: translateX(520%) skewX(-18deg);
+  4.5% {
+    color: #fff;
+    filter: brightness(1.35);
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.98), 0 0 13px rgba(196, 255, 242, 0.88);
+    transform: scale(1.24);
   }
 }
 
@@ -1411,7 +1415,7 @@ input:focus, textarea:focus, .picker-trigger:focus { border-color: #4b8b84; box-
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #openCreateModalButton::after { display: none; }
+  #openCreateModalButton .request-button-letter { animation: none; }
   .mini-event.mine { animation: none; }
   .operation-document { animation: none; transform: translateX(26px) scale(0.76); }
   .operation-calendar { animation: none; }
