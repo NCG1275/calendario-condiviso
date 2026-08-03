@@ -1100,13 +1100,13 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
 }
 
 .weekdays div:nth-child(6) {
-  background: linear-gradient(180deg, rgba(236, 231, 249, 0.98), rgba(220, 212, 242, 0.96));
-  color: #574a80;
+  background: linear-gradient(180deg, rgba(232, 238, 248, 0.98), rgba(218, 227, 242, 0.96));
+  color: #4d6080;
 }
 
 .weekdays div:nth-child(7) {
-  background: linear-gradient(180deg, rgba(251, 231, 230, 0.98), rgba(243, 212, 211, 0.96));
-  color: #883f45;
+  background: linear-gradient(180deg, rgba(220, 229, 244, 0.98), rgba(204, 217, 238, 0.96));
+  color: #3f5579;
 }
 
 .day-cell {
@@ -1162,15 +1162,15 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
 }
 
 .day-cell.saturday .day-head {
-  border-bottom-color: rgba(87, 74, 128, 0.2);
-  background: linear-gradient(180deg, rgba(236, 231, 249, 0.94), rgba(220, 212, 242, 0.9));
-  color: #574a80;
+  border-bottom-color: rgba(77, 96, 128, 0.2);
+  background: linear-gradient(180deg, rgba(232, 238, 248, 0.94), rgba(218, 227, 242, 0.9));
+  color: #4d6080;
 }
 
 .day-cell.sunday .day-head {
-  border-bottom-color: rgba(136, 63, 69, 0.2);
-  background: linear-gradient(180deg, rgba(251, 231, 230, 0.94), rgba(243, 212, 211, 0.9));
-  color: #883f45;
+  border-bottom-color: rgba(63, 85, 121, 0.22);
+  background: linear-gradient(180deg, rgba(220, 229, 244, 0.94), rgba(204, 217, 238, 0.9));
+  color: #3f5579;
 }
 
 .day-cell.other-month .day-head {
