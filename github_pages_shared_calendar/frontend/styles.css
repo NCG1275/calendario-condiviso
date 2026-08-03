@@ -1197,13 +1197,14 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
   justify-content: center;
   flex: 0 0 auto;
   gap: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: linear-gradient(145deg, #398f87, #286d68);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: linear-gradient(145deg, #78aaa5, #659691);
   color: #fff;
   font-size: 0.64rem;
   font-weight: 800;
   line-height: 1;
-  box-shadow: 0 2px 5px rgba(29, 79, 75, 0.22);
+  text-shadow: 0 1px 1px rgba(43, 79, 75, 0.2);
+  box-shadow: 0 1px 3px rgba(45, 78, 75, 0.12);
 }
 
 .day-request-count-icon {
@@ -1211,7 +1212,7 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
   height: 9px;
   flex: 0 0 auto;
   background: repeating-linear-gradient(to bottom, #fff 0 1px, transparent 1px 3px);
-  opacity: 0.9;
+  opacity: 0.78;
 }
 
 .day-cell.saturday .day-head,
