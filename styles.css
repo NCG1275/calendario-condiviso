@@ -521,6 +521,13 @@ button:disabled { opacity: 0.55; cursor: default; }
 .week-row {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
+  column-gap: 3px;
+  background: linear-gradient(
+    90deg,
+    rgba(31, 70, 67, 0.13),
+    rgba(255, 255, 255, 0.7),
+    rgba(31, 70, 67, 0.13)
+  );
 }
 
 .day-cell {
@@ -535,7 +542,7 @@ button:disabled { opacity: 0.55; cursor: default; }
   cursor: pointer;
 }
 
-.week-row .day-cell:last-child {
+.week-row .day-cell {
   border-right: 0;
 }
 
