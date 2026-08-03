@@ -1189,17 +1189,29 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
 }
 
 .day-request-count {
-  width: max-content;
-  max-width: 100%;
-  min-height: 18px;
-  height: auto;
-  padding: 2px 6px;
+  min-width: 25px;
+  height: 21px;
+  padding: 0 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 2px;
-  font-size: 0.62rem;
-  line-height: 1.2;
+  flex: 0 0 auto;
+  gap: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: linear-gradient(145deg, #398f87, #286d68);
+  color: #fff;
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 2px 5px rgba(29, 79, 75, 0.22);
+}
+
+.day-request-count-icon {
+  width: 8px;
+  height: 9px;
+  flex: 0 0 auto;
+  background: repeating-linear-gradient(to bottom, #fff 0 1px, transparent 1px 3px);
+  opacity: 0.9;
 }
 
 .day-cell.saturday .day-head,
@@ -1278,6 +1290,13 @@ input:focus, textarea:focus, .picker-trigger:focus { border-color: #4b8b84; box-
   .user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .calendar-actions { display: grid; grid-template-columns: 1fr; }
   .panel { padding: 12px; border-radius: 16px; }
+  .day-head { padding-inline: 5px; gap: 3px; }
+  .day-date { gap: 3px; }
+  .day-number { width: 24px; height: 24px; }
+  .day-weekday { font-size: 0.58rem; }
+  .day-month { font-size: 0.5rem; }
+  .day-request-count { min-width: 24px; padding-inline: 4px; gap: 2px; }
+  .day-request-count-icon { width: 6px; }
   .modal-card, .picker-card { border-radius: 0; }
 }
 

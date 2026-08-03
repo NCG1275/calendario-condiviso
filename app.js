@@ -569,7 +569,7 @@ function renderMonthGrid() {
       ? `<div class="day-overflow-note" data-action="day-count" aria-label="${escapeHtml(hiddenLabel)}" title="${escapeHtml(hiddenLabel)}">+${previewSelection.hiddenCount} ${previewSelection.hiddenCount === 1 ? 'altra' : 'altre'}</div>`
       : '';
     const requestCount = totalRequests > 0
-      ? `<div class="day-request-count" data-action="day-count" aria-label="${escapeHtml(`${requestCountLabel} in questa giornata`)}" title="${escapeHtml(`${requestCountLabel} in questa giornata`)}">${escapeHtml(requestCountLabel)}</div>`
+      ? `<div class="day-request-count" data-action="day-count" aria-label="${escapeHtml(`${requestCountLabel} in questa giornata`)}" title="${escapeHtml(`${requestCountLabel} in questa giornata`)}"><span class="day-request-count-icon" aria-hidden="true"></span><span>${totalRequests}</span></div>`
       : '';
     const monthHint = `<span class="day-month">${MONTH_LABELS[cellDate.getMonth()]}</span>`;
 
@@ -581,8 +581,9 @@ function renderMonthGrid() {
             `<span class="day-number">${cellDate.getDate()}</span>` +
             monthHint +
           `</div>` +
+          requestCount +
         `</div>` +
-        `<div class="day-events">${requestCount}${previews}${overflowNotice}</div>` +
+        `<div class="day-events">${previews}${overflowNotice}</div>` +
       `</div>`
     );
   }
