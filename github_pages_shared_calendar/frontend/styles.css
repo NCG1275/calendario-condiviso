@@ -1153,14 +1153,17 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
 }
 
 .day-request-count {
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
+  width: max-content;
+  max-width: 100%;
+  min-height: 18px;
+  height: auto;
+  padding: 2px 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 auto;
-  font-size: 0.66rem;
+  margin-bottom: 2px;
+  font-size: 0.62rem;
+  line-height: 1.2;
 }
 
 .day-cell.saturday .day-head,
