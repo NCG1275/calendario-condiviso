@@ -1099,6 +1099,16 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
   letter-spacing: 0.08em;
 }
 
+.weekdays div:nth-child(6) {
+  background: linear-gradient(180deg, rgba(236, 231, 249, 0.98), rgba(220, 212, 242, 0.96));
+  color: #574a80;
+}
+
+.weekdays div:nth-child(7) {
+  background: linear-gradient(180deg, rgba(251, 231, 230, 0.98), rgba(243, 212, 211, 0.96));
+  color: #883f45;
+}
+
 .day-cell {
   min-height: 166px;
   border-color: rgba(83, 116, 111, 0.14);
@@ -1111,6 +1121,30 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
 .day-cell.today { background: linear-gradient(180deg, rgba(247, 206, 154, 0.26), rgba(255, 255, 255, 0.82)); }
 .day-cell.today .day-number { background: linear-gradient(145deg, #e89555, var(--orange)); color: white; box-shadow: 0 4px 12px rgba(168, 83, 34, 0.25); }
 .day-request-count { background: rgba(40, 109, 104, 0.12); color: var(--accent); }
+
+.day-head {
+  margin: -8px -8px 0;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(59, 105, 153, 0.18);
+  background: linear-gradient(180deg, rgba(226, 239, 252, 0.94), rgba(207, 226, 246, 0.9));
+  color: #234f78;
+}
+
+.day-cell.saturday .day-head {
+  border-bottom-color: rgba(87, 74, 128, 0.2);
+  background: linear-gradient(180deg, rgba(236, 231, 249, 0.94), rgba(220, 212, 242, 0.9));
+  color: #574a80;
+}
+
+.day-cell.sunday .day-head {
+  border-bottom-color: rgba(136, 63, 69, 0.2);
+  background: linear-gradient(180deg, rgba(251, 231, 230, 0.94), rgba(243, 212, 211, 0.9));
+  color: #883f45;
+}
+
+.day-cell.other-month .day-head {
+  opacity: 0.68;
+}
 
 .mini-event {
   min-height: 19px;

@@ -525,9 +525,12 @@ function renderMonthGrid() {
       .slice()
       .sort((a, b) => a.startTime - b.startTime);
     const otherMonth = cellDate.getMonth() !== monthStart.getMonth();
+    const dayOfWeek = cellDate.getDay();
     const classes = [
       'day-cell',
       otherMonth ? 'other-month' : '',
+      dayOfWeek === 6 ? 'saturday' : '',
+      dayOfWeek === 0 ? 'sunday' : '',
       sameDay(cellDate, today) ? 'today' : '',
     ].filter(Boolean).join(' ');
 
