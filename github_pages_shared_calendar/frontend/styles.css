@@ -1085,8 +1085,19 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
-.weekdays { border-bottom-color: rgba(83, 116, 111, 0.16); background: rgba(219, 234, 229, 0.92); }
-.weekdays div { padding: 10px 8px; border-right-color: rgba(83, 116, 111, 0.14); color: #315e59; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; }
+.weekdays {
+  border-bottom-color: rgba(59, 105, 153, 0.28);
+  background: linear-gradient(180deg, rgba(226, 239, 252, 0.98), rgba(207, 226, 246, 0.96));
+}
+
+.weekdays div {
+  padding: 10px 8px;
+  border-right-color: rgba(59, 105, 153, 0.2);
+  color: #234f78;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
 
 .day-cell {
   min-height: 166px;
