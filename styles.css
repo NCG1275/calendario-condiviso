@@ -516,8 +516,8 @@ button:disabled { opacity: 0.55; cursor: default; }
 .month-grid {
   display: flex;
   flex-direction: column;
-  row-gap: 4px;
-  background: rgba(31, 70, 67, 0.12);
+  row-gap: 6px;
+  background: transparent;
 }
 
 .week-row {
@@ -528,7 +528,7 @@ button:disabled { opacity: 0.55; cursor: default; }
 }
 
 .week-row:not(:last-child) {
-  box-shadow: 0 2px 5px rgba(31, 70, 67, 0.18);
+  box-shadow: 0 3px 5px rgba(31, 70, 67, 0.2);
 }
 
 .day-cell {
