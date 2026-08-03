@@ -374,6 +374,9 @@ textarea {
 }
 
 #openCreateModalButton {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -381,6 +384,35 @@ textarea {
   min-width: 0;
   padding-inline: 14px;
   white-space: nowrap;
+}
+
+#openCreateModalButton:not(:disabled)::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: -35% auto -35% -45%;
+  width: 34%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.74), transparent);
+  filter: blur(1px);
+  transform: translateX(-260%) skewX(-18deg);
+  animation: add-request-sheen 2.8s ease-in-out infinite;
+}
+
+@keyframes add-request-sheen {
+  0%, 18% {
+    opacity: 0;
+    transform: translateX(-260%) skewX(-18deg);
+  }
+  26% { opacity: 0.9; }
+  52% {
+    opacity: 0.72;
+    transform: translateX(520%) skewX(-18deg);
+  }
+  53%, 100% {
+    opacity: 0;
+    transform: translateX(520%) skewX(-18deg);
+  }
 }
 
 .calendar-nav {
@@ -1379,6 +1411,7 @@ input:focus, textarea:focus, .picker-trigger:focus { border-color: #4b8b84; box-
 }
 
 @media (prefers-reduced-motion: reduce) {
+  #openCreateModalButton::after { display: none; }
   .mini-event.mine { animation: none; }
   .operation-document { animation: none; transform: translateX(26px) scale(0.76); }
   .operation-calendar { animation: none; }
