@@ -25,6 +25,8 @@ const REQUEST_OPTIONS = [
 const DATE_RANGE_WARNING = 'La data "Al giorno" non può essere antecedente alla data "Dal giorno".';
 const DUPLICATE_REQUEST_PREFIX = 'Richiesta non salvata: una richiesta identica è già stata salvata per il giorno ';
 const DAY_PREVIEW_LIMIT = 8;
+const WEEKDAY_LABELS = ['DOM', 'LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB'];
+const MONTH_LABELS = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC'];
 
 const state = {
   idToken: '',
@@ -558,13 +560,20 @@ function renderMonthGrid() {
       ? `<div class="day-overflow-note" data-action="day-count" aria-label="${escapeHtml(hiddenLabel)}" title="${escapeHtml(hiddenLabel)}">+${previewSelection.hiddenCount} ${previewSelection.hiddenCount === 1 ? 'altra' : 'altre'}</div>`
       : '';
     const requestCount = totalRequests > 0
-      ? `<div class="day-request-count" data-action="day-count" aria-label="${escapeHtml(`${requestCountLabel} in questa giornata`)}" title="${escapeHtml(`${requestCountLabel} in questa giornata`)}">${escapeHtml(requestCountLabel)}</div>`
+      ? `<div class="day-request-count" data-action="day-count" aria-label="${escapeHtml(`${requestCountLabel} in questa giornata`)}" title="${escapeHtml(`${requestCountLabel} in questa giornata`)}">${totalRequests}</div>`
+      : '';
+    const monthHint = otherMonth
+      ? `<span class="day-month">${MONTH_LABELS[cellDate.getMonth()]}</span>`
       : '';
 
     cells.push(
       `<div class="${classes}" data-action="new-on-date" data-date="${key}">` +
         `<div class="day-head">` +
-          `<div class="day-number">${cellDate.getDate()}</div>` +
+          `<div class="day-date">` +
+            `<span class="day-weekday">${WEEKDAY_LABELS[dayOfWeek]}</span>` +
+            `<span class="day-number">${cellDate.getDate()}</span>` +
+            monthHint +
+          `</div>` +
           requestCount +
         `</div>` +
         `<div class="day-events">${previews}${overflowNotice}</div>` +

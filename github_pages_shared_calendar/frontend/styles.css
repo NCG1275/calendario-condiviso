@@ -1130,6 +1130,37 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
   color: #234f78;
 }
 
+.day-date {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.day-weekday {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.day-month {
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  opacity: 0.68;
+}
+
+.day-request-count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-size: 0.66rem;
+}
+
 .day-cell.saturday .day-head {
   border-bottom-color: rgba(87, 74, 128, 0.2);
   background: linear-gradient(180deg, rgba(236, 231, 249, 0.94), rgba(220, 212, 242, 0.9));
