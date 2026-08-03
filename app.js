@@ -571,9 +571,7 @@ function renderMonthGrid() {
     const requestCount = totalRequests > 0
       ? `<div class="day-request-count" data-action="day-count" aria-label="${escapeHtml(`${requestCountLabel} in questa giornata`)}" title="${escapeHtml(`${requestCountLabel} in questa giornata`)}">${totalRequests}</div>`
       : '';
-    const monthHint = otherMonth
-      ? `<span class="day-month">${MONTH_LABELS[cellDate.getMonth()]}</span>`
-      : '';
+    const monthHint = `<span class="day-month">${MONTH_LABELS[cellDate.getMonth()]}</span>`;
 
     cells.push(
       `<div class="${classes}" data-action="new-on-date" data-date="${key}">` +

@@ -1099,14 +1099,10 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
   letter-spacing: 0.08em;
 }
 
-.weekdays div:nth-child(6) {
+.weekdays div:nth-child(6),
+.weekdays div:nth-child(7) {
   background: linear-gradient(180deg, rgba(240, 244, 250, 0.98), rgba(224, 232, 245, 0.96));
   color: #4d6080;
-}
-
-.weekdays div:nth-child(7) {
-  background: linear-gradient(180deg, rgba(198, 214, 237, 0.98), rgba(176, 197, 228, 0.96));
-  color: #2f476b;
 }
 
 .day-cell {
@@ -1150,6 +1146,12 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
   opacity: 0.68;
 }
 
+.day-number {
+  border: 1px solid rgba(59, 105, 153, 0.18);
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 2px 5px rgba(45, 73, 103, 0.14);
+}
+
 .day-request-count {
   min-width: 20px;
   height: 20px;
@@ -1161,16 +1163,11 @@ button.danger { border-color: rgba(189, 85, 71, 0.24); background: #f5ded9; colo
   font-size: 0.66rem;
 }
 
-.day-cell.saturday .day-head {
+.day-cell.saturday .day-head,
+.day-cell.sunday .day-head {
   border-bottom-color: rgba(77, 96, 128, 0.2);
   background: linear-gradient(180deg, rgba(240, 244, 250, 0.96), rgba(224, 232, 245, 0.92));
   color: #4d6080;
-}
-
-.day-cell.sunday .day-head {
-  border-bottom-color: rgba(47, 71, 107, 0.3);
-  background: linear-gradient(180deg, rgba(198, 214, 237, 0.96), rgba(176, 197, 228, 0.92));
-  color: #2f476b;
 }
 
 .day-cell.other-month .day-head {
