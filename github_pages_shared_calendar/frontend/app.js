@@ -568,8 +568,10 @@ function renderMonthGrid() {
       `<div class="${classes}" data-action="new-on-date" data-date="${key}">` +
         `<div class="day-head">` +
           `<div class="day-date">` +
-            `<span class="day-weekday">${WEEKDAY_LABELS[dayOfWeek]}</span>` +
-            `<span class="day-number">${cellDate.getDate()}</span>` +
+            `<span class="day-date-badge">` +
+              `<span class="day-weekday">${WEEKDAY_LABELS[dayOfWeek]}</span>` +
+              `<span class="day-number">${cellDate.getDate()}</span>` +
+            `</span>` +
             monthHint +
           `</div>` +
           requestCount +
