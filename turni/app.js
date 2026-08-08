@@ -244,6 +244,7 @@ function parseShiftEvent(event) {
     '8-20': { label: 'MP', kind: 'morning-afternoon', hours: 12 },
     'R': { label: 'R', kind: 'rest', hours: 0 },
     'RS': { label: 'RS', kind: 'rest', hours: 0 },
+    'PT': { label: 'PT', kind: 'zero-hours', hours: 0 },
     '14-20': { label: 'P', kind: 'afternoon', hours: 6 },
     '20-24': { label: 'N', kind: 'night', hours: 4 },
     '0-8': { label: 'SN', kind: 'night', hours: 8 },

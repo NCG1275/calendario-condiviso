@@ -1,9 +1,9 @@
-const CACHE_NAME = 'turni-personali-v7';
+const CACHE_NAME = 'turni-personali-v8';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=7',
-  './app.js?v=7',
+  './styles.css?v=8',
+  './app.js?v=8',
   './manifest.webmanifest',
   './icon-192-v2.png',
   './icon-512-v2.png',

@@ -181,6 +181,7 @@ h1, h2, h3, p { margin-top: 0; }
 .shift-cell-morning { color: #55470e; background: var(--morning) !important; }
 .shift-cell-morning-afternoon { color: #642b41; background: var(--long) !important; }
 .shift-cell-rest { color: #1a4a2b; background: #a6d5b2 !important; }
+.shift-cell-zero-hours { color: #46535f; background: #e1e5e9 !important; }
 .shift-cell-afternoon { color: #62330c; background: var(--afternoon) !important; }
 .shift-cell-night { color: #173d61; background: var(--night) !important; }
 .shift-cell-other { color: #fff; background: var(--other) !important; }
@@ -205,7 +206,7 @@ h1, h2, h3, p { margin-top: 0; }
   user-select: none;
 }
 
-.shift-code-mp, .shift-code-rs, .shift-code-sn { font-size: clamp(28px, 5.7vw, 62px); }
+.shift-code-mp, .shift-code-pt, .shift-code-rs, .shift-code-sn { font-size: clamp(28px, 5.7vw, 62px); }
 
 .shift-code b {
   align-self: flex-start;
@@ -372,7 +373,7 @@ h1, h2, h3, p { margin-top: 0; }
   .has-week-total .on-call-day b { margin-top: 15px; }
   .destination-badges { top: 25px; left: 3px; right: 3px; }
   .shift-code { inset: 10px 1px 3px; font-size: clamp(30px, 11vw, 52px); }
-  .shift-code-mp, .shift-code-rs, .shift-code-sn { font-size: clamp(25px, 8.5vw, 42px); }
+  .shift-code-mp, .shift-code-pt, .shift-code-rs, .shift-code-sn { font-size: clamp(25px, 8.5vw, 42px); }
   .destination-badge { padding-inline: 3px; font-size: 6px; }
   .calendar-entries { right: 3px; bottom: 3px; left: 3px; gap: 1px; max-height: 25%; }
   .calendar-entry { padding: 1px 3px 1px 8px; font-size: 5.5px; }
