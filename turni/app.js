@@ -462,11 +462,12 @@ function initializeGoogleIdentity() {
   google.accounts.id.initialize({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
     callback: onGoogleCredential,
-    auto_select: false,
+    auto_select: true,
   });
   google.accounts.id.renderButton(els.googleSignin, {
     theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with', width: 280,
   });
+  google.accounts.id.prompt();
 }
 
 els.monthGrid.addEventListener('click', (event) => {

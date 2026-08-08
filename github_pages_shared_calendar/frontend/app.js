@@ -1,7 +1,9 @@
 const CONFIG = {
   APPS_SCRIPT_API_URL: 'https://script.google.com/macros/s/AKfycbyOEuEFx70o0NRx4Caseht8gUNdMOHDYvYUbCdcaJBQEaREslUrfa5eV7GTXkDRvQcIUw/exec',
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
-  INACTIVITY_TIMEOUT_MS: 60 * 1000,
+  INACTIVITY_TIMEOUT_MS: 8 * 60 * 60 * 1000,
+  CREDENTIAL_STALE_MS: 50 * 60 * 1000,
+  CREDENTIAL_RETRY_MS: 5 * 60 * 1000,
 };
 
 const REQUEST_OPTIONS = [
@@ -35,6 +37,8 @@ const state = {
   visibleMonth: startOfMonth(new Date()),
   isAuthenticated: false,
   inactivityTimer: null,
+  credentialIssuedAt: 0,
+  credentialRefreshRequestedAt: 0,
   modalOriginalPayload: null,
 };
 
@@ -138,7 +142,16 @@ function armInactivityTimer() {
 
 function registerActivity() {
   if (!state.isAuthenticated || !state.idToken) return;
+  refreshGoogleCredentialIfNeeded();
   armInactivityTimer();
+}
+
+function refreshGoogleCredentialIfNeeded() {
+  const now = Date.now();
+  if (!state.idToken || now - state.credentialIssuedAt < CONFIG.CREDENTIAL_STALE_MS) return;
+  if (state.credentialRefreshRequestedAt && now - state.credentialRefreshRequestedAt < CONFIG.CREDENTIAL_RETRY_MS) return;
+  state.credentialRefreshRequestedAt = now;
+  google.accounts.id.prompt();
 }
 
 function renderSummaryPickerOptions() {
@@ -381,6 +394,8 @@ function logout(message) {
   state.idToken = '';
   state.user = null;
   state.events = [];
+  state.credentialIssuedAt = 0;
+  state.credentialRefreshRequestedAt = 0;
   showWelcome();
   resetForm();
   els.events.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
@@ -822,10 +837,17 @@ function deleteCurrentEvent() {
 }
 
 function onGoogleCredential(response) {
-  state.idToken = response.credential;
+  const wasAuthenticated = state.isAuthenticated;
+  state.idToken = response.credential || '';
+  state.credentialIssuedAt = Date.now();
+  state.credentialRefreshRequestedAt = 0;
   els.saveButton.disabled = false;
   els.openCreateModalButton.disabled = false;
   els.personalShiftsButton.disabled = false;
+  if (wasAuthenticated) {
+    sharePersonalShiftsAuth();
+    return;
+  }
   showOperationModal('sto verificando il tuo accesso al calendario.', 'Accesso in corso');
   loadBootstrap().finally(() => hideOperationModal());
 }
@@ -841,7 +863,7 @@ function initGoogleIdentity() {
   google.accounts.id.initialize({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
     callback: onGoogleCredential,
-    auto_select: false,
+    auto_select: true,
   });
 
   google.accounts.id.renderButton(els.signin, {
@@ -850,6 +872,7 @@ function initGoogleIdentity() {
     shape: 'pill',
     text: 'signin_with',
   });
+  google.accounts.id.prompt();
 }
 
 document.addEventListener('click', (event) => {
@@ -899,6 +922,10 @@ document.addEventListener('keydown', (event) => {
   if (!selected) return;
   fillForm(selected);
   window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshGoogleCredentialIfNeeded();
 });
 
 document.addEventListener('input', registerActivity, true);
