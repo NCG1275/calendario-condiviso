@@ -1464,3 +1464,151 @@ input:focus, textarea:focus, .picker-trigger:focus { border-color: #4b8b84; box-
   .operation-document { animation: none; transform: translateX(26px) scale(0.76); }
   .operation-calendar { animation: none; }
 }
+/* Vista personale dei turni, integrata nella sessione del calendario condiviso. */
+.calendar-actions {
+  grid-template-columns: auto auto minmax(0, 1fr);
+}
+
+.personal-shifts-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 14px;
+  border-color: rgba(23, 50, 77, 0.18);
+  color: #17324d;
+  background: rgba(255, 253, 249, 0.9);
+  white-space: nowrap;
+}
+
+.personal-shifts-button span {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  padding-top: 4px;
+  border-radius: 8px;
+  color: #fff;
+  background: #17324d;
+  box-shadow: inset 0 4px 0 #df6d45;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.personal-shifts-button:not(:disabled):hover {
+  border-color: rgba(23, 50, 77, 0.34);
+  background: #fffdf9;
+}
+
+.personal-shifts-open {
+  overflow: hidden;
+}
+
+.personal-shifts-backdrop {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(8, 31, 37, 0.48);
+  backdrop-filter: blur(8px);
+}
+
+.personal-shifts-panel {
+  width: min(1120px, 100%);
+  height: min(900px, calc(100dvh - 36px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 26px;
+  background: #f5f2ec;
+  box-shadow: 0 30px 100px rgba(7, 35, 32, 0.34);
+}
+
+.personal-shifts-header {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 16px 10px 20px;
+  color: #fff;
+  background: #17324d;
+}
+
+.personal-shifts-header p {
+  margin: 0 0 1px;
+  color: #e6aa8c;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.personal-shifts-header h2 {
+  margin: 0;
+  color: #fff;
+  font: 700 1.18rem Manrope, sans-serif;
+}
+
+.personal-shifts-header button {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 1.55rem;
+  box-shadow: none;
+}
+
+.personal-shifts-panel iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #f5f2ec;
+}
+
+@media (max-width: 900px) {
+  .calendar-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .calendar-actions .side-note {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .calendar-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .personal-shifts-button,
+  #openCreateModalButton {
+    width: 100%;
+  }
+
+  .calendar-actions .side-note {
+    grid-column: auto;
+  }
+
+  .personal-shifts-backdrop {
+    padding: 0;
+  }
+
+  .personal-shifts-panel {
+    width: 100%;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .personal-shifts-header {
+    padding-top: calc(9px + env(safe-area-inset-top));
+  }
+}

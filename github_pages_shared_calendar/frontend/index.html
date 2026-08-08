@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=030826.13">
+    <link rel="stylesheet" href="./styles.css?v=030826.14">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -81,6 +81,10 @@
                 <span class="request-button-letter" style="--letter-index: 16">a</span>
               </span>
             </button>
+            <button type="button" id="personalShiftsButton" class="personal-shifts-button" disabled>
+              <span aria-hidden="true">31</span>
+              I miei turni
+            </button>
             <div class="side-note">Apri una nuova richiesta da qui oppure clicca direttamente un giorno del calendario.</div>
           </div>
           <p id="appStatus" class="status app-status">Autentica per continuare.</p>
@@ -104,6 +108,19 @@
           </div>
         </main>
         </div>
+      </section>
+    </div>
+
+    <div id="personalShiftsPanel" class="personal-shifts-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="personalShiftsTitle">
+      <section class="personal-shifts-panel">
+        <header class="personal-shifts-header">
+          <div>
+            <p>Planner Turni</p>
+            <h2 id="personalShiftsTitle">I miei turni</h2>
+          </div>
+          <button type="button" id="closePersonalShiftsButton" aria-label="Chiudi i miei turni">×</button>
+        </header>
+        <iframe id="personalShiftsFrame" src="../../turni/?embedded=1" title="Calendario personale dei turni"></iframe>
       </section>
     </div>
 
@@ -164,6 +181,6 @@
       </div>
     </div>
 
-    <script src="./app.js?v=030826.10"></script>
+    <script src="./app.js?v=030826.11"></script>
   </body>
 </html>

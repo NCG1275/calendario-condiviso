@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#17324d">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="I miei turni">
+    <meta name="description" content="Vista mensile personale dei turni pubblicati da Planner Turni.">
+    <meta property="og:title" content="I miei turni">
+    <meta property="og:description" content="Il calendario personale dei turni, sempre aggiornato.">
+    <meta property="og:image" content="https://ncg1275.github.io/calendario-condiviso/turni/og.png">
+    <title>I miei turni</title>
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./apple-touch-icon-v2.png">
+    <link rel="preconnect" href="https://accounts.google.com">
+    <link rel="stylesheet" href="./styles.css?v=2">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="./app.js?v=2" defer></script>
+  </head>
+  <body>
+    <section id="loginView" class="login-view">
+      <div class="login-card">
+        <div class="app-mark" aria-hidden="true"><span>31</span></div>
+        <p class="eyebrow">Planner Turni</p>
+        <h1>I miei turni</h1>
+        <p class="login-copy">Il tuo mese di lavoro, pulito e sempre aggiornato.</p>
+        <div id="googleSignin" class="google-signin"></div>
+        <p id="loginStatus" class="status" role="status">Accedi con l’account autorizzato.</p>
+      </div>
+    </section>
+
+    <div id="appView" class="app-view hidden">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="app-mark app-mark-small" aria-hidden="true"><span>31</span></div>
+          <div>
+            <p class="eyebrow">Planner Turni</p>
+            <h1>I miei turni</h1>
+          </div>
+        </div>
+        <button id="profileButton" class="profile-button" type="button" aria-label="Account">
+          <img id="profilePicture" alt="">
+          <span id="profileInitials" aria-hidden="true"></span>
+        </button>
+      </header>
+
+      <main>
+        <section class="month-heading" aria-labelledby="monthTitle">
+          <div>
+            <p id="calendarName" class="calendar-name">Calendario personale</p>
+            <h2 id="monthTitle"></h2>
+          </div>
+          <div class="month-actions">
+            <button id="todayButton" class="today-button" type="button">Oggi</button>
+            <button id="refreshButton" class="icon-button" type="button" aria-label="Aggiorna turni">↻</button>
+          </div>
+        </section>
+
+        <section class="summary-grid" aria-label="Riepilogo del mese">
+          <article><strong id="shiftCount">0</strong><span>turni</span></article>
+          <article><strong id="hourCount">0</strong><span>ore</span></article>
+          <article><strong id="nightCount">0</strong><span>notti</span></article>
+          <article><strong id="onCallCount">0</strong><span>reperibilità</span></article>
+        </section>
+
+        <section class="calendar-card" aria-label="Calendario mensile">
+          <div class="calendar-nav">
+            <button id="prevMonthButton" class="nav-button" type="button" aria-label="Mese precedente">‹</button>
+            <p id="syncStatus" class="sync-status" role="status">Caricamento…</p>
+            <button id="nextMonthButton" class="nav-button" type="button" aria-label="Mese successivo">›</button>
+          </div>
+          <div class="weekday-row" aria-hidden="true">
+            <span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span>
+          </div>
+          <div id="monthGrid" class="month-grid"></div>
+        </section>
+
+        <section class="legend" aria-label="Legenda turni">
+          <span><i class="dot dot-morning"></i>Mattina</span>
+          <span><i class="dot dot-afternoon"></i>Pomeriggio</span>
+          <span><i class="dot dot-long"></i>Giornata</span>
+          <span><i class="dot dot-night"></i>Notte</span>
+          <span><i class="dot dot-oncall"></i>Reperibilità</span>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="Navigazione mesi">
+        <button id="bottomPrevButton" type="button"><span aria-hidden="true">‹</span>Prima</button>
+        <button id="bottomTodayButton" class="bottom-today" type="button"><span aria-hidden="true">●</span>Oggi</button>
+        <button id="bottomNextButton" type="button"><span aria-hidden="true">›</span>Dopo</button>
+      </nav>
+    </div>
+
+    <div id="daySheet" class="sheet-backdrop hidden" role="presentation">
+      <section class="day-sheet" role="dialog" aria-modal="true" aria-labelledby="daySheetTitle">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-header">
+          <div>
+            <p class="eyebrow">Dettaglio giornata</p>
+            <h2 id="daySheetTitle"></h2>
+          </div>
+          <button id="closeSheetButton" class="close-button" type="button" aria-label="Chiudi">×</button>
+        </div>
+        <div id="dayEventList" class="day-event-list"></div>
+      </section>
+    </div>
+
+    <div id="accountSheet" class="sheet-backdrop hidden" role="presentation">
+      <section class="day-sheet account-sheet" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-header">
+          <div>
+            <p class="eyebrow">Account</p>
+            <h2 id="accountTitle">Profilo</h2>
+          </div>
+          <button id="closeAccountButton" class="close-button" type="button" aria-label="Chiudi">×</button>
+        </div>
+        <div class="account-detail">
+          <strong id="accountName"></strong>
+          <span id="accountEmail"></span>
+          <button id="logoutButton" class="logout-button" type="button">Esci dall’app</button>
+        </div>
+      </section>
+    </div>
+
+    <noscript>Per usare il calendario è necessario abilitare JavaScript.</noscript>
+  </body>
+</html>

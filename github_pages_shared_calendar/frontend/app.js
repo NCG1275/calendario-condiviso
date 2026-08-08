@@ -60,6 +60,10 @@ const els = {
   modalTimestamps: document.getElementById('modalTimestamps'),
   modalStatus: document.getElementById('modalStatus'),
   openCreateModalButton: document.getElementById('openCreateModalButton'),
+  personalShiftsButton: document.getElementById('personalShiftsButton'),
+  personalShiftsPanel: document.getElementById('personalShiftsPanel'),
+  personalShiftsFrame: document.getElementById('personalShiftsFrame'),
+  closePersonalShiftsButton: document.getElementById('closePersonalShiftsButton'),
   closeModalButton: document.getElementById('closeModalButton'),
   eventForm: document.getElementById('eventForm'),
   eventId: document.getElementById('eventId'),
@@ -102,6 +106,7 @@ function setBusy(isBusy) {
     els.deleteButton.disabled = !els.eventId.value || els.summary.disabled;
   }
   els.openCreateModalButton.disabled = isBusy || !state.idToken;
+  els.personalShiftsButton.disabled = isBusy || !state.idToken;
 }
 
 function setModalStatus(message) {
@@ -371,6 +376,8 @@ function resetForm() {
 }
 
 function logout(message) {
+  closePersonalShifts();
+  sendPersonalShiftsMessage({ type: 'planner-logout' });
   state.idToken = '';
   state.user = null;
   state.events = [];
@@ -381,6 +388,7 @@ function logout(message) {
   setStatus(message || 'Accesso disconnesso.');
   els.saveButton.disabled = true;
   els.openCreateModalButton.disabled = true;
+  els.personalShiftsButton.disabled = true;
   closeModal();
   hideOperationModal();
   google.accounts.id.disableAutoSelect();
@@ -393,6 +401,29 @@ function openModal() {
 function closeModal() {
   closeSummaryPicker();
   els.requestModal.classList.add('hidden');
+}
+
+function sendPersonalShiftsMessage(message) {
+  if (!els.personalShiftsFrame.contentWindow) return;
+  els.personalShiftsFrame.contentWindow.postMessage(message, window.location.origin);
+}
+
+function sharePersonalShiftsAuth() {
+  if (!state.idToken) return;
+  sendPersonalShiftsMessage({ type: 'planner-shared-auth', idToken: state.idToken });
+}
+
+function openPersonalShifts() {
+  if (!state.idToken) return;
+  els.personalShiftsPanel.classList.remove('hidden');
+  document.body.classList.add('personal-shifts-open');
+  sharePersonalShiftsAuth();
+  els.closePersonalShiftsButton.focus();
+}
+
+function closePersonalShifts() {
+  els.personalShiftsPanel.classList.add('hidden');
+  document.body.classList.remove('personal-shifts-open');
 }
 
 function showOperationModal(message, title = 'Operazione in corso') {
@@ -794,6 +825,7 @@ function onGoogleCredential(response) {
   state.idToken = response.credential;
   els.saveButton.disabled = false;
   els.openCreateModalButton.disabled = false;
+  els.personalShiftsButton.disabled = false;
   showOperationModal('sto verificando il tuo accesso al calendario.', 'Accesso in corso');
   loadBootstrap().finally(() => hideOperationModal());
 }
@@ -805,6 +837,7 @@ function initGoogleIdentity() {
   closeModal();
   els.saveButton.disabled = true;
   els.openCreateModalButton.disabled = true;
+  els.personalShiftsButton.disabled = true;
   google.accounts.id.initialize({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
     callback: onGoogleCredential,
@@ -853,6 +886,10 @@ document.addEventListener('click', (event) => {
 
 document.addEventListener('keydown', (event) => {
   registerActivity();
+  if (event.key === 'Escape' && !els.personalShiftsPanel.classList.contains('hidden')) {
+    closePersonalShifts();
+    return;
+  }
   const targetElement = resolveEventElement(event.target);
   const target = targetElement ? targetElement.closest('[data-action="edit"]') : null;
   if (!target) return;
@@ -894,6 +931,17 @@ els.resetButton.addEventListener('click', () => {
 els.openCreateModalButton.addEventListener('click', () => {
   resetForm();
   openModal();
+});
+els.personalShiftsButton.addEventListener('click', openPersonalShifts);
+els.closePersonalShiftsButton.addEventListener('click', closePersonalShifts);
+els.personalShiftsPanel.addEventListener('click', (event) => {
+  if (event.target === els.personalShiftsPanel) closePersonalShifts();
+});
+els.personalShiftsFrame.addEventListener('load', sharePersonalShiftsAuth);
+window.addEventListener('message', (event) => {
+  if (event.origin !== window.location.origin || event.source !== els.personalShiftsFrame.contentWindow) return;
+  if (event.data?.type === 'planner-turni-ready') sharePersonalShiftsAuth();
+  if (event.data?.type === 'planner-activity') registerActivity();
 });
 els.closeModalButton.addEventListener('click', closeModal);
 els.logoutButton.addEventListener('click', logout);

@@ -41,6 +41,19 @@ const CONFIG = {
     'cris.tolu76@gmail.com': 'Cristian Tolu',
     'elvy.vazz@gmail.com': 'Elvy',
   },
+  SHIFT_CALENDAR_BY_OWNER_NAME: {
+    'Gian Nicola Aru': 'Turni Aru',
+    'Mattia Cabianca': 'Turni Cabianca',
+    'Silvia Casula': 'Turni Casula',
+    'Michela Del Rio': 'Turni Del Rio',
+    'Federica Masillo': 'Turni Masillo',
+    'Riccardo Pili': 'Turni Pili',
+    'Francesca Piras': 'Turni Piras F',
+    'Desiderio Piras': 'Turni Piras D',
+    'Patrizia Pitzalis': 'Turni Pitzalis',
+    'Marta Sanna': 'Turni Sanna',
+    'Daniela Puddu': 'Turni Puddu',
+  },
   LOOKAHEAD_DAYS: 730,
 };
 
@@ -80,6 +93,9 @@ function handleApiGet_(params) {
       case 'delete':
         result = deleteOwnedEvent_(String(params.eventId || payload.id || ''), idToken);
         break;
+      case 'personalShifts':
+        result = getPersonalShifts_(payload, idToken);
+        break;
       default:
         throw new Error('Azione non supportata.');
     }
@@ -88,6 +104,92 @@ function handleApiGet_(params) {
   } catch (error) {
     return jsonpErrorOutput_(String(error && error.message ? error.message : error), callback);
   }
+}
+
+function getPersonalShifts_(payload, idToken) {
+  const user = getVerifiedUser_(idToken);
+  const range = validateShiftRange_(payload);
+  const ownerName = resolveOwnerName_(user.email, user.name);
+  const calendarSummary = resolveShiftCalendarSummary_(user.email, ownerName);
+  const calendarId = findCalendarIdBySummary_(calendarSummary);
+  const response = Calendar.Events.list(calendarId, {
+    singleEvents: true,
+    showDeleted: false,
+    orderBy: 'startTime',
+    timeMin: range.start.toISOString(),
+    timeMax: range.end.toISOString(),
+    maxResults: 500,
+  });
+
+  return {
+    user: user,
+    ownerName: ownerName,
+    calendarName: calendarSummary,
+    range: { start: payload.start, end: payload.end },
+    updatedAt: new Date().toISOString(),
+    events: (response.items || [])
+      .filter(function(item) { return item.status !== 'cancelled'; })
+      .map(mapShiftEventForClient_),
+  };
+}
+
+function validateShiftRange_(payload) {
+  const startText = String((payload || {}).start || '').trim();
+  const endText = String((payload || {}).end || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startText) || !/^\d{4}-\d{2}-\d{2}$/.test(endText)) {
+    throw new Error('Intervallo mensile non valido.');
+  }
+  const start = new Date(startText + 'T00:00:00+01:00');
+  const end = new Date(endText + 'T00:00:00+01:00');
+  const days = (end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000);
+  if (!Number.isFinite(days) || days <= 0 || days > 62) {
+    throw new Error('Intervallo mensile non valido.');
+  }
+  return { start: start, end: end };
+}
+
+function resolveShiftCalendarSummary_(email, ownerName) {
+  const overrides = getJsonScriptProperty_('SHIFT_CALENDAR_MAP_JSON', {});
+  const configured = String((overrides || {})[String(email || '').toLowerCase()] || '').trim();
+  if (configured) return configured;
+
+  const fallback = CONFIG.SHIFT_CALENDAR_BY_OWNER_NAME || {};
+  const summary = String(fallback[ownerName] || '').trim();
+  if (!summary) {
+    throw new Error('Nessun calendario turni associato a questo account.');
+  }
+  return summary;
+}
+
+function findCalendarIdBySummary_(summary) {
+  let pageToken = '';
+  do {
+    const options = { maxResults: 250, showHidden: true };
+    if (pageToken) options.pageToken = pageToken;
+    const response = Calendar.CalendarList.list(options);
+    const match = (response.items || []).find(function(item) {
+      return String(item.summary || '').trim().toLowerCase() === String(summary).trim().toLowerCase();
+    });
+    if (match && match.id) return match.id;
+    pageToken = String(response.nextPageToken || '');
+  } while (pageToken);
+  throw new Error('Calendario non disponibile: ' + summary + '.');
+}
+
+function mapShiftEventForClient_(event) {
+  const privateProperties = ((event.extendedProperties || {}).private || {});
+  return {
+    id: event.id || '',
+    summary: event.summary || 'Turno',
+    description: event.description || '',
+    location: event.location || '',
+    colorId: String(event.colorId || ''),
+    start: (event.start && (event.start.dateTime || event.start.date)) || '',
+    end: (event.end && (event.end.dateTime || event.end.date)) || '',
+    updated: event.updated || '',
+    dayName: privateProperties.plannerDayName || '',
+    slotKey: privateProperties.plannerSlotKey || '',
+  };
 }
 
 function getBootstrapData_(idToken) {
@@ -214,7 +316,7 @@ function mapEventForClient_(event, currentEmail) {
 
 function resolveOwnerName_(email, fallbackName) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
-  const overrides = CONFIG.OWNER_NAME_OVERRIDES || {};
+  const overrides = getJsonScriptProperty_('OWNER_NAME_OVERRIDES_JSON', CONFIG.OWNER_NAME_OVERRIDES || {});
   if (normalizedEmail && overrides[normalizedEmail]) {
     return String(overrides[normalizedEmail] || '').trim();
   }
@@ -264,8 +366,9 @@ function validateTokenInfo_(tokenInfo) {
     throw new Error('Email utente non disponibile.');
   }
 
-  const allowedEmails = Array.isArray(CONFIG.ALLOWED_EMAILS)
-    ? CONFIG.ALLOWED_EMAILS.map(function(item) {
+  const configuredAllowedEmails = getJsonScriptProperty_('ALLOWED_EMAILS_JSON', CONFIG.ALLOWED_EMAILS || []);
+  const allowedEmails = Array.isArray(configuredAllowedEmails)
+    ? configuredAllowedEmails.map(function(item) {
         return String(item || '').trim().toLowerCase();
       }).filter(Boolean)
     : [];
@@ -285,6 +388,16 @@ function validateTokenInfo_(tokenInfo) {
     name: String(info.name || '').trim(),
     picture: String(info.picture || '').trim(),
   };
+}
+
+function getJsonScriptProperty_(name, fallbackValue) {
+  const raw = PropertiesService.getScriptProperties().getProperty(name) || '';
+  if (!raw) return fallbackValue;
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new Error(name + ' non è un JSON valido.');
+  }
 }
 
 function assertOwnership_(event, email) {

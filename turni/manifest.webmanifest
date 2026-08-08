@@ -1,0 +1,16 @@
+{
+  "name": "I miei turni",
+  "short_name": "Turni",
+  "description": "Vista mensile personale dei turni pubblicati da Planner Turni.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f5f2ec",
+  "theme_color": "#17324d",
+  "icons": [
+    { "src": "./icon-192-v2.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icon-512-v2.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
