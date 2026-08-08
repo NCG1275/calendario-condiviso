@@ -241,11 +241,12 @@ function parseShiftEvent(event) {
     '20-24': { label: 'N', kind: 'night' },
     '0-8': { label: 'SN', kind: 'night' },
   };
+  const recognized = Boolean(variants[code]);
   const variant = variants[code] || {
     label: code || 'Turno',
     kind: COLOR_CLASSES[String(event.colorId || '')] || 'other',
   };
-  return { ...variant, code, destination, flagged };
+  return { ...variant, code, destination, flagged, recognized, summary };
 }
 
 function onCallKind(event) {
@@ -277,17 +278,25 @@ function renderMonth() {
     const dayOnCall = events.find((event) => onCallKind(event) === 'day');
     const nightOnCall = events.find((event) => onCallKind(event) === 'night');
     const shifts = events.filter((event) => !onCallKind(event));
-    const primaryShift = shifts[0] ? parseShiftEvent(shifts[0]) : null;
+    const parsedShifts = shifts.map(parseShiftEvent);
+    const primaryShift = parsedShifts.find((shift) => shift.recognized) || null;
+    const calendarEntries = parsedShifts.filter((shift) => !shift.recognized);
     const outside = date.getMonth() !== month.getMonth();
     const shiftClass = primaryShift ? ` shift-cell-${primaryShift.kind}` : '';
     const shiftLabel = primaryShift
-      ? `<span class="shift-code">${escapeHtml(primaryShift.label)}${primaryShift.flagged ? '<b>**</b>' : ''}</span>`
+      ? `<span class="shift-code shift-code-${primaryShift.label.toLowerCase()}">${escapeHtml(primaryShift.label)}${primaryShift.flagged ? '<b>**</b>' : ''}</span>`
       : '';
-    const destinations = shifts
-      .map(parseShiftEvent)
+    const destinations = parsedShifts
+      .filter((shift) => shift.recognized)
       .filter((shift) => shift.destination)
       .map((shift) => `<span class="destination-badge">${escapeHtml(shift.destination)}</span>`)
       .join('');
+    const calendarEntryHtml = calendarEntries.slice(0, 2)
+      .map((entry) => `<span class="calendar-entry">${escapeHtml(entry.summary)}</span>`)
+      .join('');
+    const calendarOverflow = calendarEntries.length > 2
+      ? `<span class="calendar-entry calendar-entry-more">+${calendarEntries.length - 2}</span>`
+      : '';
     const repDay = dayOnCall ? '<span class="on-call-half on-call-day"><b>repD</b></span>' : '';
     const repNight = nightOnCall ? '<span class="on-call-half on-call-night"><b>repN</b></span>' : '';
     cells.push(`
@@ -295,8 +304,9 @@ function renderMonth() {
         type="button" data-date="${key}" aria-label="${escapeHtml(formatDay(date))}, ${events.length} turni">
         ${repDay}${repNight}
         <span class="day-number">${date.getDate()}</span>
-        ${shiftLabel}
         <span class="destination-badges">${destinations}</span>
+        ${shiftLabel}
+        <span class="calendar-entries">${calendarEntryHtml}${calendarOverflow}</span>
       </button>`);
   }
   els.monthGrid.innerHTML = cells.join('');
