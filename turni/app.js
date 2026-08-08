@@ -2,6 +2,7 @@ const CONFIG = {
   APPS_SCRIPT_API_URL: 'https://script.google.com/macros/s/AKfycbyOEuEFx70o0NRx4Caseht8gUNdMOHDYvYUbCdcaJBQEaREslUrfa5eV7GTXkDRvQcIUw/exec',
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
   JSONP_TIMEOUT_MS: 20000,
+  INACTIVITY_TIMEOUT_MS: 5 * 60 * 1000,
 };
 
 const EMBEDDED_MODE = new URLSearchParams(window.location.search).get('embedded') === '1';
@@ -24,6 +25,7 @@ const state = {
   visibleMonth: startOfMonth(new Date()),
   updatedAt: '',
   requestVersion: 0,
+  inactivityTimer: null,
 };
 
 const els = {
@@ -166,6 +168,30 @@ function setLoading(isLoading) {
   els.refreshButton.disabled = isLoading;
   els.refreshButton.classList.toggle('is-loading', isLoading);
   if (isLoading) els.syncStatus.textContent = 'Aggiornamento…';
+}
+
+function clearInactivityTimer() {
+  if (!state.inactivityTimer) return;
+  window.clearTimeout(state.inactivityTimer);
+  state.inactivityTimer = null;
+}
+
+function armInactivityTimer() {
+  clearInactivityTimer();
+  if (EMBEDDED_MODE || !state.idToken) return;
+  state.inactivityTimer = window.setTimeout(() => logoutStandalone('Sessione scaduta per inattività.'), CONFIG.INACTIVITY_TIMEOUT_MS);
+}
+
+function logoutStandalone(message = 'Sessione terminata. Accedi per continuare.') {
+  clearInactivityTimer();
+  google.accounts.id.disableAutoSelect();
+  state.idToken = '';
+  state.user = null;
+  state.events = [];
+  closeSheet(els.accountSheet);
+  els.appView.classList.add('hidden');
+  els.loginView.classList.remove('hidden');
+  els.loginStatus.textContent = message;
 }
 
 async function loadMonth() {
@@ -419,6 +445,7 @@ function goToday() {
 
 function onGoogleCredential(response) {
   state.idToken = response.credential || '';
+  armInactivityTimer();
   els.loginStatus.textContent = 'Accesso verificato. Carico i tuoi turni…';
   els.loginStatus.classList.remove('is-error');
   loadMonth().catch(() => {});
@@ -487,14 +514,7 @@ els.profileButton.addEventListener('click', () => els.accountSheet.classList.rem
 els.closeAccountButton.addEventListener('click', () => closeSheet(els.accountSheet));
 els.accountSheet.addEventListener('click', (event) => { if (event.target === els.accountSheet) closeSheet(els.accountSheet); });
 els.logoutButton.addEventListener('click', () => {
-  google.accounts.id.disableAutoSelect();
-  state.idToken = '';
-  state.user = null;
-  state.events = [];
-  closeSheet(els.accountSheet);
-  els.appView.classList.add('hidden');
-  els.loginView.classList.remove('hidden');
-  els.loginStatus.textContent = 'Sessione terminata. Accedi per continuare.';
+  logoutStandalone();
 });
 
 document.addEventListener('keydown', (event) => {
@@ -512,5 +532,8 @@ if (EMBEDDED_MODE) {
   });
 } else {
   initializeGoogleIdentity();
+  ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {
+    document.addEventListener(eventName, armInactivityTimer, { passive: true });
+  });
 }
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
