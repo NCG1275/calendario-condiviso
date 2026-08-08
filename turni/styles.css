@@ -218,27 +218,44 @@ h1, h2, h3, p { margin-top: 0; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 2px;
+  overflow: hidden;
+  padding: 0 2px;
   color: currentColor;
-  font-size: clamp(34px, 7.2vw, 76px);
+  font-size: clamp(28px, 5.5vw, 58px);
   font-weight: 850;
   letter-spacing: -.09em;
   line-height: .82;
-  opacity: .22;
   text-align: center;
   pointer-events: none;
   user-select: none;
 }
 
-.shift-code-compact { font-size: clamp(28px, 5.7vw, 62px); }
-.shift-code-wide { font-size: clamp(17px, 3.5vw, 38px); letter-spacing: -.06em; }
+.shift-code-label {
+  overflow: hidden;
+  max-width: 100%;
+  opacity: .2;
+  white-space: nowrap;
+}
 
-.shift-code b {
-  align-self: flex-start;
-  margin-top: 2px;
+.shift-code.is-flagged .shift-code-label { max-width: calc(100% - 17px); }
+.shift-code-compact { font-size: clamp(22px, 4.5vw, 46px); }
+.shift-code-wide { font-size: clamp(14px, 2.8vw, 30px); letter-spacing: -.05em; }
+
+.shift-flag {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 2px 3px;
+  border: 1px solid rgba(145, 0, 18, .2);
+  border-radius: 5px;
+  color: #c40018;
+  background: rgba(255, 250, 235, .94);
+  box-shadow: 0 1px 4px rgba(87, 13, 22, .2);
   font-family: ui-sans-serif, sans-serif;
-  font-size: .5em;
-  letter-spacing: 0;
+  font-size: clamp(8px, 1.15vw, 13px);
+  font-weight: 950;
+  letter-spacing: -.08em;
+  line-height: 1;
 }
 
 .destination-badges {
@@ -398,9 +415,11 @@ h1, h2, h3, p { margin-top: 0; }
   .weekly-hours b { width: 11px; height: 11px; border-radius: 4px; font-size: 8px; }
   .has-week-total .on-call-day b { margin-top: 15px; }
   .destination-badges { top: 25px; left: 3px; right: 3px; }
-  .shift-code { inset: 10px 1px 3px; font-size: clamp(30px, 11vw, 52px); }
-  .shift-code-compact { font-size: clamp(25px, 8.5vw, 42px); }
-  .shift-code-wide { font-size: clamp(14px, 5vw, 26px); }
+  .shift-code { inset: 10px 1px 3px; gap: 1px; padding-inline: 1px; font-size: clamp(22px, 8vw, 34px); }
+  .shift-code.is-flagged .shift-code-label { max-width: calc(100% - 13px); }
+  .shift-code-compact { font-size: clamp(19px, 6.5vw, 29px); }
+  .shift-code-wide { font-size: clamp(10px, 3.8vw, 17px); }
+  .shift-flag { padding: 1px 2px; border-radius: 4px; font-size: 8px; }
   .destination-badge { padding-inline: 3px; font-size: 6px; }
   .calendar-entries { right: 3px; bottom: 3px; left: 3px; gap: 1px; max-height: 25%; }
   .calendar-entry { padding: 1px 3px 1px 8px; font-size: 5.5px; }

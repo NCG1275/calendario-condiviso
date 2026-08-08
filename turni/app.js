@@ -349,7 +349,7 @@ function renderMonth() {
       ? ' shift-code-wide'
       : primaryShift && primaryShift.label.length > 1 ? ' shift-code-compact' : '';
     const shiftLabel = primaryShift
-      ? `<span class="shift-code${shiftCodeSize}">${escapeHtml(primaryShift.label)}${primaryShift.flagged ? '<b>**</b>' : ''}</span>`
+      ? `<span class="shift-code${shiftCodeSize}${primaryShift.flagged ? ' is-flagged' : ''}"><span class="shift-code-label">${escapeHtml(primaryShift.label)}</span>${primaryShift.flagged ? '<b class="shift-flag">**</b>' : ''}</span>`
       : '';
     const destinations = parsedShifts
       .filter((shift) => shift.recognized)
