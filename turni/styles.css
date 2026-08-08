@@ -181,7 +181,15 @@ h1, h2, h3, p { margin-top: 0; }
 .shift-cell-morning { color: #55470e; background: var(--morning) !important; }
 .shift-cell-morning-afternoon { color: #642b41; background: var(--long) !important; }
 .shift-cell-rest { color: #1a4a2b; background: #a6d5b2 !important; }
+.shift-cell-rest-ordinary, .shift-cell-rest-holiday { color: #40566d; background: #dce5ef !important; }
+.shift-cell-leave { color: #1f655e; background: #d3ebe6 !important; }
 .shift-cell-zero-hours { color: #46535f; background: #e1e5e9 !important; }
+.shift-cell-leave-motivated { color: #76501b; background: #f4e5c8 !important; }
+.shift-cell-leave-unmotivated { color: #7a3e3a; background: #f1d9d6 !important; }
+.shift-cell-training-optional { color: #285f56; background: #d5e9e3 !important; }
+.shift-cell-training-required { color: #514e82; background: #e2e0f0 !important; }
+.shift-cell-illness { color: #844437; background: #f2dcd5 !important; }
+.shift-cell-law-104 { color: #624879; background: #e7dcf0 !important; }
 .shift-cell-afternoon { color: #62330c; background: var(--afternoon) !important; }
 .shift-cell-night { color: #173d61; background: var(--night) !important; }
 .shift-cell-other { color: #fff; background: var(--other) !important; }
@@ -206,7 +214,8 @@ h1, h2, h3, p { margin-top: 0; }
   user-select: none;
 }
 
-.shift-code-mp, .shift-code-pt, .shift-code-rs, .shift-code-sn { font-size: clamp(28px, 5.7vw, 62px); }
+.shift-code-compact { font-size: clamp(28px, 5.7vw, 62px); }
+.shift-code-wide { font-size: clamp(17px, 3.5vw, 38px); letter-spacing: -.06em; }
 
 .shift-code b {
   align-self: flex-start;
@@ -373,7 +382,8 @@ h1, h2, h3, p { margin-top: 0; }
   .has-week-total .on-call-day b { margin-top: 15px; }
   .destination-badges { top: 25px; left: 3px; right: 3px; }
   .shift-code { inset: 10px 1px 3px; font-size: clamp(30px, 11vw, 52px); }
-  .shift-code-mp, .shift-code-pt, .shift-code-rs, .shift-code-sn { font-size: clamp(25px, 8.5vw, 42px); }
+  .shift-code-compact { font-size: clamp(25px, 8.5vw, 42px); }
+  .shift-code-wide { font-size: clamp(14px, 5vw, 26px); }
   .destination-badge { padding-inline: 3px; font-size: 6px; }
   .calendar-entries { right: 3px; bottom: 3px; left: 3px; gap: 1px; max-height: 25%; }
   .calendar-entry { padding: 1px 3px 1px 8px; font-size: 5.5px; }

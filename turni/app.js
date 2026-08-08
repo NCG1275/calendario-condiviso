@@ -105,12 +105,6 @@ function formatTime(value) {
   return new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
-function eventDuration(event) {
-  if (!String(event.start || '').includes('T') || !String(event.end || '').includes('T')) return 0;
-  const duration = (new Date(event.end).getTime() - new Date(event.start).getTime()) / 3600000;
-  return Number.isFinite(duration) && duration > 0 && duration <= 24 ? duration : 0;
-}
-
 function escapeHtml(value) {
   return String(value || '')
     .replaceAll('&', '&amp;')
@@ -244,7 +238,22 @@ function parseShiftEvent(event) {
     '8-20': { label: 'MP', kind: 'morning-afternoon', hours: 12 },
     'R': { label: 'R', kind: 'rest', hours: 0 },
     'RS': { label: 'RS', kind: 'rest', hours: 0 },
+    'RO': { label: 'RO', kind: 'rest-ordinary', hours: 7.36 },
+    'RF': { label: 'RF', kind: 'rest-holiday', hours: 7.36 },
+    'F': { label: 'F', kind: 'leave', hours: 7.36 },
     'PT': { label: 'PT', kind: 'zero-hours', hours: 0 },
+    'CSM': { label: 'CSM', kind: 'leave-motivated', hours: 7.36 },
+    'CSNM': { label: 'CSNM', kind: 'leave-unmotivated', hours: 7.36 },
+    'CS': { label: 'CS', kind: 'leave-motivated', hours: 7.36 },
+    'C': { label: 'C', kind: 'leave-motivated', hours: 7.36 },
+    'AGGPF': { label: 'AGGPF', kind: 'training-optional', hours: 7.36 },
+    'AGGPO': { label: 'AGGPO', kind: 'training-required', hours: 7.36 },
+    'AGGP': { label: 'AGGP', kind: 'training-required', hours: 7.36 },
+    'AF': { label: 'AF', kind: 'training-optional', hours: 7.36 },
+    'AO': { label: 'AO', kind: 'training-required', hours: 7.36 },
+    'M': { label: 'M', kind: 'illness', hours: 7.36 },
+    'L.104': { label: 'L.104', kind: 'law-104', hours: 7.36 },
+    'L': { label: 'L', kind: 'law-104', hours: 7.36 },
     '14-20': { label: 'P', kind: 'afternoon', hours: 6 },
     '20-24': { label: 'N', kind: 'night', hours: 4 },
     '0-8': { label: 'SN', kind: 'night', hours: 8 },
@@ -269,6 +278,11 @@ function weeklyShiftHours(sunday, grouped) {
       .reduce((dayTotal, shift) => dayTotal + shift.hours, 0);
   }
   return total;
+}
+
+function formatHourTotal(hours) {
+  const rounded = Math.round(hours * 100) / 100;
+  return (Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, '')).replace('.', ',');
 }
 
 function onCallKind(event) {
@@ -305,8 +319,11 @@ function renderMonth() {
     const calendarEntries = parsedShifts.filter((shift) => !shift.recognized);
     const outside = date.getMonth() !== month.getMonth();
     const shiftClass = primaryShift ? ` shift-cell-${primaryShift.kind}` : '';
+    const shiftCodeSize = primaryShift && primaryShift.label.length >= 4
+      ? ' shift-code-wide'
+      : primaryShift && primaryShift.label.length > 1 ? ' shift-code-compact' : '';
     const shiftLabel = primaryShift
-      ? `<span class="shift-code shift-code-${primaryShift.label.toLowerCase()}">${escapeHtml(primaryShift.label)}${primaryShift.flagged ? '<b>**</b>' : ''}</span>`
+      ? `<span class="shift-code${shiftCodeSize}">${escapeHtml(primaryShift.label)}${primaryShift.flagged ? '<b>**</b>' : ''}</span>`
       : '';
     const destinations = parsedShifts
       .filter((shift) => shift.recognized)
@@ -321,12 +338,13 @@ function renderMonth() {
       : '';
     const isSunday = index % 7 === 6;
     const weekHours = isSunday ? weeklyShiftHours(date, grouped) : 0;
-    const weekTotal = isSunday ? `<span class="weekly-hours" title="Ore lavorate da lunedì a domenica">Σ ${weekHours}h</span>` : '';
+    const weekHoursLabel = formatHourTotal(weekHours);
+    const weekTotal = isSunday ? `<span class="weekly-hours" title="Ore lavorate da lunedì a domenica">Σ ${weekHoursLabel}h</span>` : '';
     const repDay = dayOnCall ? '<span class="on-call-half on-call-day"><b>repD</b></span>' : '';
     const repNight = nightOnCall ? '<span class="on-call-half on-call-night"><b>repN</b></span>' : '';
     cells.push(`
       <button class="day-cell${shiftClass}${outside ? ' is-outside' : ''}${key === todayKey ? ' is-today' : ''}${events.length ? ' has-events' : ''}${isSunday ? ' has-week-total' : ''}"
-        type="button" data-date="${key}" aria-label="${escapeHtml(formatDay(date))}, ${events.length} turni${isSunday ? `, ${weekHours} ore nella settimana` : ''}">
+        type="button" data-date="${key}" aria-label="${escapeHtml(formatDay(date))}, ${events.length} turni${isSunday ? `, ${weekHoursLabel} ore nella settimana` : ''}">
         ${repDay}${repNight}
         <span class="day-number">${date.getDate()}</span>
         ${weekTotal}
@@ -352,11 +370,14 @@ function renderSummary() {
     const key = eventDateKey(event);
     return key >= start && key < end;
   });
-  const shifts = events.filter((event) => !onCallKind(event));
-  const hours = shifts.reduce((total, event) => total + eventDuration(event), 0);
+  const shifts = events
+    .filter((event) => !onCallKind(event))
+    .map(parseShiftEvent)
+    .filter((shift) => shift.recognized);
+  const hours = shifts.reduce((total, shift) => total + shift.hours, 0);
   els.shiftCount.textContent = String(shifts.length);
-  els.hourCount.textContent = Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace('.', ',');
-  els.nightCount.textContent = String(shifts.filter((event) => eventKind(event) === 'night').length);
+  els.hourCount.textContent = formatHourTotal(hours);
+  els.nightCount.textContent = String(shifts.filter((shift) => shift.kind === 'night').length);
   els.onCallCount.textContent = String(events.filter((event) => Boolean(onCallKind(event))).length);
 }
 
