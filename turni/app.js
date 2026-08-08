@@ -375,9 +375,9 @@ function renderSummary() {
     .map(parseShiftEvent)
     .filter((shift) => shift.recognized);
   const hours = shifts.reduce((total, shift) => total + shift.hours, 0);
-  els.shiftCount.textContent = String(shifts.length);
+  els.shiftCount.textContent = String(shifts.filter((shift) => shift.code !== '0-8').length);
   els.hourCount.textContent = formatHourTotal(hours);
-  els.nightCount.textContent = String(shifts.filter((shift) => shift.kind === 'night').length);
+  els.nightCount.textContent = String(shifts.filter((shift) => shift.code === '20-24').length);
   els.onCallCount.textContent = String(events.filter((event) => Boolean(onCallKind(event))).length);
 }
 
