@@ -164,16 +164,32 @@ h1, h2, h3, p { margin-top: 0; }
   z-index: 8;
   top: 5px;
   right: 4px;
-  padding: 2px 4px;
-  border-radius: 5px;
-  color: #174c48;
-  background: rgba(251, 255, 254, .72);
-  box-shadow: 0 1px 3px rgba(23, 49, 51, .08);
-  font-size: clamp(6px, .72vw, 9px);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px 2px 2px;
+  border: 1px solid rgba(255, 255, 255, .66);
+  border-radius: 8px;
+  color: white;
+  background: linear-gradient(145deg, #226f68, #174f4b);
+  box-shadow: 0 2px 6px rgba(23, 49, 51, .24);
+  font-size: clamp(8px, .95vw, 12px);
   font-weight: 850;
   line-height: 1;
   letter-spacing: -.02em;
   pointer-events: none;
+}
+
+.weekly-hours b {
+  width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  color: #56470c;
+  background: #f3dc7d;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .has-week-total .on-call-day b { margin-top: 18px; }
@@ -378,7 +394,8 @@ h1, h2, h3, p { margin-top: 0; }
   .calendar-card { padding: 8px; border-radius: 20px; }
   .day-cell { min-height: 76px; }
   .day-number { top: 3px; left: 3px; width: 21px; height: 21px; font-size: 10px; }
-  .weekly-hours { top: 3px; right: 3px; padding: 2px 3px; font-size: 6.5px; }
+  .weekly-hours { top: 3px; right: 3px; gap: 2px; padding: 2px 3px 2px 2px; border-radius: 6px; font-size: 7.5px; }
+  .weekly-hours b { width: 11px; height: 11px; border-radius: 4px; font-size: 8px; }
   .has-week-total .on-call-day b { margin-top: 15px; }
   .destination-badges { top: 25px; left: 3px; right: 3px; }
   .shift-code { inset: 10px 1px 3px; font-size: clamp(30px, 11vw, 52px); }

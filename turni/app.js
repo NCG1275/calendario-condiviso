@@ -339,7 +339,7 @@ function renderMonth() {
     const isSunday = index % 7 === 6;
     const weekHours = isSunday ? weeklyShiftHours(date, grouped) : 0;
     const weekHoursLabel = formatHourTotal(weekHours);
-    const weekTotal = isSunday ? `<span class="weekly-hours" title="Ore lavorate da lunedì a domenica">Σ ${weekHoursLabel}h</span>` : '';
+    const weekTotal = isSunday ? `<span class="weekly-hours" title="Ore lavorate da lunedì a domenica"><b>Σ</b><span>${weekHoursLabel}h</span></span>` : '';
     const repDay = dayOnCall ? '<span class="on-call-half on-call-day"><b>repD</b></span>' : '';
     const repNight = nightOnCall ? '<span class="on-call-half on-call-night"><b>repN</b></span>' : '';
     cells.push(`
