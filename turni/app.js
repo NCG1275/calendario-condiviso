@@ -80,9 +80,13 @@ function eventDateKey(event) {
 }
 
 function monthRange(month) {
+  const first = startOfMonth(month);
+  const mondayOffset = (first.getDay() + 6) % 7;
+  const gridStart = new Date(first.getFullYear(), first.getMonth(), 1 - mondayOffset);
+  const gridEnd = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + 42);
   return {
-    start: localDateKey(startOfMonth(month)),
-    end: localDateKey(addMonths(month, 1)),
+    start: localDateKey(gridStart),
+    end: localDateKey(gridEnd),
   };
 }
 
@@ -234,13 +238,13 @@ function parseShiftEvent(event) {
   const code = rawShift.replaceAll('**', '').trim().toUpperCase();
   const destination = parts.join(' - ').trim();
   const variants = {
-    '8-14': { label: 'M', kind: 'morning' },
-    '8-20': { label: 'MP', kind: 'morning-afternoon' },
-    'R': { label: 'R', kind: 'rest' },
-    'RS': { label: 'RS', kind: 'rest' },
-    '14-20': { label: 'P', kind: 'afternoon' },
-    '20-24': { label: 'N', kind: 'night' },
-    '0-8': { label: 'SN', kind: 'night' },
+    '8-14': { label: 'M', kind: 'morning', hours: 6 },
+    '8-20': { label: 'MP', kind: 'morning-afternoon', hours: 12 },
+    'R': { label: 'R', kind: 'rest', hours: 0 },
+    'RS': { label: 'RS', kind: 'rest', hours: 0 },
+    '14-20': { label: 'P', kind: 'afternoon', hours: 6 },
+    '20-24': { label: 'N', kind: 'night', hours: 4 },
+    '0-8': { label: 'SN', kind: 'night', hours: 8 },
   };
   const recognized = Boolean(variants[code]);
   const variant = variants[code] || {
@@ -248,6 +252,20 @@ function parseShiftEvent(event) {
     kind: COLOR_CLASSES[String(event.colorId || '')] || 'other',
   };
   return { ...variant, code, destination, flagged, recognized, summary };
+}
+
+function weeklyShiftHours(sunday, grouped) {
+  let total = 0;
+  for (let offset = -6; offset <= 0; offset += 1) {
+    const date = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + offset);
+    const events = grouped[localDateKey(date)] || [];
+    total += events
+      .filter((event) => !onCallKind(event))
+      .map(parseShiftEvent)
+      .filter((shift) => shift.recognized)
+      .reduce((dayTotal, shift) => dayTotal + shift.hours, 0);
+  }
+  return total;
 }
 
 function onCallKind(event) {
@@ -298,13 +316,17 @@ function renderMonth() {
     const calendarOverflow = calendarEntries.length > 2
       ? `<span class="calendar-entry calendar-entry-more">+${calendarEntries.length - 2}</span>`
       : '';
+    const isSunday = index % 7 === 6;
+    const weekHours = isSunday ? weeklyShiftHours(date, grouped) : 0;
+    const weekTotal = isSunday ? `<span class="weekly-hours" title="Ore lavorate da lunedì a domenica">Σ ${weekHours}h</span>` : '';
     const repDay = dayOnCall ? '<span class="on-call-half on-call-day"><b>repD</b></span>' : '';
     const repNight = nightOnCall ? '<span class="on-call-half on-call-night"><b>repN</b></span>' : '';
     cells.push(`
-      <button class="day-cell${shiftClass}${outside ? ' is-outside' : ''}${key === todayKey ? ' is-today' : ''}${events.length ? ' has-events' : ''}"
-        type="button" data-date="${key}" aria-label="${escapeHtml(formatDay(date))}, ${events.length} turni">
+      <button class="day-cell${shiftClass}${outside ? ' is-outside' : ''}${key === todayKey ? ' is-today' : ''}${events.length ? ' has-events' : ''}${isSunday ? ' has-week-total' : ''}"
+        type="button" data-date="${key}" aria-label="${escapeHtml(formatDay(date))}, ${events.length} turni${isSunday ? `, ${weekHours} ore nella settimana` : ''}">
         ${repDay}${repNight}
         <span class="day-number">${date.getDate()}</span>
+        ${weekTotal}
         <span class="destination-badges">${destinations}</span>
         ${shiftLabel}
         <span class="calendar-entries">${calendarEntryHtml}${calendarOverflow}</span>
@@ -321,7 +343,12 @@ function renderMonth() {
 }
 
 function renderSummary() {
-  const events = state.events;
+  const start = localDateKey(startOfMonth(state.visibleMonth));
+  const end = localDateKey(addMonths(state.visibleMonth, 1));
+  const events = state.events.filter((event) => {
+    const key = eventDateKey(event);
+    return key >= start && key < end;
+  });
   const shifts = events.filter((event) => !onCallKind(event));
   const hours = shifts.reduce((total, event) => total + eventDuration(event), 0);
   els.shiftCount.textContent = String(shifts.length);
