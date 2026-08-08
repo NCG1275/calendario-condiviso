@@ -226,17 +226,38 @@ function eventsByDay() {
   }, {});
 }
 
-function eventKind(event) {
-  const summary = String(event.summary || '').toUpperCase();
-  if (summary.includes('REP ')) return 'oncall';
-  if (/^(0-8|20-24|20-08)/.test(summary)) return 'night';
-  return COLOR_CLASSES[String(event.colorId || '')] || 'other';
+function parseShiftEvent(event) {
+  const summary = String(event.summary || '').trim();
+  const parts = summary.split(' - ');
+  const rawShift = String(parts.shift() || '').trim();
+  const flagged = rawShift.includes('**');
+  const code = rawShift.replaceAll('**', '').trim().toUpperCase();
+  const destination = parts.join(' - ').trim();
+  const variants = {
+    '8-14': { label: 'M', kind: 'morning' },
+    '8-20': { label: 'MP', kind: 'morning-afternoon' },
+    'R': { label: 'R', kind: 'rest' },
+    '14-20': { label: 'P', kind: 'afternoon' },
+    '20-24': { label: 'N', kind: 'night' },
+    '0-8': { label: 'SN', kind: 'night' },
+  };
+  const variant = variants[code] || {
+    label: code || 'Turno',
+    kind: COLOR_CLASSES[String(event.colorId || '')] || 'other',
+  };
+  return { ...variant, code, destination, flagged };
 }
 
-function shortShiftLabel(event) {
-  const summary = String(event.summary || 'Turno').trim();
-  const firstPart = summary.split(' - ')[0];
-  return firstPart.replace('REP GIORNO', 'REP G').replace('REP NOTTE', 'REP N');
+function onCallKind(event) {
+  const summary = String(event.summary || '').trim().toUpperCase();
+  if (summary === 'REP GIORNO') return 'day';
+  if (summary === 'REP NOTTE') return 'night';
+  return '';
+}
+
+function eventKind(event) {
+  if (onCallKind(event)) return 'oncall';
+  return parseShiftEvent(event).kind || COLOR_CLASSES[String(event.colorId || '')] || 'other';
 }
 
 function renderMonth() {
@@ -253,16 +274,29 @@ function renderMonth() {
     const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + index);
     const key = localDateKey(date);
     const events = grouped[key] || [];
+    const dayOnCall = events.find((event) => onCallKind(event) === 'day');
+    const nightOnCall = events.find((event) => onCallKind(event) === 'night');
+    const shifts = events.filter((event) => !onCallKind(event));
+    const primaryShift = shifts[0] ? parseShiftEvent(shifts[0]) : null;
     const outside = date.getMonth() !== month.getMonth();
-    const eventHtml = events.slice(0, 2).map((event) => (
-      `<span class="shift-pill shift-${eventKind(event)}">${escapeHtml(shortShiftLabel(event))}</span>`
-    )).join('');
-    const overflow = events.length > 2 ? `<span class="more-events">+${events.length - 2}</span>` : '';
+    const shiftClass = primaryShift ? ` shift-cell-${primaryShift.kind}` : '';
+    const shiftLabel = primaryShift
+      ? `<span class="shift-code">${escapeHtml(primaryShift.label)}${primaryShift.flagged ? '<b>**</b>' : ''}</span>`
+      : '';
+    const destinations = shifts
+      .map(parseShiftEvent)
+      .filter((shift) => shift.destination)
+      .map((shift) => `<span class="destination-badge">${escapeHtml(shift.destination)}</span>`)
+      .join('');
+    const repDay = dayOnCall ? '<span class="on-call-half on-call-day"><b>repD</b></span>' : '';
+    const repNight = nightOnCall ? '<span class="on-call-half on-call-night"><b>repN</b></span>' : '';
     cells.push(`
-      <button class="day-cell${outside ? ' is-outside' : ''}${key === todayKey ? ' is-today' : ''}${events.length ? ' has-events' : ''}"
+      <button class="day-cell${shiftClass}${outside ? ' is-outside' : ''}${key === todayKey ? ' is-today' : ''}${events.length ? ' has-events' : ''}"
         type="button" data-date="${key}" aria-label="${escapeHtml(formatDay(date))}, ${events.length} turni">
+        ${repDay}${repNight}
         <span class="day-number">${date.getDate()}</span>
-        <span class="day-events">${eventHtml}${overflow}</span>
+        ${shiftLabel}
+        <span class="destination-badges">${destinations}</span>
       </button>`);
   }
   els.monthGrid.innerHTML = cells.join('');
@@ -277,11 +311,12 @@ function renderMonth() {
 
 function renderSummary() {
   const events = state.events;
-  const hours = events.reduce((total, event) => total + eventDuration(event), 0);
-  els.shiftCount.textContent = String(events.length);
+  const shifts = events.filter((event) => !onCallKind(event));
+  const hours = shifts.reduce((total, event) => total + eventDuration(event), 0);
+  els.shiftCount.textContent = String(shifts.length);
   els.hourCount.textContent = Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace('.', ',');
-  els.nightCount.textContent = String(events.filter((event) => eventKind(event) === 'night').length);
-  els.onCallCount.textContent = String(events.filter((event) => eventKind(event) === 'oncall').length);
+  els.nightCount.textContent = String(shifts.filter((event) => eventKind(event) === 'night').length);
+  els.onCallCount.textContent = String(events.filter((event) => Boolean(onCallKind(event))).length);
 }
 
 function openDay(dateKey) {

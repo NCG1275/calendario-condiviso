@@ -138,6 +138,8 @@ h1, h2, h3, p { margin-top: 0; }
 
 .day-cell {
   position: relative;
+  isolation: isolate;
+  overflow: hidden;
   min-width: 0;
   min-height: 91px;
   padding: 7px 5px;
@@ -151,23 +153,101 @@ h1, h2, h3, p { margin-top: 0; }
 }
 .day-cell:active { background: #f0ede6; }
 .day-cell.is-outside { color: #aeb5b7; background: #f8f6f1; }
-.day-number { width: 25px; height: 25px; display: grid; place-items: center; margin-bottom: 5px; border-radius: 50%; font-size: 12px; font-weight: 750; }
+.day-number { position: relative; z-index: 5; width: 25px; height: 25px; display: grid; place-items: center; margin-bottom: 5px; border-radius: 50%; font-size: 12px; font-weight: 800; }
 .is-today .day-number { color: white; background: var(--accent); }
-.day-events { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.shift-pill { overflow: hidden; padding: 3px 4px; border-radius: 5px; color: white; font-size: 8px; font-weight: 800; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
-.shift-morning { background: var(--morning); }
-.shift-afternoon { background: var(--afternoon); }
-.shift-long { background: var(--long); }
-.shift-night { background: var(--night); }
-.shift-oncall { background: var(--oncall); }
-.shift-other { background: var(--other); }
-.more-events { color: var(--ink-soft); font-size: 8px; font-weight: 800; text-align: center; }
+
+.shift-cell-morning { color: #493c09; background: #f2d45c !important; }
+.shift-cell-morning-afternoon { color: #5d233b; background: #eaa4bd !important; }
+.shift-cell-rest { color: #173e24; background: #7ecb8b !important; }
+.shift-cell-afternoon { color: #5b2d08; background: #ed9c4d !important; }
+.shift-cell-night { color: #fff; background: #5e89c7 !important; }
+.shift-cell-other { color: #fff; background: var(--other) !important; }
+.day-cell.is-outside.has-events { opacity: .42; }
+
+.shift-code {
+  position: absolute;
+  z-index: 3;
+  inset: 26px 3px 21px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-family: Georgia, serif;
+  font-size: clamp(17px, 3.2vw, 27px);
+  font-weight: 800;
+  letter-spacing: -.04em;
+  text-align: center;
+}
+
+.shift-code b {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-family: ui-sans-serif, sans-serif;
+  font-size: .5em;
+  letter-spacing: 0;
+}
+
+.destination-badges {
+  position: absolute;
+  z-index: 5;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.destination-badge {
+  overflow: hidden;
+  max-width: 100%;
+  padding: 2px 5px;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 999px;
+  color: #17324d;
+  background: rgba(255, 255, 255, .84);
+  box-shadow: 0 1px 4px rgba(23, 50, 77, .12);
+  font-size: 7px;
+  font-weight: 850;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.on-call-half {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  height: 50%;
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px;
+  color: #3f4850;
+  background: rgba(190, 196, 202, .94);
+  pointer-events: none;
+}
+
+.on-call-half b {
+  position: relative;
+  z-index: 1;
+  padding: 2px 4px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, .6);
+  font-size: 7px;
+  letter-spacing: .01em;
+}
+
+.on-call-day { top: 0; align-items: flex-start; }
+.on-call-night { bottom: 0; align-items: flex-end; }
 
 .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 14px; padding: 17px 8px 4px; color: var(--ink-soft); font-size: 10px; font-weight: 650; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .dot { width: 7px; height: 7px; border-radius: 50%; }
-.dot-morning { background: var(--morning); } .dot-afternoon { background: var(--afternoon); }
-.dot-long { background: var(--long); } .dot-night { background: var(--night); } .dot-oncall { background: var(--oncall); }
+.dot-morning { background: #f2d45c; } .dot-morning-afternoon { background: #eaa4bd; }
+.dot-rest { background: #7ecb8b; } .dot-afternoon { background: #ed9c4d; }
+.dot-night { background: #5e89c7; } .dot-oncall { background: #bec4ca; }
 
 .bottom-nav {
   position: fixed;
@@ -200,7 +280,8 @@ h1, h2, h3, p { margin-top: 0; }
 .day-event h3 { margin: 5px 0 0; font-size: 16px; }
 .day-event p { margin: 9px 0 0; color: var(--ink-soft); font-size: 13px; line-height: 1.45; }
 .event-time { color: var(--ink-soft); font-size: 11px; font-weight: 750; }
-.shift-border-morning { border-left-color: var(--morning); } .shift-border-afternoon { border-left-color: var(--afternoon); }
+.shift-border-morning { border-left-color: #f2d45c; } .shift-border-afternoon { border-left-color: #ed9c4d; }
+.shift-border-morning-afternoon { border-left-color: #eaa4bd; } .shift-border-rest { border-left-color: #7ecb8b; }
 .shift-border-long { border-left-color: var(--long); } .shift-border-night { border-left-color: var(--night); }
 .shift-border-oncall { border-left-color: var(--oncall); } .shift-border-other { border-left-color: var(--other); }
 .empty-day { display: grid; gap: 5px; padding: 28px; border-radius: 18px; color: var(--ink-soft); background: #f3f0e9; text-align: center; }
@@ -217,7 +298,10 @@ h1, h2, h3, p { margin-top: 0; }
   .calendar-card { padding: 8px; border-radius: 20px; }
   .day-cell { min-height: 76px; padding: 5px 3px; }
   .day-number { width: 22px; height: 22px; margin-bottom: 3px; font-size: 11px; }
-  .shift-pill { padding-inline: 3px; font-size: 7px; }
+  .shift-code { inset: 22px 2px 18px; font-size: 17px; }
+  .destination-badge { padding-inline: 3px; font-size: 6px; }
+  .on-call-half { padding: 4px 3px; }
+  .on-call-half b { font-size: 6px; }
   .summary-grid { gap: 6px; }
   .summary-grid article { padding: 12px 8px 10px; border-radius: 15px; }
   .summary-grid strong { font-size: 22px; }
@@ -226,7 +310,7 @@ h1, h2, h3, p { margin-top: 0; }
 
 @media (min-width: 760px) {
   .day-cell { min-height: 120px; padding: 10px; }
-  .shift-pill { padding: 5px 7px; font-size: 10px; }
+  .destination-badge { padding: 3px 7px; font-size: 9px; }
   .day-number { font-size: 13px; }
   .bottom-nav { display: none; }
   .app-view { padding-bottom: 40px; }

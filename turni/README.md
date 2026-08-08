@@ -16,6 +16,13 @@ memoria il token Google già verificato tramite `postMessage` limitato alla
 stessa origine. Il token non viene salvato in `localStorage` o nell’URL e non è
 quindi necessario ripetere il login.
 
+## Codifica delle celle
+
+La cella usa il colore del turno principale: `M` (8–14) giallo, `MP` (8–20)
+rosa, `R` verde, `P` (14–20) arancio, `N` (20–24) e `SN` (0–8) blu. La marcatura
+`**` resta visibile accanto alla sigla. Le destinazioni sono mostrate come badge;
+`repD` occupa la metà superiore grigia e `repN` quella inferiore.
+
 ## Configurazione Apps Script
 
 Distribuire la versione aggiornata di `github_pages_shared_calendar/apps_script_backend/Code.gs`.
