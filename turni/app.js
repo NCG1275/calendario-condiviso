@@ -239,6 +239,8 @@ function parseShiftEvent(event) {
   const destination = parts.join(' - ').trim();
   const variants = {
     '8-14': { label: 'M', kind: 'morning', hours: 6 },
+    '8-15': { label: 'M', kind: 'morning', hours: 7 },
+    '8-16': { label: 'M', kind: 'morning', hours: 8 },
     '8-20': { label: 'MP', kind: 'morning-afternoon', hours: 12 },
     'R': { label: 'R', kind: 'rest', hours: 0 },
     'RS': { label: 'RS', kind: 'rest', hours: 0 },
