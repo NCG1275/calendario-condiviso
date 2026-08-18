@@ -403,6 +403,7 @@ function renderMonth() {
   const mondayOffset = (first.getDay() + 6) % 7;
   const gridStart = new Date(first.getFullYear(), first.getMonth(), 1 - mondayOffset);
   const cells = [];
+  let hasCurrentWeek = false;
 
   els.monthTitle.textContent = formatMonth(month);
   for (let index = 0; index < 42; index += 1) {
@@ -417,6 +418,7 @@ function renderMonth() {
     const calendarEntries = parsedShifts.filter((shift) => !shift.recognized);
     const outside = date.getMonth() !== month.getMonth();
     const isCurrentWeek = date >= currentWeekStart && date < currentWeekEnd;
+    if (isCurrentWeek) hasCurrentWeek = true;
     const shiftClass = primaryShift ? ` shift-cell-${primaryShift.kind}` : '';
     const shiftCodeSize = primaryShift && primaryShift.label.length >= 4
       ? ' shift-code-wide'
@@ -453,6 +455,7 @@ function renderMonth() {
       </button>`);
   }
   els.monthGrid.innerHTML = cells.join('');
+  els.monthGrid.classList.toggle('has-current-week', hasCurrentWeek);
   renderSummary();
 
   if (state.updatedAt) {
