@@ -4,6 +4,7 @@ const CONFIG = {
   INACTIVITY_TIMEOUT_MS: 5 * 60 * 1000,
   CREDENTIAL_STALE_MS: 50 * 60 * 1000,
   CREDENTIAL_RETRY_MS: 5 * 60 * 1000,
+  JSONP_TIMEOUT_MS: 20000,
 };
 
 const REQUEST_OPTIONS = [
@@ -343,6 +344,12 @@ function jsonpRequest(action, params = {}) {
     });
 
     let settled = false;
+    const timeoutId = window.setTimeout(() => {
+      if (settled) return;
+      cleanup();
+      reject(new Error('Richiesta scaduta. Verifica la connessione e riprova.'));
+    }, CONFIG.JSONP_TIMEOUT_MS);
+
     window[callbackName] = (response) => {
       settled = true;
       cleanup();
@@ -360,6 +367,8 @@ function jsonpRequest(action, params = {}) {
     };
 
     function cleanup() {
+      settled = true;
+      window.clearTimeout(timeoutId);
       delete window[callbackName];
       script.remove();
     }
@@ -396,11 +405,11 @@ function logout(message) {
   state.events = [];
   state.credentialIssuedAt = 0;
   state.credentialRefreshRequestedAt = 0;
+  const statusMessage = typeof message === 'string' ? message : 'Accesso disconnesso.';
   showWelcome();
   resetForm();
-  els.events.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
   els.monthGrid.innerHTML = '<div class="empty">Nessun evento caricato.</div>';
-  setStatus(message || 'Accesso disconnesso.');
+  setStatus(statusMessage);
   els.saveButton.disabled = true;
   els.openCreateModalButton.disabled = true;
   els.personalShiftsButton.disabled = true;
@@ -971,7 +980,7 @@ window.addEventListener('message', (event) => {
   if (event.data?.type === 'planner-activity') registerActivity();
 });
 els.closeModalButton.addEventListener('click', closeModal);
-els.logoutButton.addEventListener('click', logout);
+els.logoutButton.addEventListener('click', () => logout());
 els.prevMonthButton.addEventListener('click', () => {
   state.visibleMonth = addMonths(state.visibleMonth, -1);
   renderMonthGrid();

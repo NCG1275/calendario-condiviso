@@ -2,7 +2,7 @@ const CONFIG = {
   APPS_SCRIPT_API_URL: 'https://script.google.com/macros/s/AKfycbyOEuEFx70o0NRx4Caseht8gUNdMOHDYvYUbCdcaJBQEaREslUrfa5eV7GTXkDRvQcIUw/exec',
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
   JSONP_TIMEOUT_MS: 20000,
-  INACTIVITY_TIMEOUT_MS: 5 * 60 * 1000,
+  DEVICE_SESSION_STORAGE_KEY: 'planner-turni-device-session-v1',
 };
 
 const EMBEDDED_MODE = new URLSearchParams(window.location.search).get('embedded') === '1';
@@ -18,6 +18,7 @@ const COLOR_CLASSES = {
 
 const state = {
   idToken: '',
+  deviceSessionToken: '',
   user: null,
   ownerName: '',
   calendarName: '',
@@ -25,7 +26,6 @@ const state = {
   visibleMonth: startOfMonth(new Date()),
   updatedAt: '',
   requestVersion: 0,
-  inactivityTimer: null,
 };
 
 const els = {
@@ -170,21 +170,45 @@ function setLoading(isLoading) {
   if (isLoading) els.syncStatus.textContent = 'Aggiornamento…';
 }
 
-function clearInactivityTimer() {
-  if (!state.inactivityTimer) return;
-  window.clearTimeout(state.inactivityTimer);
-  state.inactivityTimer = null;
+function readDeviceSession() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CONFIG.DEVICE_SESSION_STORAGE_KEY) || '{}');
+    const expiresAt = Date.parse(saved.expiresAt || '');
+    if (!saved.sessionToken || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      localStorage.removeItem(CONFIG.DEVICE_SESSION_STORAGE_KEY);
+      return null;
+    }
+    return saved;
+  } catch (error) {
+    try {
+      localStorage.removeItem(CONFIG.DEVICE_SESSION_STORAGE_KEY);
+    } catch (storageError) {
+      // Il browser puo disabilitare lo spazio locale in modalita privata.
+    }
+    return null;
+  }
 }
 
-function armInactivityTimer() {
-  clearInactivityTimer();
-  if (EMBEDDED_MODE || !state.idToken) return;
-  state.inactivityTimer = window.setTimeout(() => logoutStandalone('Sessione scaduta per inattività.'), CONFIG.INACTIVITY_TIMEOUT_MS);
+function saveDeviceSession(session) {
+  localStorage.setItem(CONFIG.DEVICE_SESSION_STORAGE_KEY, JSON.stringify({
+    sessionToken: session.sessionToken,
+    expiresAt: session.expiresAt,
+  }));
 }
 
-function logoutStandalone(message = 'Sessione terminata. Accedi per continuare.') {
-  clearInactivityTimer();
-  google.accounts.id.disableAutoSelect();
+function clearDeviceSession() {
+  try {
+    localStorage.removeItem(CONFIG.DEVICE_SESSION_STORAGE_KEY);
+  } catch (error) {
+    // Lo stato in memoria viene comunque eliminato.
+  }
+  state.deviceSessionToken = '';
+}
+
+async function logoutStandalone(message = 'Sessione terminata. Accedi per continuare.') {
+  const sessionToken = state.deviceSessionToken;
+  clearDeviceSession();
+  if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect();
   state.idToken = '';
   state.user = null;
   state.events = [];
@@ -192,17 +216,22 @@ function logoutStandalone(message = 'Sessione terminata. Accedi per continuare.'
   els.appView.classList.add('hidden');
   els.loginView.classList.remove('hidden');
   els.loginStatus.textContent = message;
+  if (sessionToken) {
+    jsonpRequest('revokeDeviceSession', { sessionToken }).catch(() => {});
+  }
+  initializeGoogleIdentity();
 }
 
 async function loadMonth() {
-  if (!state.idToken) return;
+  if (!state.idToken && !state.deviceSessionToken) return false;
   const requestVersion = ++state.requestVersion;
   const range = monthRange(state.visibleMonth);
   setLoading(true);
   renderMonth();
   try {
     const data = await jsonpRequest('personalShifts', {
-      idToken: state.idToken,
+      idToken: state.deviceSessionToken ? '' : state.idToken,
+      sessionToken: state.deviceSessionToken,
       payload: encodePayload(range),
     });
     if (requestVersion !== state.requestVersion) return;
@@ -213,15 +242,27 @@ async function loadMonth() {
     state.updatedAt = data.updatedAt || new Date().toISOString();
     showApp();
     renderMonth();
+    return true;
   } catch (error) {
     if (requestVersion !== state.requestVersion) return;
     const message = error instanceof Error ? error.message : 'Turni non disponibili.';
+    if (state.deviceSessionToken && message === 'Sessione dispositivo scaduta. Accedi di nuovo.') {
+      clearDeviceSession();
+      state.user = null;
+      state.events = [];
+      els.appView.classList.add('hidden');
+      els.loginView.classList.remove('hidden');
+      els.loginStatus.textContent = message;
+      initializeGoogleIdentity();
+      return false;
+    }
     els.syncStatus.textContent = message;
     els.syncStatus.classList.add('is-error');
     if (els.appView.classList.contains('hidden')) {
       els.loginStatus.textContent = message;
       els.loginStatus.classList.add('is-error');
     }
+    return false;
   } finally {
     if (requestVersion === state.requestVersion) setLoading(false);
   }
@@ -443,11 +484,20 @@ function goToday() {
   loadMonth();
 }
 
-function onGoogleCredential(response) {
+async function onGoogleCredential(response) {
   state.idToken = response.credential || '';
-  armInactivityTimer();
   els.loginStatus.textContent = 'Accesso verificato. Carico i tuoi turni…';
   els.loginStatus.classList.remove('is-error');
+  try {
+    const session = await jsonpRequest('createDeviceSession', { idToken: state.idToken });
+    if (session?.sessionToken && session?.expiresAt) {
+      saveDeviceSession(session);
+      state.deviceSessionToken = session.sessionToken;
+      state.idToken = '';
+    }
+  } catch (error) {
+    // Durante un rilascio graduale il token Google corrente resta utilizzabile.
+  }
   loadMonth().catch(() => {});
 }
 
@@ -482,6 +532,7 @@ window.addEventListener('message', (event) => {
 });
 
 function initializeGoogleIdentity() {
+  if (state.deviceSessionToken || initializeGoogleIdentity.initialized) return;
   if (!window.google?.accounts?.id) {
     window.setTimeout(initializeGoogleIdentity, 100);
     return;
@@ -491,10 +542,22 @@ function initializeGoogleIdentity() {
     callback: onGoogleCredential,
     auto_select: true,
   });
+  initializeGoogleIdentity.initialized = true;
   google.accounts.id.renderButton(els.googleSignin, {
     theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with', width: 280,
   });
   google.accounts.id.prompt();
+}
+
+async function initializeStandalone() {
+  const savedSession = readDeviceSession();
+  if (savedSession) {
+    state.deviceSessionToken = savedSession.sessionToken;
+    els.loginStatus.textContent = 'Ripristino della sessione…';
+    const loaded = await loadMonth();
+    if (loaded || state.deviceSessionToken) return;
+  }
+  initializeGoogleIdentity();
 }
 
 els.monthGrid.addEventListener('click', (event) => {
@@ -531,9 +594,6 @@ if (EMBEDDED_MODE) {
     document.addEventListener(eventName, () => notifyParent('planner-activity'), { passive: true });
   });
 } else {
-  initializeGoogleIdentity();
-  ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {
-    document.addEventListener(eventName, armInactivityTimer, { passive: true });
-  });
+  initializeStandalone().catch(() => initializeGoogleIdentity());
 }
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));

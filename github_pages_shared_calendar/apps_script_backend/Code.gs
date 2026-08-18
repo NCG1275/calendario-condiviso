@@ -55,6 +55,9 @@ const CONFIG = {
     'Daniela Puddu': 'Turni Puddu',
   },
   LOOKAHEAD_DAYS: 730,
+  DEVICE_SESSION_TTL_MS: 30 * 24 * 60 * 60 * 1000,
+  DEVICE_SESSION_PROPERTY_PREFIX: 'PERSONAL_SHIFT_DEVICE_SESSION_',
+  MAX_DEVICE_SESSIONS_PER_USER: 5,
 };
 
 function doGet(e) {
@@ -77,6 +80,7 @@ function handleApiGet_(params) {
   try {
     const action = String(params.action || '').trim();
     const idToken = String(params.idToken || '').trim();
+    const sessionToken = String(params.sessionToken || '').trim();
     const payload = parsePayload_(params.payload || '');
     let result;
 
@@ -94,7 +98,13 @@ function handleApiGet_(params) {
         result = deleteOwnedEvent_(String(params.eventId || payload.id || ''), idToken);
         break;
       case 'personalShifts':
-        result = getPersonalShifts_(payload, idToken);
+        result = getPersonalShifts_(payload, idToken, sessionToken);
+        break;
+      case 'createDeviceSession':
+        result = createDeviceSession_(idToken);
+        break;
+      case 'revokeDeviceSession':
+        result = revokeDeviceSession_(sessionToken);
         break;
       default:
         throw new Error('Azione non supportata.');
@@ -106,8 +116,8 @@ function handleApiGet_(params) {
   }
 }
 
-function getPersonalShifts_(payload, idToken) {
-  const user = getVerifiedUser_(idToken);
+function getPersonalShifts_(payload, idToken, sessionToken) {
+  const user = sessionToken ? getDeviceSessionUser_(sessionToken) : getVerifiedUser_(idToken);
   const range = validateShiftRange_(payload);
   const ownerName = resolveOwnerName_(user.email, user.name);
   const calendarSummary = resolveShiftCalendarSummary_(user.email, ownerName);
@@ -131,6 +141,140 @@ function getPersonalShifts_(payload, idToken) {
       .filter(function(item) { return item.status !== 'cancelled'; })
       .map(mapShiftEventForClient_),
   };
+}
+
+function createDeviceSession_(idToken) {
+  const user = getVerifiedUser_(idToken);
+  const token = createDeviceSessionToken_();
+  const tokenHash = hashDeviceSessionToken_(token);
+  const now = Date.now();
+  const expiresAt = now + CONFIG.DEVICE_SESSION_TTL_MS;
+
+  withRequestLock_(function() {
+    const sessions = readDeviceSessions_();
+    pruneDeviceSessions_(sessions, now);
+    sessions[tokenHash] = {
+      email: user.email,
+      name: user.name,
+      picture: user.picture,
+      createdAt: now,
+      expiresAt: expiresAt,
+    };
+    limitDeviceSessionsForUser_(sessions, user.email);
+    writeDeviceSessions_(sessions);
+  });
+
+  return { sessionToken: token, expiresAt: new Date(expiresAt).toISOString() };
+}
+
+function getDeviceSessionUser_(sessionToken) {
+  const tokenHash = hashDeviceSessionToken_(sessionToken);
+  const now = Date.now();
+  const sessions = readDeviceSessions_();
+  const session = sessions[tokenHash];
+  if (!session || Number(session.expiresAt || 0) <= now) {
+    if (session) {
+      withRequestLock_(function() {
+        const currentSessions = readDeviceSessions_();
+        delete currentSessions[tokenHash];
+        pruneDeviceSessions_(currentSessions, now);
+        writeDeviceSessions_(currentSessions);
+      });
+    }
+    throw new Error('Sessione dispositivo scaduta. Accedi di nuovo.');
+  }
+
+  return validateAuthorizedUser_({
+    email: session.email,
+    name: session.name,
+    picture: session.picture,
+  });
+}
+
+function revokeDeviceSession_(sessionToken) {
+  if (!sessionToken) return { revoked: true };
+  const tokenHash = hashDeviceSessionToken_(sessionToken);
+  withRequestLock_(function() {
+    const sessions = readDeviceSessions_();
+    delete sessions[tokenHash];
+    pruneDeviceSessions_(sessions, Date.now());
+    writeDeviceSessions_(sessions);
+  });
+  return { revoked: true };
+}
+
+function createDeviceSessionToken_() {
+  return (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
+}
+
+function hashDeviceSessionToken_(sessionToken) {
+  const token = String(sessionToken || '').trim();
+  if (!/^[a-fA-F0-9]{64}$/.test(token)) {
+    throw new Error('Sessione dispositivo scaduta. Accedi di nuovo.');
+  }
+  return Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    token,
+    Utilities.Charset.UTF_8
+  ).map(function(byte) {
+    return ('0' + ((byte + 256) % 256).toString(16)).slice(-2);
+  }).join('');
+}
+
+function readDeviceSessions_() {
+  const stored = PropertiesService.getScriptProperties().getProperties();
+  const sessions = {};
+  Object.keys(stored).forEach(function(name) {
+    if (name.indexOf(CONFIG.DEVICE_SESSION_PROPERTY_PREFIX) !== 0) return;
+    const tokenHash = name.slice(CONFIG.DEVICE_SESSION_PROPERTY_PREFIX.length);
+    try {
+      const session = JSON.parse(stored[name]);
+      if (session && typeof session === 'object' && !Array.isArray(session)) {
+        sessions[tokenHash] = session;
+      }
+    } catch (error) {
+      // Una singola sessione corrotta non deve bloccare quelle valide.
+    }
+  });
+  return sessions;
+}
+
+function writeDeviceSessions_(sessions) {
+  const properties = PropertiesService.getScriptProperties();
+  const stored = properties.getProperties();
+  Object.keys(stored).forEach(function(name) {
+    if (name.indexOf(CONFIG.DEVICE_SESSION_PROPERTY_PREFIX) !== 0) return;
+    const tokenHash = name.slice(CONFIG.DEVICE_SESSION_PROPERTY_PREFIX.length);
+    if (!sessions[tokenHash]) properties.deleteProperty(name);
+  });
+  Object.keys(sessions).forEach(function(tokenHash) {
+    properties.setProperty(
+      CONFIG.DEVICE_SESSION_PROPERTY_PREFIX + tokenHash,
+      JSON.stringify(sessions[tokenHash])
+    );
+  });
+}
+
+function pruneDeviceSessions_(sessions, now) {
+  Object.keys(sessions).forEach(function(tokenHash) {
+    if (Number((sessions[tokenHash] || {}).expiresAt || 0) <= now) {
+      delete sessions[tokenHash];
+    }
+  });
+}
+
+function limitDeviceSessionsForUser_(sessions, email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const matching = Object.keys(sessions)
+    .filter(function(tokenHash) {
+      return String((sessions[tokenHash] || {}).email || '').trim().toLowerCase() === normalizedEmail;
+    })
+    .sort(function(left, right) {
+      return Number((sessions[right] || {}).createdAt || 0) - Number((sessions[left] || {}).createdAt || 0);
+    });
+  matching.slice(CONFIG.MAX_DEVICE_SESSIONS_PER_USER).forEach(function(tokenHash) {
+    delete sessions[tokenHash];
+  });
 }
 
 function validateShiftRange_(payload) {
@@ -366,6 +510,19 @@ function validateTokenInfo_(tokenInfo) {
     throw new Error('Email utente non disponibile.');
   }
 
+  return validateAuthorizedUser_({
+    email: email,
+    name: String(info.name || '').trim(),
+    picture: String(info.picture || '').trim(),
+  });
+}
+
+function validateAuthorizedUser_(user) {
+  const email = String((user || {}).email || '').trim().toLowerCase();
+  if (!email) {
+    throw new Error('Email utente non disponibile.');
+  }
+
   const configuredAllowedEmails = getJsonScriptProperty_('ALLOWED_EMAILS_JSON', CONFIG.ALLOWED_EMAILS || []);
   const allowedEmails = Array.isArray(configuredAllowedEmails)
     ? configuredAllowedEmails.map(function(item) {
@@ -385,8 +542,8 @@ function validateTokenInfo_(tokenInfo) {
 
   return {
     email: email,
-    name: String(info.name || '').trim(),
-    picture: String(info.picture || '').trim(),
+    name: String((user || {}).name || '').trim(),
+    picture: String((user || {}).picture || '').trim(),
   };
 }
 

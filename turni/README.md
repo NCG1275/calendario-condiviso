@@ -13,8 +13,12 @@ PWA in sola lettura che mostra, mese per mese, gli eventi pubblicati da
 
 La pagina principale apre la vista in un pannello interno e le inoltra in
 memoria il token Google già verificato tramite `postMessage` limitato alla
-stessa origine. Il token non viene salvato in `localStorage` o nell’URL e non è
-quindi necessario ripetere il login.
+stessa origine.
+
+Nella PWA autonoma, dopo il primo accesso Google il backend rilascia una chiave
+casuale revocabile valida 30 giorni. Nel dispositivo viene conservata soltanto
+questa chiave, mai il token Google. Il comando `Esci dall’app` revoca la chiave
+anche sul backend; sono ammesse al massimo cinque sessioni per account.
 
 ## Codifica delle celle
 
