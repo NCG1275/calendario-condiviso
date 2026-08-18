@@ -387,7 +387,18 @@ function eventKind(event) {
 function renderMonth() {
   const month = state.visibleMonth;
   const grouped = eventsByDay();
-  const todayKey = localDateKey(new Date());
+  const today = new Date();
+  const todayKey = localDateKey(today);
+  const currentWeekStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - ((today.getDay() + 6) % 7),
+  );
+  const currentWeekEnd = new Date(
+    currentWeekStart.getFullYear(),
+    currentWeekStart.getMonth(),
+    currentWeekStart.getDate() + 7,
+  );
   const first = startOfMonth(month);
   const mondayOffset = (first.getDay() + 6) % 7;
   const gridStart = new Date(first.getFullYear(), first.getMonth(), 1 - mondayOffset);
@@ -405,6 +416,7 @@ function renderMonth() {
     const primaryShift = parsedShifts.find((shift) => shift.recognized) || null;
     const calendarEntries = parsedShifts.filter((shift) => !shift.recognized);
     const outside = date.getMonth() !== month.getMonth();
+    const isCurrentWeek = date >= currentWeekStart && date < currentWeekEnd;
     const shiftClass = primaryShift ? ` shift-cell-${primaryShift.kind}` : '';
     const shiftCodeSize = primaryShift && primaryShift.label.length >= 4
       ? ' shift-code-wide'
@@ -430,8 +442,8 @@ function renderMonth() {
     const repDay = dayOnCall ? '<span class="on-call-half on-call-day"><b>repD</b></span>' : '';
     const repNight = nightOnCall ? '<span class="on-call-half on-call-night"><b>repN</b></span>' : '';
     cells.push(`
-      <button class="day-cell${shiftClass}${outside ? ' is-outside' : ''}${key === todayKey ? ' is-today' : ''}${events.length ? ' has-events' : ''}${isSunday ? ' has-week-total' : ''}"
-        type="button" data-date="${key}" aria-label="${escapeHtml(formatDay(date))}, ${events.length} turni${isSunday ? `, ${weekHoursLabel} ore nella settimana` : ''}">
+      <button class="day-cell${shiftClass}${outside ? ' is-outside' : ''}${key === todayKey ? ' is-today' : ''}${isCurrentWeek ? ' is-current-week' : ''}${events.length ? ' has-events' : ''}${isSunday ? ' has-week-total' : ''}"
+        type="button" data-date="${key}" style="--week-column: ${index % 7}" aria-label="${escapeHtml(formatDay(date))}, ${events.length} turni${isSunday ? `, ${weekHoursLabel} ore nella settimana` : ''}">
         ${repDay}${repNight}
         <span class="day-number">${date.getDate()}</span>
         ${weekTotal}

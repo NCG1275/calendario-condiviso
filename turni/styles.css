@@ -269,7 +269,36 @@ h1, h2, h3, p { margin-top: 0; }
 .profile-button span { display: grid; place-items: center; font-weight: 800; }
 
 .month-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; padding: 22px 4px 18px; }
-.month-heading h2 { margin: 0; font-size: clamp(32px, 8vw, 48px); line-height: 1; letter-spacing: -.04em; }
+.month-heading h2 {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: 0;
+  padding: 10px 18px 12px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 19px;
+  color: #fff;
+  background: linear-gradient(135deg, #1d6862 0%, #2d8f87 52%, #397fa6 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .3),
+    0 10px 24px rgba(23, 79, 75, .22);
+  font-size: clamp(28px, 7vw, 42px);
+  line-height: .95;
+  letter-spacing: -.035em;
+  text-shadow: 0 2px 8px rgba(10, 48, 46, .22);
+  text-transform: capitalize;
+}
+
+.month-heading h2::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -60% 45% -60% -25%;
+  transform: rotate(18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .2), transparent);
+}
 .calendar-name { margin-bottom: 7px; color: var(--ink-soft); font-size: 12px; font-weight: 700; }
 .month-actions { display: flex; gap: 8px; }
 .today-button, .icon-button, .nav-button {
@@ -285,9 +314,60 @@ h1, h2, h3, p { margin-top: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin-bottom: 13px; }
-.summary-grid article { padding: 14px 12px 12px; border: 1px solid rgba(45, 143, 135, .12); border-radius: 18px; background: rgba(251, 255, 254, .72); }
-.summary-grid strong { display: block; font-size: 25px; line-height: 1; }
-.summary-grid span { display: block; margin-top: 5px; color: var(--ink-soft); font-size: 10px; font-weight: 750; text-transform: uppercase; }
+.summary-grid article {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-width: 0;
+  padding: 15px 12px 13px;
+  border: 1px solid rgba(255, 255, 255, .62);
+  border-radius: 18px;
+  color: #fff;
+  background: linear-gradient(145deg, #247a73, #3a9c91);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .25),
+    0 8px 20px rgba(23, 79, 75, .16);
+}
+
+.summary-grid article:nth-child(2) { background: linear-gradient(145deg, #26746f, #3d9e94); }
+.summary-grid article:nth-child(3) { background: linear-gradient(145deg, #315f87, #538eb9); }
+.summary-grid article:nth-child(4) { background: linear-gradient(145deg, #874f59, #bd6873); }
+
+.summary-grid article::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -18px;
+  bottom: -26px;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .13);
+  box-shadow: 0 0 28px rgba(255, 255, 255, .08);
+}
+
+.summary-grid strong {
+  display: block;
+  overflow: hidden;
+  font-size: 25px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 7px rgba(19, 55, 63, .2);
+  white-space: nowrap;
+}
+
+.summary-grid span {
+  display: block;
+  overflow: hidden;
+  margin-top: 6px;
+  color: rgba(255, 255, 255, .76);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .045em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 
 .calendar-card { padding: 12px; border: 1px solid rgba(45, 143, 135, .14); border-radius: 24px; background: rgba(251, 255, 254, .92); box-shadow: 0 18px 50px rgba(23, 49, 51, .08); backdrop-filter: blur(10px); }
 .calendar-nav { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -314,6 +394,47 @@ h1, h2, h3, p { margin-top: 0; }
 }
 .day-cell:active { filter: brightness(.96); }
 .day-cell.is-outside { color: #9bb0b1; background: #f2f8f7; }
+.day-cell.is-current-week {
+  filter: saturate(1.22) contrast(1.035);
+  box-shadow:
+    inset 0 2px 0 rgba(45, 143, 135, .52),
+    inset 0 -2px 0 rgba(45, 143, 135, .42);
+}
+
+.day-cell.is-current-week:active { filter: saturate(1.22) contrast(1.035) brightness(.96); }
+
+.day-cell.is-current-week::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: rgba(44, 164, 151, .08);
+  pointer-events: none;
+}
+
+.day-cell.is-current-week::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: -20%;
+  bottom: -20%;
+  left: -80%;
+  width: 62%;
+  transform: translateX(-80%) skewX(-14deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .62), transparent);
+  mix-blend-mode: soft-light;
+  opacity: 0;
+  pointer-events: none;
+  animation: current-week-light 5.2s ease-in-out infinite;
+  animation-delay: calc(var(--week-column) * .16s);
+}
+
+@keyframes current-week-light {
+  0%, 16% { opacity: 0; transform: translateX(-80%) skewX(-14deg); }
+  24% { opacity: .85; }
+  43% { opacity: .55; }
+  52%, 100% { opacity: 0; transform: translateX(390%) skewX(-14deg); }
+}
 .day-number { position: absolute; z-index: 7; top: 4px; left: 4px; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; font-size: 11px; font-weight: 850; }
 .is-today .day-number { color: white; background: var(--accent); }
 
@@ -563,7 +684,11 @@ h1, h2, h3, p { margin-top: 0; }
 @media (max-width: 520px) {
   .app-view { padding-inline: 10px; }
   .topbar { padding-inline: 6px; }
-  .month-heading { padding-inline: 7px; }
+  .month-heading { gap: 10px; padding-inline: 7px; }
+  .month-heading h2 { padding: 9px 13px 10px; border-radius: 16px; font-size: clamp(24px, 7vw, 30px); }
+  .month-actions { gap: 5px; }
+  .today-button { padding-inline: 12px; }
+  .icon-button { width: 40px; }
   .calendar-card { padding: 8px; border-radius: 20px; }
   .day-cell { min-height: 76px; }
   .day-number { top: 3px; left: 3px; width: 21px; height: 21px; font-size: 10px; }
@@ -600,6 +725,7 @@ h1, h2, h3, p { margin-top: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; }
+  .day-cell.is-current-week::after { opacity: 0; animation: none; }
 }
 
 html.embedded .google-signin,
