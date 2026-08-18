@@ -64,7 +64,9 @@ const els = {
   logoutButton: document.getElementById('logoutButton'),
 };
 
-const sessionSplashStartedAt = performance.now();
+const SESSION_SPLASH_MINIMUM_MS = 1500;
+let sessionSplashShownAt = performance.now();
+let sessionSplashHideTimer = 0;
 
 function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -175,6 +177,8 @@ function setLoading(isLoading) {
 }
 
 function showSessionSplash(message = 'Ripristino della sessione…') {
+  window.clearTimeout(sessionSplashHideTimer);
+  sessionSplashShownAt = performance.now();
   els.sessionSplashStatus.textContent = message;
   els.sessionSplash.setAttribute('aria-busy', 'true');
   els.sessionSplash.classList.remove('is-hidden');
@@ -182,8 +186,9 @@ function showSessionSplash(message = 'Ripristino della sessione…') {
 }
 
 function hideSessionSplash(minimumVisibleMs = 0) {
-  const remaining = Math.max(0, minimumVisibleMs - (performance.now() - sessionSplashStartedAt));
-  window.setTimeout(() => {
+  window.clearTimeout(sessionSplashHideTimer);
+  const remaining = Math.max(0, minimumVisibleMs - (performance.now() - sessionSplashShownAt));
+  sessionSplashHideTimer = window.setTimeout(() => {
     els.sessionSplash.setAttribute('aria-busy', 'false');
     els.sessionSplash.classList.add('is-hidden');
     document.body.classList.remove('splash-active');
@@ -591,7 +596,7 @@ async function initializeStandalone() {
     showSessionSplash('Ripristino della sessione…');
     els.loginStatus.textContent = 'Ripristino della sessione…';
     const loaded = await loadMonth();
-    hideSessionSplash(700);
+    hideSessionSplash(SESSION_SPLASH_MINIMUM_MS);
     if (loaded || state.deviceSessionToken) return;
   }
   hideSessionSplash();
@@ -645,10 +650,11 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!hadController || refreshing) return;
       refreshing = true;
-      window.location.reload();
+      showSessionSplash('Aggiornamento dell’app…');
+      window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=180826.7', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=180826.8', {
         updateViaCache: 'none',
       });
       await registration.update();

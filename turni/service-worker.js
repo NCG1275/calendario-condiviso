@@ -1,10 +1,10 @@
-const CACHE_NAME = 'turni-personali-180826.7';
+const CACHE_NAME = 'turni-personali-180826.8';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=180826.7',
-  './app.js?v=180826.7',
-  './manifest.webmanifest?v=180826.7',
+  './styles.css?v=180826.8',
+  './app.js?v=180826.8',
+  './manifest.webmanifest?v=180826.8',
   './icon-192-v2.png',
   './icon-512-v2.png',
   './apple-touch-icon-v2.png',
