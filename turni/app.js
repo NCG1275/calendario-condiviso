@@ -638,4 +638,22 @@ if (EMBEDDED_MODE) {
     initializeGoogleIdentity();
   });
 }
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+    try {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=180826.7', {
+        updateViaCache: 'none',
+      });
+      await registration.update();
+    } catch {
+      // L'app resta utilizzabile online anche se il service worker non è disponibile.
+    }
+  });
+}
