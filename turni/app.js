@@ -29,6 +29,8 @@ const state = {
 };
 
 const els = {
+  sessionSplash: document.getElementById('sessionSplash'),
+  sessionSplashStatus: document.getElementById('sessionSplashStatus'),
   loginView: document.getElementById('loginView'),
   appView: document.getElementById('appView'),
   googleSignin: document.getElementById('googleSignin'),
@@ -61,6 +63,8 @@ const els = {
   accountEmail: document.getElementById('accountEmail'),
   logoutButton: document.getElementById('logoutButton'),
 };
+
+const sessionSplashStartedAt = performance.now();
 
 function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -168,6 +172,22 @@ function setLoading(isLoading) {
   els.refreshButton.disabled = isLoading;
   els.refreshButton.classList.toggle('is-loading', isLoading);
   if (isLoading) els.syncStatus.textContent = 'Aggiornamento…';
+}
+
+function showSessionSplash(message = 'Ripristino della sessione…') {
+  els.sessionSplashStatus.textContent = message;
+  els.sessionSplash.setAttribute('aria-busy', 'true');
+  els.sessionSplash.classList.remove('is-hidden');
+  document.body.classList.add('splash-active');
+}
+
+function hideSessionSplash(minimumVisibleMs = 0) {
+  const remaining = Math.max(0, minimumVisibleMs - (performance.now() - sessionSplashStartedAt));
+  window.setTimeout(() => {
+    els.sessionSplash.setAttribute('aria-busy', 'false');
+    els.sessionSplash.classList.add('is-hidden');
+    document.body.classList.remove('splash-active');
+  }, remaining);
 }
 
 function readDeviceSession() {
@@ -553,10 +573,13 @@ async function initializeStandalone() {
   const savedSession = readDeviceSession();
   if (savedSession) {
     state.deviceSessionToken = savedSession.sessionToken;
+    showSessionSplash('Ripristino della sessione…');
     els.loginStatus.textContent = 'Ripristino della sessione…';
     const loaded = await loadMonth();
+    hideSessionSplash(700);
     if (loaded || state.deviceSessionToken) return;
   }
+  hideSessionSplash();
   initializeGoogleIdentity();
 }
 
@@ -588,12 +611,16 @@ document.addEventListener('keydown', (event) => {
 
 renderMonth();
 if (EMBEDDED_MODE) {
+  hideSessionSplash();
   els.loginStatus.textContent = 'Apertura dei tuoi turni…';
   notifyParent('planner-turni-ready');
   ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {
     document.addEventListener(eventName, () => notifyParent('planner-activity'), { passive: true });
   });
 } else {
-  initializeStandalone().catch(() => initializeGoogleIdentity());
+  initializeStandalone().catch(() => {
+    hideSessionSplash();
+    initializeGoogleIdentity();
+  });
 }
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));

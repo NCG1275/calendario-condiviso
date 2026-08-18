@@ -33,9 +33,167 @@ body {
     linear-gradient(145deg, #f1fbff 0%, var(--paper) 64%, #f7fcfb 100%);
 }
 
+body.splash-active { overflow: hidden; }
+
 button { font: inherit; }
 button:focus-visible { outline: 3px solid rgba(45, 143, 135, .35); outline-offset: 2px; }
 .hidden { display: none !important; }
+
+.session-splash {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 18% 4%, rgba(83, 169, 160, .3), transparent 22rem),
+    radial-gradient(circle at 86% 92%, rgba(83, 154, 197, .2), transparent 24rem),
+    linear-gradient(145deg, #f1fbff 0%, #eaf7f4 62%, #f8fcfb 100%);
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .28s ease, visibility .28s ease;
+}
+
+.session-splash.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.session-splash-card {
+  width: min(100%, 360px);
+  padding: 42px 30px 34px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, .86);
+  border-radius: 30px;
+  background: rgba(251, 255, 254, .9);
+  box-shadow: 0 30px 90px rgba(23, 49, 51, .16);
+  backdrop-filter: blur(18px);
+}
+
+.session-splash-card h1 {
+  margin: 4px 0 10px;
+  font-size: clamp(36px, 11vw, 50px);
+  letter-spacing: -.045em;
+}
+
+.session-splash-status {
+  min-height: 22px;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.session-transfer {
+  position: relative;
+  width: 106px;
+  height: 72px;
+  margin: 0 auto 22px;
+  display: block;
+}
+
+.session-document {
+  position: absolute;
+  z-index: 2;
+  left: 5px;
+  top: 20px;
+  width: 32px;
+  height: 40px;
+  border: 2px solid var(--accent);
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 7px, rgba(45, 143, 135, .25) 7px 9px),
+    #fff;
+  box-shadow: 0 7px 16px rgba(23, 49, 51, .16);
+  animation: session-document-to-calendar 1.65s ease-in-out infinite;
+}
+
+.session-document::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: -2px;
+  width: 10px;
+  height: 10px;
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  background: #e9f6f3;
+}
+
+.session-calendar {
+  position: absolute;
+  z-index: 3;
+  right: 3px;
+  top: 8px;
+  width: 48px;
+  height: 54px;
+  overflow: hidden;
+  border: 2px solid var(--accent-dark);
+  border-radius: 9px;
+  background:
+    linear-gradient(to bottom, #53a9a0 0 13px, transparent 13px),
+    repeating-linear-gradient(to right, transparent 0 13px, rgba(45, 143, 135, .16) 13px 14px),
+    repeating-linear-gradient(to bottom, transparent 0 13px, rgba(45, 143, 135, .16) 13px 14px),
+    #fbfffe;
+  box-shadow: 0 9px 20px rgba(23, 49, 51, .2);
+  animation: session-calendar-receive 1.65s ease-in-out infinite;
+}
+
+.session-calendar::before,
+.session-calendar::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: -4px;
+  width: 5px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--accent-dark);
+}
+
+.session-calendar::before { left: 10px; }
+.session-calendar::after { right: 10px; }
+
+.session-progress {
+  width: 146px;
+  height: 5px;
+  margin: 22px auto 0;
+  display: block;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(45, 143, 135, .13);
+}
+
+.session-progress i {
+  width: 46%;
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), #67b8b0);
+  animation: session-progress 1.25s ease-in-out infinite;
+}
+
+@keyframes session-document-to-calendar {
+  0% { opacity: 0; transform: translateX(0) rotate(-5deg) scale(.84); }
+  16% { opacity: 1; }
+  66% { opacity: 1; transform: translateX(58px) rotate(0) scale(.78); }
+  82%, 100% { opacity: 0; transform: translateX(66px) rotate(0) scale(.46); }
+}
+
+@keyframes session-calendar-receive {
+  0%, 60%, 100% { transform: scale(1); }
+  76% { transform: scale(1.08); box-shadow: 0 9px 24px rgba(45, 143, 135, .32); }
+}
+
+@keyframes session-progress {
+  0% { transform: translateX(-105%); }
+  50% { transform: translateX(118%); }
+  100% { transform: translateX(225%); }
+}
 
 .login-view {
   min-height: 100vh;

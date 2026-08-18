@@ -14,15 +14,29 @@
     <title>I miei turni</title>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="apple-touch-icon" href="./apple-touch-icon-v2.png">
+    <noscript><style>.session-splash{display:none!important}.splash-active{overflow:auto!important}</style></noscript>
     <link rel="preconnect" href="https://accounts.google.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=180826.1">
+    <link rel="stylesheet" href="./styles.css?v=180826.2">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="./app.js?v=180826.1" defer></script>
+    <script src="./app.js?v=180826.2" defer></script>
   </head>
-  <body>
+  <body class="splash-active">
+    <section id="sessionSplash" class="session-splash" aria-live="polite" aria-busy="true">
+      <div class="session-splash-card">
+        <span class="session-transfer" aria-hidden="true">
+          <span class="session-document"></span>
+          <span class="session-calendar"></span>
+        </span>
+        <p class="eyebrow">Planner Turni</p>
+        <h1>I miei turni</h1>
+        <p id="sessionSplashStatus" class="session-splash-status">Apertura del calendario…</p>
+        <span class="session-progress" aria-hidden="true"><i></i></span>
+      </div>
+    </section>
+
     <section id="loginView" class="login-view">
       <div class="login-card">
         <div class="app-mark" aria-hidden="true"><span>31</span></div>
