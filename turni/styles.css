@@ -251,6 +251,20 @@ h1, h2, h3, p { margin-top: 0; }
 .brand-lockup { display: flex; align-items: center; gap: 12px; }
 .brand-lockup h1 { margin: 0; font-size: 22px; letter-spacing: -.025em; }
 .brand-lockup .eyebrow { margin-bottom: 1px; font-size: 9px; }
+.brand-lockup .app-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: .12em;
+  white-space: nowrap;
+}
+.brand-lockup .app-meta span {
+  color: #6f8586;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .055em;
+  text-transform: none;
+}
 
 .profile-button {
   position: relative;
@@ -283,23 +297,67 @@ h1, h2, h3, p { margin-top: 0; }
   background: linear-gradient(135deg, #1d6862 0%, #2d8f87 52%, #397fa6 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, .3),
-    0 10px 24px rgba(23, 79, 75, .22);
+    inset 0 0 20px rgba(119, 255, 236, .15),
+    0 0 0 1px rgba(77, 225, 207, .2),
+    0 0 24px rgba(45, 199, 183, .4),
+    0 12px 30px rgba(23, 79, 75, .28);
   font-size: clamp(28px, 7vw, 42px);
   line-height: .95;
   letter-spacing: -.035em;
   text-shadow: 0 2px 8px rgba(10, 48, 46, .22);
   text-transform: capitalize;
+  animation: month-badge-glow 3.4s ease-in-out infinite;
 }
 
 .month-heading h2::after {
   content: "";
   position: absolute;
   z-index: -1;
-  inset: -60% 45% -60% -25%;
-  transform: rotate(18deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .2), transparent);
+  top: -45%;
+  bottom: -45%;
+  left: -45%;
+  width: 38%;
+  transform: skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .48), transparent);
+  animation: month-badge-sheen 4.2s ease-in-out infinite;
+  pointer-events: none;
 }
-.calendar-name { margin-bottom: 7px; color: var(--ink-soft); font-size: 12px; font-weight: 700; }
+@keyframes month-badge-glow {
+  0%, 100% {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), inset 0 0 20px rgba(119, 255, 236, .12), 0 0 0 1px rgba(77, 225, 207, .18), 0 0 18px rgba(45, 199, 183, .3), 0 12px 30px rgba(23, 79, 75, .25);
+  }
+  50% {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .48), inset 0 0 28px rgba(119, 255, 236, .26), 0 0 0 1px rgba(98, 244, 226, .38), 0 0 34px rgba(45, 219, 198, .58), 0 14px 34px rgba(23, 79, 75, .3);
+  }
+}
+@keyframes month-badge-sheen {
+  0%, 18% { left: -45%; opacity: 0; }
+  28% { opacity: .9; }
+  52% { left: 120%; opacity: 0; }
+  100% { left: 120%; opacity: 0; }
+}
+.calendar-name {
+  position: relative;
+  margin: 0 0 9px 2px;
+  padding-left: 13px;
+  color: #214f4d;
+  font-size: clamp(14px, 3.6vw, 17px);
+  font-weight: 850;
+  letter-spacing: -.012em;
+  line-height: 1.1;
+}
+.calendar-name::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 6px;
+  height: 17px;
+  border-radius: 999px;
+  background: linear-gradient(#4de0ce, #247f78);
+  box-shadow: 0 0 10px rgba(45, 199, 183, .46);
+  transform: translateY(-50%);
+}
 .month-actions { display: flex; gap: 8px; }
 .today-button, .icon-button, .nav-button {
   min-height: 42px;
