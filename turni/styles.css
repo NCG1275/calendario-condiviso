@@ -352,15 +352,15 @@ h1, h2, h3, p { margin-top: 0; }
 .icon-button.is-loading { animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.summary-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; margin-bottom: 13px; }
+.summary-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
 .summary-grid article {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   min-width: 0;
-  padding: 15px 12px 13px;
+  padding: 11px 8px 10px;
   border: 1px solid rgba(255, 255, 255, .62);
-  border-radius: 18px;
+  border-radius: 14px;
   color: #fff;
   background: linear-gradient(145deg, #247a73, #3a9c91);
   box-shadow:
@@ -389,7 +389,7 @@ h1, h2, h3, p { margin-top: 0; }
 .summary-grid strong {
   display: block;
   overflow: hidden;
-  font-size: 25px;
+  font-size: 22px;
   line-height: 1;
   text-overflow: ellipsis;
   text-shadow: 0 2px 7px rgba(19, 55, 63, .2);
@@ -399,7 +399,7 @@ h1, h2, h3, p { margin-top: 0; }
 .summary-grid span {
   display: block;
   overflow: hidden;
-  margin-top: 6px;
+  margin-top: 5px;
   color: rgba(255, 255, 255, .76);
   font-size: 9px;
   font-weight: 800;
@@ -783,12 +783,10 @@ h1, h2, h3, p { margin-top: 0; }
   .calendar-entry::before { top: 1px; bottom: 1px; left: 2px; width: 2px; }
   .on-call-half { padding: 4px 3px; }
   .on-call-half b { font-size: 6px; }
-  .summary-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
-  .summary-grid article { grid-column: span 2; }
-  .summary-grid article:nth-child(n + 4) { grid-column: span 3; }
-  .summary-grid article { padding: 12px 8px 10px; border-radius: 15px; }
-  .summary-grid strong { font-size: 22px; }
-  .summary-grid span { font-size: 8px; }
+  .summary-grid { gap: 4px; margin-bottom: 9px; }
+  .summary-grid article { padding: 9px 3px 8px; border-radius: 11px; text-align: center; }
+  .summary-grid strong { font-size: clamp(16px, 4.6vw, 22px); letter-spacing: -.035em; }
+  .summary-grid span { margin-top: 4px; font-size: clamp(6.5px, 1.85vw, 8px); letter-spacing: 0; }
 }
 
 @media (min-width: 760px) {
