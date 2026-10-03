@@ -352,7 +352,7 @@ h1, h2, h3, p { margin-top: 0; }
 .icon-button.is-loading { animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin-bottom: 13px; }
+.summary-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; margin-bottom: 13px; }
 .summary-grid article {
   position: relative;
   isolation: isolate;
@@ -369,8 +369,9 @@ h1, h2, h3, p { margin-top: 0; }
 }
 
 .summary-grid article:nth-child(2) { background: linear-gradient(145deg, #26746f, #3d9e94); }
-.summary-grid article:nth-child(3) { background: linear-gradient(145deg, #315f87, #538eb9); }
-.summary-grid article:nth-child(4) { background: linear-gradient(145deg, #874f59, #bd6873); }
+.summary-grid article:nth-child(3) { background: linear-gradient(145deg, #68518b, #9573b7); }
+.summary-grid article:nth-child(4) { background: linear-gradient(145deg, #315f87, #538eb9); }
+.summary-grid article:nth-child(5) { background: linear-gradient(145deg, #874f59, #bd6873); }
 
 .summary-grid article::after {
   content: "";
@@ -785,7 +786,7 @@ h1, h2, h3, p { margin-top: 0; }
   .summary-grid { gap: 6px; }
   .summary-grid article { padding: 12px 8px 10px; border-radius: 15px; }
   .summary-grid strong { font-size: 22px; }
-  .summary-grid span { font-size: 8px; }
+  .summary-grid span { font-size: 7px; letter-spacing: 0; }
 }
 
 @media (min-width: 760px) {
