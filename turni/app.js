@@ -46,7 +46,6 @@ const els = {
   bottomPrevButton: document.getElementById('bottomPrevButton'),
   bottomNextButton: document.getElementById('bottomNextButton'),
   bottomTodayButton: document.getElementById('bottomTodayButton'),
-  shiftCount: document.getElementById('shiftCount'),
   hourCount: document.getElementById('hourCount'),
   projectHourCount: document.getElementById('projectHourCount'),
   nightCount: document.getElementById('nightCount'),
@@ -483,7 +482,6 @@ function renderSummary() {
     .map(parseShiftEvent)
     .filter((shift) => shift.recognized);
   const hours = shifts.reduce((total, shift) => total + shift.hours, 0);
-  els.shiftCount.textContent = String(shifts.filter((shift) => shift.code !== '0-8').length);
   els.hourCount.textContent = formatHourTotal(hours);
   const projectHours = shifts.reduce((total, shift) => total + (shift.flagged ? shift.hours : 0), 0);
   els.projectHourCount.textContent = formatHourTotal(projectHours);
@@ -657,7 +655,7 @@ if ('serviceWorker' in navigator) {
       window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=031026.02', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=051026.01', {
         updateViaCache: 'none',
       });
       await registration.update();

@@ -8,7 +8,7 @@ const context = vm.createContext({
   Intl, Date,
   COLOR_CLASSES: {},
   state: { visibleMonth: new Date(2026, 9, 1), events: [] },
-  els: Object.fromEntries(['shiftCount', 'hourCount', 'projectHourCount', 'nightCount', 'onCallCount']
+  els: Object.fromEntries(['hourCount', 'projectHourCount', 'nightCount', 'onCallCount']
     .map((key) => [key, { textContent: '' }])),
 });
 for (const name of ['startOfMonth', 'addMonths', 'localDateKey', 'eventDateKey',
