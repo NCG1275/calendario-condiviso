@@ -12,16 +12,16 @@
     <meta property="og:description" content="Il calendario personale dei turni, sempre aggiornato.">
     <meta property="og:image" content="https://ncg1275.github.io/calendario-condiviso/turni/og.png">
     <title>I miei turni</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=051026.01">
+    <link rel="manifest" href="./manifest.webmanifest?v=111026.01">
     <link rel="apple-touch-icon" href="./apple-touch-icon-v2.png">
     <noscript><style>.session-splash{display:none!important}.splash-active{overflow:auto!important}</style></noscript>
     <link rel="preconnect" href="https://accounts.google.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=051026.01">
+    <link rel="stylesheet" href="./styles.css?v=111026.01">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="./app.js?v=051026.01" defer></script>
+    <script src="./app.js?v=111026.01" defer></script>
   </head>
   <body class="splash-active">
     <section id="sessionSplash" class="session-splash" aria-live="polite" aria-busy="true">
@@ -53,8 +53,11 @@
         <div class="brand-lockup">
           <div class="app-mark app-mark-small" aria-hidden="true"><span>31</span></div>
           <div>
-            <p class="eyebrow app-meta">Planner Turni · <span>v.051026.01 · by GN</span></p>
-            <h1>I miei turni</h1>
+            <p class="eyebrow app-meta">Planner Turni · <span>v.111026.01 · by GN</span></p>
+            <nav class="view-switch" aria-label="Vista dei turni">
+              <h1><button id="personalViewButton" type="button" aria-pressed="true">I miei turni</button></h1>
+              <button id="groupViewButton" type="button" aria-pressed="false">I turni del gruppo</button>
+            </nav>
           </div>
         </div>
         <button id="profileButton" class="profile-button" type="button" aria-label="Account">
@@ -63,7 +66,7 @@
         </button>
       </header>
 
-      <main>
+      <main id="personalView">
         <section class="month-heading" aria-labelledby="monthTitle">
           <div>
             <p id="calendarName" class="calendar-name">Calendario personale</p>
@@ -104,7 +107,22 @@
         </section>
       </main>
 
-      <nav class="bottom-nav" aria-label="Navigazione mesi">
+      <section id="groupView" class="group-view hidden" aria-labelledby="weekTitle">
+        <div class="week-heading">
+          <div><p class="calendar-name">Tutti i colleghi</p><h2 id="weekTitle"></h2></div>
+          <button id="refreshGroupButton" class="icon-button" type="button" aria-label="Aggiorna turni del gruppo">↻</button>
+        </div>
+        <nav class="week-nav" aria-label="Navigazione settimane">
+          <button id="prevWeekButton" class="nav-button" type="button" aria-label="Settimana precedente">‹</button>
+          <button id="currentWeekButton" class="today-button" type="button">Questa settimana</button>
+          <button id="nextWeekButton" class="nav-button" type="button" aria-label="Settimana successiva">›</button>
+        </nav>
+        <p id="groupStatus" class="group-status" role="status" aria-live="polite"></p>
+        <div id="groupTable" class="group-table" role="table" aria-label="Turni settimanali del gruppo"></div>
+        <p class="group-note">** progetto · D reperibilità diurna · N reperibilità notturna</p>
+      </section>
+
+      <nav id="personalBottomNav" class="bottom-nav" aria-label="Navigazione mesi">
         <button id="bottomPrevButton" type="button"><span aria-hidden="true">‹</span>Prima</button>
         <button id="bottomTodayButton" class="bottom-today" type="button"><span aria-hidden="true">●</span>Oggi</button>
         <button id="bottomNextButton" type="button"><span aria-hidden="true">›</span>Dopo</button>

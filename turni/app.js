@@ -26,9 +26,25 @@ const state = {
   visibleMonth: startOfMonth(new Date()),
   updatedAt: '',
   requestVersion: 0,
+  view: 'personal',
+  visibleWeek: startOfWeek(new Date()),
+  colleagues: [],
+  groupRequestVersion: 0,
 };
 
 const els = {
+  personalViewButton: document.getElementById('personalViewButton'),
+  groupViewButton: document.getElementById('groupViewButton'),
+  personalView: document.getElementById('personalView'),
+  personalBottomNav: document.getElementById('personalBottomNav'),
+  groupView: document.getElementById('groupView'),
+  weekTitle: document.getElementById('weekTitle'),
+  groupStatus: document.getElementById('groupStatus'),
+  groupTable: document.getElementById('groupTable'),
+  refreshGroupButton: document.getElementById('refreshGroupButton'),
+  prevWeekButton: document.getElementById('prevWeekButton'),
+  nextWeekButton: document.getElementById('nextWeekButton'),
+  currentWeekButton: document.getElementById('currentWeekButton'),
   sessionSplash: document.getElementById('sessionSplash'),
   sessionSplashStatus: document.getElementById('sessionSplashStatus'),
   loginView: document.getElementById('loginView'),
@@ -70,6 +86,119 @@ let sessionSplashHideTimer = 0;
 
 function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function startOfWeek(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() - (date.getDay() + 6) % 7);
+}
+
+function weekDate(offset) {
+  const date = state.visibleWeek;
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + offset);
+}
+
+function setView(view) {
+  state.view = view;
+  const group = view === 'group';
+  els.personalView.classList.toggle('hidden', group);
+  els.personalBottomNav.classList.toggle('hidden', group);
+  els.groupView.classList.toggle('hidden', !group);
+  document.body.classList.toggle('group-active', group);
+  els.personalViewButton.setAttribute('aria-pressed', String(!group));
+  els.groupViewButton.setAttribute('aria-pressed', String(group));
+  closeSheet(els.daySheet);
+  if (group) {
+    ++state.requestVersion;
+    setLoading(false);
+    loadGroupWeek();
+  } else {
+    ++state.groupRequestVersion;
+    loadMonth();
+  }
+}
+
+function groupShiftLabels(events) {
+  return events.map((event) => {
+    const onCall = onCallKind(event);
+    if (onCall) return { text: onCall === 'day' ? 'D 8-20' : 'N 20-8', kind: 'oncall' };
+    const shift = parseShiftEvent(event);
+    return { text: shift.code + (shift.flagged ? '**' : ''), kind: shift.kind };
+  });
+}
+
+function renderGroupWeek() {
+  const formatter = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' });
+  els.weekTitle.textContent = `${formatter.format(weekDate(0))} – ${formatter.format(weekDate(6))} ${weekDate(6).getFullYear()}`;
+  const today = localDateKey(new Date());
+  let html = '<div class="group-row group-header" role="row"><span role="columnheader">Collega</span>';
+  for (let offset = 0; offset < 7; offset += 1) {
+    const date = weekDate(offset);
+    const current = localDateKey(date) === today ? ' group-today' : '';
+    html += `<span role="columnheader" class="${current}"><b>${['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'][offset]}</b><strong>${date.getDate()}</strong></span>`;
+  }
+  html += '</div>';
+  state.colleagues.forEach((colleague) => {
+    html += `<div class="group-row" role="row"><span class="group-name" role="rowheader" title="${escapeHtml(colleague.name)}">${escapeHtml(colleague.name)}</span>`;
+    for (let offset = 0; offset < 7; offset += 1) {
+      const key = localDateKey(weekDate(offset));
+      const events = (colleague.events || []).filter((event) => eventDateKey(event) === key);
+      const labels = groupShiftLabels(events);
+      const text = colleague.unavailable ? 'Non disponibile' : labels.map((label) => label.text).join(', ') || 'Nessun turno pubblicato';
+      const current = key === today ? ' group-today' : '';
+      html += `<span role="cell" class="group-cell${current}" aria-label="${escapeHtml(text)}" title="${escapeHtml(text)}" style="--label-count:${Math.max(1, labels.length)}">`;
+      html += colleague.unavailable ? '<i class="group-missing">?</i>' : labels.length
+        ? labels.map((label) => `<i class="group-label ${escapeHtml(label.kind)}">${escapeHtml(label.text)}</i>`).join('')
+        : '<i class="group-empty">–</i>';
+      html += '</span>';
+    }
+    html += '</div>';
+  });
+  els.groupTable.style.setProperty('--colleague-count', Math.max(1, state.colleagues.length));
+  els.groupTable.innerHTML = html;
+}
+
+async function loadGroupWeek() {
+  if (!state.idToken && !state.deviceSessionToken) return;
+  const version = ++state.groupRequestVersion;
+  state.colleagues = [];
+  renderGroupWeek();
+  els.groupStatus.textContent = 'Caricamento dei turni del gruppo…';
+  els.groupStatus.classList.remove('is-error');
+  els.refreshGroupButton.disabled = true;
+  els.groupTable.setAttribute('aria-busy', 'true');
+  try {
+    const data = await jsonpRequest('groupShifts', {
+      idToken: state.deviceSessionToken ? '' : state.idToken,
+      sessionToken: state.deviceSessionToken,
+      payload: encodePayload({ start: localDateKey(weekDate(0)), end: localDateKey(weekDate(7)) }),
+    });
+    if (version !== state.groupRequestVersion) return;
+    state.colleagues = Array.isArray(data.colleagues) ? data.colleagues : [];
+    renderGroupWeek();
+    const missing = state.colleagues.filter((colleague) => colleague.unavailable).length;
+    els.groupStatus.textContent = missing ? `${missing} calendari non disponibili · riprova con ↻`
+      : state.colleagues.length ? `${state.colleagues.length} colleghi · aggiornato alle ${formatTime(data.updatedAt)}`
+        : 'Nessun calendario del gruppo disponibile.';
+  } catch (error) {
+    if (version !== state.groupRequestVersion) return;
+    const message = error instanceof Error ? error.message : 'Turni del gruppo non disponibili.';
+    if (message === 'Sessione dispositivo scaduta. Accedi di nuovo.') {
+      logoutStandalone(message);
+      return;
+    }
+    els.groupStatus.textContent = message;
+    els.groupStatus.classList.add('is-error');
+  } finally {
+    if (version === state.groupRequestVersion) {
+      els.refreshGroupButton.disabled = false;
+      els.groupTable.setAttribute('aria-busy', 'false');
+    }
+  }
+}
+
+function changeWeek(amount) {
+  state.visibleWeek = weekDate(amount * 7);
+  loadGroupWeek();
 }
 
 function addMonths(date, amount) {
@@ -150,7 +279,7 @@ function jsonpRequest(action, params = {}) {
       if (settled) return;
       cleanup();
       reject(new Error('Connessione scaduta. Riprova tra poco.'));
-    }, CONFIG.JSONP_TIMEOUT_MS);
+    }, action === 'groupShifts' ? 90000 : CONFIG.JSONP_TIMEOUT_MS);
 
     window[callbackName] = (response) => {
       cleanup();
@@ -231,6 +360,8 @@ function clearDeviceSession() {
 }
 
 async function logoutStandalone(message = 'Sessione terminata. Accedi per continuare.') {
+  resetGroupView();
+  ++state.requestVersion;
   const sessionToken = state.deviceSessionToken;
   clearDeviceSession();
   if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect();
@@ -272,6 +403,7 @@ async function loadMonth() {
     if (requestVersion !== state.requestVersion) return;
     const message = error instanceof Error ? error.message : 'Turni non disponibili.';
     if (state.deviceSessionToken && message === 'Sessione dispositivo scaduta. Accedi di nuovo.') {
+      resetGroupView();
       clearDeviceSession();
       state.user = null;
       state.events = [];
@@ -543,6 +675,7 @@ async function onGoogleCredential(response) {
 }
 
 function resetEmbeddedSession() {
+  resetGroupView();
   ++state.requestVersion;
   state.idToken = '';
   state.user = null;
@@ -604,6 +737,29 @@ async function initializeStandalone() {
   initializeGoogleIdentity();
 }
 
+function resetGroupView() {
+  ++state.groupRequestVersion;
+  state.colleagues = [];
+  state.view = 'personal';
+  document.body.classList.remove('group-active');
+  els.personalView.classList.remove('hidden');
+  els.personalBottomNav.classList.remove('hidden');
+  els.groupView.classList.add('hidden');
+  els.groupTable.innerHTML = '';
+  els.personalViewButton.setAttribute('aria-pressed', 'true');
+  els.groupViewButton.setAttribute('aria-pressed', 'false');
+}
+
+els.personalViewButton.addEventListener('click', () => setView('personal'));
+els.groupViewButton.addEventListener('click', () => setView('group'));
+els.prevWeekButton.addEventListener('click', () => changeWeek(-1));
+els.nextWeekButton.addEventListener('click', () => changeWeek(1));
+els.currentWeekButton.addEventListener('click', () => {
+  state.visibleWeek = startOfWeek(new Date());
+  loadGroupWeek();
+});
+els.refreshGroupButton.addEventListener('click', loadGroupWeek);
+
 els.monthGrid.addEventListener('click', (event) => {
   const button = event.target.closest('[data-date]');
   if (button) openDay(button.dataset.date);
@@ -655,7 +811,7 @@ if ('serviceWorker' in navigator) {
       window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=051026.01', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=111026.01', {
         updateViaCache: 'none',
       });
       await registration.update();

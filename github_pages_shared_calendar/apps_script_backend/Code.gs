@@ -2,6 +2,7 @@ const CONFIG = {
   SHARED_CALENDAR_ID: '9d42da48ceb082c24d18a088c08edd6c0944d5e0abb0d620edcb9b6323f6d4da@group.calendar.google.com',
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
   ALLOWED_DOMAIN: '',
+  REVOKED_EMAILS: ['femasillo78@gmail.com'],
   ALLOWED_EMAILS: [
     'john.ncr24@gmail.com',
     'giannicola.aru@gmail.com',
@@ -11,7 +12,6 @@ const CONFIG = {
     'micheladelrio@tiscali.it',
     'mdesogus.76@gmail.com',
     'paolomattana2@gmail.com',
-    'femasillo78@gmail.com',
     'patrypitzalis@yahoo.it',
     'pirasdesi@gmail.com',
     'frapira73@gmail.com',
@@ -100,6 +100,9 @@ function handleApiGet_(params) {
       case 'personalShifts':
         result = getPersonalShifts_(payload, idToken, sessionToken);
         break;
+      case 'groupShifts':
+        result = getGroupShifts_(payload, idToken, sessionToken);
+        break;
       case 'createDeviceSession':
         result = createDeviceSession_(idToken);
         break;
@@ -141,6 +144,58 @@ function getPersonalShifts_(payload, idToken, sessionToken) {
       .filter(function(item) { return item.status !== 'cancelled'; })
       .map(mapShiftEventForClient_),
   };
+}
+
+// Only the published shift labels and dates are shared; no event identifiers,
+// account emails, descriptions or editable request data leave this endpoint.
+function getGroupShifts_(payload, idToken, sessionToken) {
+  if (sessionToken) getDeviceSessionUser_(sessionToken);
+  else getVerifiedUser_(idToken);
+  const range = validateShiftRange_(payload);
+  if (range.end.getTime() - range.start.getTime() !== 7 * 86400000) {
+    throw new Error('Intervallo settimanale non valido.');
+  }
+  const calendars = [];
+  let pageToken = '';
+  do {
+    const options = { maxResults: 250, showHidden: true };
+    if (pageToken) options.pageToken = pageToken;
+    const response = Calendar.CalendarList.list(options);
+    (response.items || []).forEach(function(calendar) {
+      if (/^Turni\s+\S/i.test(String(calendar.summary || '').trim())) calendars.push(calendar);
+    });
+    pageToken = response.nextPageToken || '';
+  } while (pageToken);
+  const colleagues = calendars.map(function(calendar) {
+    const colleague = { name: calendar.summary.trim().replace(/^Turni\s+/i, ''), events: [], unavailable: false };
+    try {
+      let eventPageToken = '';
+      do {
+        // Cover both CET and CEST midnights, then select the published local dates.
+        const options = {
+          singleEvents: true, showDeleted: false, orderBy: 'startTime', maxResults: 500,
+          timeMin: payload.start + 'T00:00:00+02:00',
+          timeMax: payload.end + 'T00:00:00+01:00',
+        };
+        if (eventPageToken) options.pageToken = eventPageToken;
+        const response = Calendar.Events.list(calendar.id, options);
+        (response.items || []).forEach(function(event) {
+          const start = (event.start && (event.start.dateTime || event.start.date)) || '';
+          const date = start.slice(0, 10);
+          if (event.status !== 'cancelled' && date >= payload.start && date < payload.end) {
+            colleague.events.push({ summary: event.summary || 'Turno', start: date });
+          }
+        });
+        eventPageToken = response.nextPageToken || '';
+      } while (eventPageToken);
+    } catch (error) {
+      colleague.events = [];
+      colleague.unavailable = true;
+    }
+    return colleague;
+  });
+  colleagues.sort(function(a, b) { return a.name.localeCompare(b.name, 'it'); });
+  return { colleagues: colleagues, updatedAt: new Date().toISOString() };
 }
 
 function createDeviceSession_(idToken) {
@@ -521,6 +576,10 @@ function validateAuthorizedUser_(user) {
   const email = String((user || {}).email || '').trim().toLowerCase();
   if (!email) {
     throw new Error('Email utente non disponibile.');
+  }
+
+  if (CONFIG.REVOKED_EMAILS.indexOf(email) !== -1) {
+    throw new Error('Questo account non è autorizzato ad accedere.');
   }
 
   const configuredAllowedEmails = getJsonScriptProperty_('ALLOWED_EMAILS_JSON', CONFIG.ALLOWED_EMAILS || []);

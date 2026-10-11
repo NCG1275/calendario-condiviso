@@ -3,6 +3,21 @@
 PWA in sola lettura che mostra, mese per mese, gli eventi pubblicati da
 `planner_turni_web` nei calendari Google personali `Turni …`.
 
+L'intestazione contiene i pulsanti `I miei turni` e, sotto, `I turni del gruppo`.
+La seconda vista mostra tutti i calendari pubblicati `Turni …` leggibili dal
+backend, anche per i colleghi senza un'associazione di accesso personale.
+Ogni settimana va da lunedì a domenica: frecce per la precedente/successiva,
+`Questa settimana` per tornare a oggi e `↻` per aggiornare.
+La tabella adatta righe e caratteri all'altezza dello smartphone senza scroll;
+gli orari restano completi (`8-14`, `8-20`, `20-24`, `0-8`), con `**` e
+reperibilità `D 8-20` / `N 20-8`. Un trattino indica nessun turno pubblicato;
+`?` indica un calendario non leggibile.
+
+La nuova API autenticata `groupShifts` accetta solo intervalli di sette giorni,
+riusa Google login/sessioni dispositivo e restituisce soltanto nome del collega,
+data ed etichetta del turno. Per attivare la funzione è necessario pubblicare
+anche il backend Apps Script aggiornato, oltre ai file statici della PWA.
+
 ## Flusso
 
 1. L’utente accede con Google dalla pagina GitHub Pages `/turni/`.
