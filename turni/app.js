@@ -118,9 +118,9 @@ function setView(view) {
 }
 
 function groupShiftLabels(events) {
-  return events.map((event) => {
+  return [...events].sort((a, b) => Number(Boolean(onCallKind(a))) - Number(Boolean(onCallKind(b)))).map((event) => {
     const onCall = onCallKind(event);
-    if (onCall) return { text: onCall === 'day' ? 'D 8-20' : 'N 20-8', kind: 'oncall' };
+    if (onCall) return { text: onCall === 'day' ? 'RD' : 'RN', kind: 'oncall' };
     const shift = parseShiftEvent(event);
     return { text: shift.code + (shift.flagged ? '**' : ''), kind: shift.kind };
   });
@@ -143,7 +143,7 @@ function renderGroupWeek() {
       const key = localDateKey(weekDate(offset));
       const events = (colleague.events || []).filter((event) => eventDateKey(event) === key);
       const labels = groupShiftLabels(events);
-      const text = colleague.unavailable ? 'Non disponibile' : labels.map((label) => label.text).join(', ') || 'Nessun turno pubblicato';
+      const text = colleague.unavailable ? 'Non disponibile' : labels.map((label) => label.text === 'RD' ? 'Reperibilità diurna' : label.text === 'RN' ? 'Reperibilità notturna' : label.text).join(', ') || 'Nessun turno pubblicato';
       const current = key === today ? ' group-today' : '';
       html += `<span role="cell" class="group-cell${current}" aria-label="${escapeHtml(text)}" title="${escapeHtml(text)}" style="--label-count:${Math.max(1, labels.length)}">`;
       html += colleague.unavailable ? '<i class="group-missing">?</i>' : labels.length
@@ -811,7 +811,7 @@ if ('serviceWorker' in navigator) {
       window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=111026.02', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=111026.03', {
         updateViaCache: 'none',
       });
       await registration.update();

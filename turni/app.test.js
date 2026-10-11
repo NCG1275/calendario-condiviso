@@ -44,5 +44,7 @@ assert.equal(vm.runInContext('localDateKey(weekDate(0))', context), '2026-10-26'
 assert.equal(vm.runInContext('localDateKey(weekDate(7))', context), '2026-11-02');
 context.groupEvents = [event('8-20** - SALA'), event('14-20 - AMB'), event('20-24'), event('0-8'), event('REP GIORNO'), event('REP NOTTE'), event('M')];
 assert.equal(vm.runInContext('groupShiftLabels(groupEvents).map(label => label.text).join(",")', context),
-  '8-20**,14-20,20-24,0-8,D 8-20,N 20-8,M');
+  '8-20**,14-20,20-24,0-8,M,RD,RN');
+context.groupEvents = [event('REP NOTTE'), event('8-20 - SALA')];
+assert.equal(vm.runInContext('groupShiftLabels(groupEvents).map(label => label.text).join(",")', context), '8-20,RN');
 console.log('Group week boundaries and full time labels OK');

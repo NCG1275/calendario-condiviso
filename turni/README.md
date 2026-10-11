@@ -11,7 +11,7 @@ Ogni settimana va da lunedì a domenica: frecce per la precedente/successiva,
 `Questa settimana` per tornare a oggi e `↻` per aggiornare.
 La tabella adatta righe e caratteri all'altezza dello smartphone senza scroll;
 gli orari restano completi (`8-14`, `8-20`, `20-24`, `0-8`), con `**` e
-reperibilità `D 8-20` / `N 20-8`. Un trattino indica nessun turno pubblicato;
+reperibilità `RD` / `RN` separate dagli orari di lavoro. Un trattino indica nessun turno pubblicato;
 `?` indica un calendario non leggibile.
 
 La nuova API autenticata `groupShifts` accetta solo intervalli di sette giorni,
