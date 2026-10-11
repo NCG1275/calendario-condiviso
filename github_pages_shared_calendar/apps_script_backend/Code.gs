@@ -3,6 +3,7 @@ const CONFIG = {
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
   ALLOWED_DOMAIN: '',
   REVOKED_EMAILS: ['femasillo78@gmail.com'],
+  GROUP_DOCTORS: ['Aru', 'Cabianca', 'Casula', 'Corda', 'Del Rio', 'Desogus', 'Mattana', 'Pili', 'Piras D', 'Piras F', 'Pistincu', 'Pitzalis', 'Puddu', 'Sanna', 'Tolu'],
   ALLOWED_EMAILS: [
     'john.ncr24@gmail.com',
     'giannicola.aru@gmail.com',
@@ -174,8 +175,12 @@ function getGroupShifts_(payload, idToken, sessionToken) {
     });
     pageToken = response.nextPageToken || '';
   } while (pageToken);
-  const colleagues = calendars.map(function(calendar) {
-    const colleague = { name: calendar.summary.trim().replace(/^Turni\s+/i, ''), events: [], unavailable: false };
+  const colleagues = CONFIG.GROUP_DOCTORS.map(function(name) {
+    const calendar = calendars.find(function(item) {
+      return item.summary.trim().replace(/^Turni\s+/i, '').toLowerCase() === name.toLowerCase();
+    });
+    const colleague = { name: name, events: [], unavailable: false, unpublished: !calendar };
+    if (!calendar) return colleague;
     try {
       let eventPageToken = '';
       do {

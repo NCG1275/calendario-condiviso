@@ -143,10 +143,10 @@ function renderGroupWeek() {
       const key = localDateKey(weekDate(offset));
       const events = (colleague.events || []).filter((event) => eventDateKey(event) === key);
       const labels = groupShiftLabels(events);
-      const text = colleague.unavailable ? 'Non disponibile' : labels.map((label) => label.text === 'RD' ? 'Reperibilità diurna' : label.text === 'RN' ? 'Reperibilità notturna' : label.text).join(', ') || 'Nessun turno pubblicato';
+      const text = colleague.unpublished ? 'Turni non pubblicati: calendario assente' : colleague.unavailable ? 'Non disponibile' : labels.map((label) => label.text === 'RD' ? 'Reperibilità diurna' : label.text === 'RN' ? 'Reperibilità notturna' : label.text).join(', ') || 'Nessun turno pubblicato';
       const current = key === today ? ' group-today' : '';
       html += `<span role="cell" class="group-cell${current}" aria-label="${escapeHtml(text)}" title="${escapeHtml(text)}" style="--label-count:${Math.max(1, labels.length)}">`;
-      html += colleague.unavailable ? '<i class="group-missing">?</i>' : labels.length
+      html += colleague.unpublished ? '<i class="group-missing">NP</i>' : colleague.unavailable ? '<i class="group-missing">?</i>' : labels.length
         ? labels.map((label) => `<i class="group-label ${escapeHtml(label.kind)}">${escapeHtml(label.text)}</i>`).join('')
         : '<i class="group-empty">–</i>';
       html += '</span>';
@@ -176,8 +176,9 @@ async function loadGroupWeek() {
     state.colleagues = Array.isArray(data.colleagues) ? data.colleagues : [];
     renderGroupWeek();
     const missing = state.colleagues.filter((colleague) => colleague.unavailable).length;
-    els.groupStatus.textContent = missing ? `${missing} calendari non disponibili · riprova con ↻`
-      : state.colleagues.length ? `${state.colleagues.length} colleghi · aggiornato alle ${formatTime(data.updatedAt)}`
+    const unpublished = state.colleagues.filter((colleague) => colleague.unpublished).length;
+    els.groupStatus.textContent = state.colleagues.length
+      ? `${state.colleagues.length} anestesisti${unpublished ? ` · NP: ${unpublished} non pubblicati` : ''}${missing ? ` · ?: ${missing} non disponibili` : ''} · ${formatTime(data.updatedAt)}`
         : 'Nessun calendario del gruppo disponibile.';
   } catch (error) {
     if (version !== state.groupRequestVersion) return;
@@ -811,7 +812,7 @@ if ('serviceWorker' in navigator) {
       window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=111026.05', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=111026.06', {
         updateViaCache: 'none',
       });
       await registration.update();
