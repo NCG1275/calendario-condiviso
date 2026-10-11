@@ -64,10 +64,11 @@ context.Calendar = {
   CalendarList: { list(options) {
     calendarReads += 1;
     return options.pageToken ? { items: [{ id: 'unmapped', summary: 'Turni Del Rio' }, { id: 'missing', summary: 'Turni Corda' }] }
-      : { items: [{ id: 'aru', summary: 'Turni Aru' }, { id: 'private', summary: 'Calendario privato' }], nextPageToken: 'next' };
+      : { items: [{ id: 'aru', summary: 'Turni Aru' }, { id: 'private', summary: 'Calendario privato' }, { id: 'revoked', summary: 'Turni Masillo' }], nextPageToken: 'next' };
   } },
   Events: { list(id, options) {
     assert.notEqual(id, 'private');
+    assert.notEqual(id, 'revoked');
     assert.equal(options.timeMin, '2026-10-26T00:00:00+02:00');
     assert.equal(options.timeMax, '2026-11-02T00:00:00+01:00');
     if (id === 'missing') throw new Error('Calendar unavailable');

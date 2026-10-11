@@ -6,6 +6,7 @@ PWA in sola lettura che mostra, mese per mese, gli eventi pubblicati da
 L'intestazione contiene i pulsanti `I miei turni` e, sotto, `I turni del gruppo`.
 La seconda vista mostra tutti i calendari pubblicati `Turni …` leggibili dal
 backend, anche per i colleghi senza un'associazione di accesso personale.
+I calendari degli account rimossi dalla lista (`REVOKED_EMAILS`) sono esclusi.
 Ogni settimana va da lunedì a domenica: frecce per la precedente/successiva,
 `Questa settimana` per tornare a oggi e `↻` per aggiornare.
 La tabella adatta righe e caratteri all'altezza dello smartphone senza scroll;

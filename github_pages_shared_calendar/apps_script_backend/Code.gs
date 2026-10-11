@@ -155,6 +155,13 @@ function getGroupShifts_(payload, idToken, sessionToken) {
   if (range.end.getTime() - range.start.getTime() !== 7 * 86400000) {
     throw new Error('Intervallo settimanale non valido.');
   }
+  const revokedCalendarNames = (CONFIG.REVOKED_EMAILS || []).map(function(email) {
+    try {
+      return resolveShiftCalendarSummary_(email, resolveOwnerName_(email, '')).trim().toLowerCase();
+    } catch (error) {
+      return '';
+    }
+  });
   const calendars = [];
   let pageToken = '';
   do {
@@ -162,7 +169,8 @@ function getGroupShifts_(payload, idToken, sessionToken) {
     if (pageToken) options.pageToken = pageToken;
     const response = Calendar.CalendarList.list(options);
     (response.items || []).forEach(function(calendar) {
-      if (/^Turni\s+\S/i.test(String(calendar.summary || '').trim())) calendars.push(calendar);
+      const summary = String(calendar.summary || '').trim();
+      if (/^Turni\s+\S/i.test(summary) && revokedCalendarNames.indexOf(summary.toLowerCase()) === -1) calendars.push(calendar);
     });
     pageToken = response.nextPageToken || '';
   } while (pageToken);
