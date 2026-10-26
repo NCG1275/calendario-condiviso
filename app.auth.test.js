@@ -63,6 +63,20 @@ async function check(source) {
   await context.jsonpRequest('createDeviceSession', { idToken: 'synthetic-Google-credential' });
   assert.equal(requestUrl.searchParams.has('sessionToken'),false);
   assert.equal(requestUrl.searchParams.get('idToken'),'synthetic-Google-credential');
+  // Logout during session creation must not silently sign the user back in.
+  let resolveSession, revoked = '';
+  context.state.deviceSessionToken = '';
+  context.state.isAuthenticated = false;
+  context.jsonpRequest = (action, params) => action === 'createDeviceSession'
+    ? new Promise(resolve => { resolveSession = resolve; })
+    : (revoked = params.sessionToken, Promise.resolve({}));
+  use('onGoogleCredential');
+  const signingIn = context.onGoogleCredential({credential:'synthetic-Google-credential'});
+  context.state.idToken = '';
+  resolveSession(session);
+  await signingIn;
+  assert.equal(context.state.deviceSessionToken,'');
+  assert.equal(revoked,session.sessionToken);
 }
 (async()=>{
   await check(fs.readFileSync(__dirname+'/app.js','utf8'));

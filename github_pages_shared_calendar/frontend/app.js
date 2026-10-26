@@ -905,14 +905,20 @@ async function onGoogleCredential(response) {
   const wasAuthenticated = state.isAuthenticated;
   state.idToken = response.credential || '';
   if (!hasAuthentication()) return;
+  const credential = state.idToken;
   try {
     const session = await jsonpRequest('createDeviceSession', { idToken: state.idToken });
+    if (state.idToken !== credential) {
+      jsonpRequest('revokeDeviceSession', { sessionToken: session.sessionToken }).catch(() => {});
+      return;
+    }
     state.deviceSessionToken = session.sessionToken;
     state.idToken = '';
     try { saveDeviceSession(session); } catch (error) { /* Session remains usable in memory. */ }
   } catch (error) {
     // The current Google credential remains usable if session creation fails.
   }
+  if (!hasAuthentication()) return;
   state.credentialIssuedAt = Date.now();
   state.credentialRefreshRequestedAt = 0;
   els.saveButton.disabled = false;
