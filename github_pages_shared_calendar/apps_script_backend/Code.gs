@@ -87,16 +87,16 @@ function handleApiGet_(params) {
 
     switch (action) {
       case 'bootstrap':
-        result = getBootstrapData_(idToken);
+        result = getBootstrapData_(idToken, sessionToken);
         break;
       case 'create':
-        result = createOwnedEvent_(payload, idToken);
+        result = createOwnedEvent_(payload, idToken, sessionToken);
         break;
       case 'update':
-        result = updateOwnedEvent_(payload, idToken);
+        result = updateOwnedEvent_(payload, idToken, sessionToken);
         break;
       case 'delete':
-        result = deleteOwnedEvent_(String(params.eventId || payload.id || ''), idToken);
+        result = deleteOwnedEvent_(String(params.eventId || payload.id || ''), idToken, sessionToken);
         break;
       case 'personalShifts':
         result = getPersonalShifts_(payload, idToken, sessionToken);
@@ -404,8 +404,12 @@ function mapShiftEventForClient_(event) {
   };
 }
 
-function getBootstrapData_(idToken) {
-  const user = getVerifiedUser_(idToken);
+function getAuthenticatedUser_(idToken, sessionToken) {
+  return sessionToken ? getDeviceSessionUser_(sessionToken) : getVerifiedUser_(idToken);
+}
+
+function getBootstrapData_(idToken, sessionToken) {
+  const user = getAuthenticatedUser_(idToken, sessionToken);
   const now = new Date();
   const min = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const max = new Date(min.getTime() + CONFIG.LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000);
@@ -416,8 +420,8 @@ function getBootstrapData_(idToken) {
   };
 }
 
-function createOwnedEvent_(payload, idToken) {
-  const user = getVerifiedUser_(idToken);
+function createOwnedEvent_(payload, idToken, sessionToken) {
+  const user = getAuthenticatedUser_(idToken, sessionToken);
   validatePayload_(payload);
   const ownerName = resolveOwnerName_(user.email, user.name);
 
@@ -443,8 +447,8 @@ function createOwnedEvent_(payload, idToken) {
   });
 }
 
-function updateOwnedEvent_(payload, idToken) {
-  const user = getVerifiedUser_(idToken);
+function updateOwnedEvent_(payload, idToken, sessionToken) {
+  const user = getAuthenticatedUser_(idToken, sessionToken);
   validatePayload_(payload, true);
   const ownerName = resolveOwnerName_(user.email, user.name);
 
@@ -475,8 +479,8 @@ function updateOwnedEvent_(payload, idToken) {
   });
 }
 
-function deleteOwnedEvent_(eventId, idToken) {
-  const user = getVerifiedUser_(idToken);
+function deleteOwnedEvent_(eventId, idToken, sessionToken) {
+  const user = getAuthenticatedUser_(idToken, sessionToken);
   if (!eventId) {
     throw new Error('ID evento mancante.');
   }

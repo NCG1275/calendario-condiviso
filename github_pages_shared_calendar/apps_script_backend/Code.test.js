@@ -100,3 +100,33 @@ assert.throws(() => context.getGroupShifts_({ start: '2026-10-26', end: '2026-11
 assert.throws(() => context.getGroupShifts_({ start: '2026-10-26', end: '2026-11-02' }, '', 'invalid'), /Sessione dispositivo scaduta/);
 assert.equal(calendarReads, readsBefore);
 console.log('Authenticated group shifts, pagination, partial failures and privacy tests OK');
+
+// A persistent session can access shared requests, but ownership still applies.
+context.listEvents_ = () => [];
+assert.equal(context.getBootstrapData_('', validSession.sessionToken).user.email, 'giannicola.aru@gmail.com');
+for (const operation of [
+  () => context.getBootstrapData_('google-token', 'invalid'),
+  () => context.createOwnedEvent_({}, 'google-token', 'invalid'),
+  () => context.updateOwnedEvent_({}, 'google-token', 'invalid'),
+  () => context.deleteOwnedEvent_('event', 'google-token', 'invalid'),
+]) assert.throws(operation, /Sessione dispositivo scaduta/);
+context.validatePayload_ = () => {};
+context.assertNoDuplicateRequest_ = () => {};
+let writes = 0;
+context.Calendar.Events.get = () => ({ extendedProperties: { private: { ownerEmail: 'other@example.test' } } });
+context.Calendar.Events.update = () => { writes++; };
+context.Calendar.Events.remove = () => { writes++; };
+assert.throws(() => context.updateOwnedEvent_({ id: 'foreign' }, '', validSession.sessionToken), /permess|tuoi|autorizzat/i);
+assert.throws(() => context.deleteOwnedEvent_('foreign', '', validSession.sessionToken), /permess|tuoi|autorizzat/i);
+assert.equal(writes, 0);
+context.Calendar.Events.insert = event => { writes++; return { ...event, id: 'own' }; };
+context.Calendar.Events.get = () => ({ extendedProperties: { private: { ownerEmail: 'giannicola.aru@gmail.com' } } });
+context.Calendar.Events.update = event => { writes++; return { ...event, id: 'own' }; };
+const ownPayload = { id: 'own', summary: 'FERIE', start: '2026-11-02', end: '2026-11-03' };
+assert.equal(context.createOwnedEvent_(ownPayload, '', validSession.sessionToken).canEdit, true);
+assert.equal(context.updateOwnedEvent_(ownPayload, '', validSession.sessionToken).canEdit, true);
+assert.equal(context.deleteOwnedEvent_('own', '', validSession.sessionToken).ok, true);
+assert.equal(writes, 3);
+context.revokeDeviceSession_(validSession.sessionToken);
+assert.throws(() => context.getBootstrapData_('', validSession.sessionToken), /Sessione dispositivo scaduta/);
+console.log('Persistent shared-calendar sessions, revocation and ownership checks OK');

@@ -1,7 +1,7 @@
 const CONFIG = {
   APPS_SCRIPT_API_URL: 'https://script.google.com/macros/s/AKfycbyOEuEFx70o0NRx4Caseht8gUNdMOHDYvYUbCdcaJBQEaREslUrfa5eV7GTXkDRvQcIUw/exec',
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
-  INACTIVITY_TIMEOUT_MS: 5 * 60 * 1000,
+  DEVICE_SESSION_STORAGE_KEY: 'planner-turni-device-session-v1',
   CREDENTIAL_STALE_MS: 50 * 60 * 1000,
   CREDENTIAL_RETRY_MS: 5 * 60 * 1000,
   JSONP_TIMEOUT_MS: 20000,
@@ -33,6 +33,7 @@ const MONTH_LABELS = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'S
 
 const state = {
   idToken: '',
+  deviceSessionToken: '',
   user: null,
   events: [],
   visibleMonth: startOfMonth(new Date()),
@@ -111,9 +112,9 @@ function setBusy(isBusy) {
     updateSaveButtonState();
     els.deleteButton.disabled = !els.eventId.value || els.summary.disabled;
   }
-  els.openCreateModalButton.disabled = isBusy || !state.idToken;
-  els.personalShiftsButton.disabled = isBusy || !state.idToken;
-  els.groupShiftsButton.disabled = isBusy || !state.idToken;
+  els.openCreateModalButton.disabled = isBusy || !hasAuthentication();
+  els.personalShiftsButton.disabled = isBusy || !hasAuthentication();
+  els.groupShiftsButton.disabled = isBusy || !hasAuthentication();
 }
 
 function setModalStatus(message) {
@@ -128,6 +129,45 @@ function setSignedInUi(isSignedIn) {
   els.userCard.classList.toggle('hidden', !isSignedIn);
 }
 
+function hasAuthentication() {
+  return Boolean(state.deviceSessionToken || state.idToken);
+}
+
+function readDeviceSession() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CONFIG.DEVICE_SESSION_STORAGE_KEY) || '{}');
+    const expiresAt = Date.parse(saved.expiresAt || '');
+    if (!saved.sessionToken || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      localStorage.removeItem(CONFIG.DEVICE_SESSION_STORAGE_KEY);
+      return null;
+    }
+    return saved;
+  } catch (error) {
+    try {
+      localStorage.removeItem(CONFIG.DEVICE_SESSION_STORAGE_KEY);
+    } catch (storageError) {
+      // Il browser puo disabilitare lo spazio locale in modalita privata.
+    }
+    return null;
+  }
+}
+
+function saveDeviceSession(session) {
+  localStorage.setItem(CONFIG.DEVICE_SESSION_STORAGE_KEY, JSON.stringify({
+    sessionToken: session.sessionToken,
+    expiresAt: session.expiresAt,
+  }));
+}
+
+function clearDeviceSession() {
+  try {
+    localStorage.removeItem(CONFIG.DEVICE_SESSION_STORAGE_KEY);
+  } catch (error) {
+    // Lo stato in memoria viene comunque eliminato.
+  }
+  state.deviceSessionToken = '';
+}
+
 function clearInactivityTimer() {
   if (state.inactivityTimer) {
     window.clearTimeout(state.inactivityTimer);
@@ -137,21 +177,18 @@ function clearInactivityTimer() {
 
 function armInactivityTimer() {
   clearInactivityTimer();
-  if (!state.isAuthenticated || !state.idToken) return;
-  state.inactivityTimer = window.setTimeout(() => {
-    logout('Sessione scaduta per inattività.');
-  }, CONFIG.INACTIVITY_TIMEOUT_MS);
 }
 
 function registerActivity() {
-  if (!state.isAuthenticated || !state.idToken) return;
+  if (!state.isAuthenticated || !hasAuthentication()) return;
   refreshGoogleCredentialIfNeeded();
   armInactivityTimer();
 }
 
 function refreshGoogleCredentialIfNeeded() {
+  if (state.deviceSessionToken) return;
   const now = Date.now();
-  if (!state.idToken || now - state.credentialIssuedAt < CONFIG.CREDENTIAL_STALE_MS) return;
+  if (!hasAuthentication() || now - state.credentialIssuedAt < CONFIG.CREDENTIAL_STALE_MS) return;
   if (state.credentialRefreshRequestedAt && now - state.credentialRefreshRequestedAt < CONFIG.CREDENTIAL_RETRY_MS) return;
   state.credentialRefreshRequestedAt = now;
   google.accounts.id.prompt();
@@ -330,6 +367,9 @@ function encodePayload(payload) {
 }
 
 function jsonpRequest(action, params = {}) {
+  if (state.deviceSessionToken && ['bootstrap', 'create', 'update', 'delete'].includes(action)) {
+    params = { ...params, idToken: '', sessionToken: state.deviceSessionToken };
+  }
   return new Promise((resolve, reject) => {
     const callbackName = '__calendarCb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
     const script = document.createElement('script');
@@ -356,6 +396,7 @@ function jsonpRequest(action, params = {}) {
       settled = true;
       cleanup();
       if (!response || response.ok !== true) {
+        if (state.deviceSessionToken && /Sessione dispositivo|non è autorizzato|Dominio email non autorizzato/.test(response?.error || '')) logout(response.error);
         reject(new Error((response && response.error) || 'Errore API.'));
         return;
       }
@@ -400,6 +441,8 @@ function resetForm() {
 }
 
 function logout(message) {
+  const sessionToken = state.deviceSessionToken;
+  clearDeviceSession();
   closePersonalShifts();
   sendPersonalShiftsMessage({ type: 'planner-logout' });
   state.idToken = '';
@@ -418,7 +461,8 @@ function logout(message) {
   els.groupShiftsButton.disabled = true;
   closeModal();
   hideOperationModal();
-  google.accounts.id.disableAutoSelect();
+  window.google?.accounts?.id?.disableAutoSelect();
+  if (sessionToken) jsonpRequest('revokeDeviceSession', { sessionToken }).catch(() => {});
 }
 
 function openModal() {
@@ -436,12 +480,12 @@ function sendPersonalShiftsMessage(message) {
 }
 
 function sharePersonalShiftsAuth() {
-  if (!state.idToken) return;
-  sendPersonalShiftsMessage({ type: 'planner-shared-auth', idToken: state.idToken, view: state.shiftsView || 'personal' });
+  if (!hasAuthentication()) return;
+  sendPersonalShiftsMessage({ type: 'planner-shared-auth', idToken: state.idToken, sessionToken: state.deviceSessionToken, view: state.shiftsView || 'personal' });
 }
 
 function openPersonalShifts(view = 'personal') {
-  if (!state.idToken) return;
+  if (!hasAuthentication()) return;
   state.shiftsView = view === 'group' ? 'group' : 'personal';
   const title = state.shiftsView === 'group' ? 'I turni del gruppo' : 'I miei turni';
   document.getElementById('personalShiftsTitle').textContent = title;
@@ -478,7 +522,7 @@ function hideOperationModal() {
 
 function setFormEditable(editable) {
   els.summary.disabled = !editable;
-  els.summaryPickerButton.disabled = !editable || !state.idToken;
+  els.summaryPickerButton.disabled = !editable || !hasAuthentication();
   els.start.disabled = !editable;
   els.end.disabled = !editable;
   els.description.disabled = !editable;
@@ -653,12 +697,14 @@ function renderMonthGrid() {
 }
 
 function loadBootstrap(options = {}) {
-  if (!state.idToken) return Promise.resolve();
+  if (!hasAuthentication()) return Promise.resolve(false);
+  const credential = state.deviceSessionToken || state.idToken;
   registerActivity();
   setBusy(true);
   setStatus('Caricamento eventi...');
   return jsonpRequest('bootstrap', { idToken: state.idToken })
     .then((data) => {
+      if (!hasAuthentication() || credential !== (state.deviceSessionToken || state.idToken)) return false;
       const hadEventsLoaded = state.events.length > 0;
       state.user = data.user || null;
       state.events = data.events || [];
@@ -671,6 +717,7 @@ function loadBootstrap(options = {}) {
       renderMonthGrid();
       setStatus('');
       setBusy(false);
+      return true;
     })
     .catch((error) => {
       setBusy(false);
@@ -760,7 +807,7 @@ function validateDateRange() {
 }
 
 function updateSaveButtonState() {
-  if (!state.idToken || els.summary.disabled) {
+  if (!hasAuthentication() || els.summary.disabled) {
     els.saveButton.disabled = true;
     return;
   }
@@ -823,7 +870,7 @@ function saveEvent(event) {
       setBusy(false);
       setModalStatus(error.message);
       setStatus(error.message, 'error');
-      openModal();
+      if (hasAuthentication()) openModal();
     });
 }
 
@@ -849,13 +896,23 @@ function deleteCurrentEvent() {
       setBusy(false);
       setModalStatus(error.message);
       setStatus(error.message, 'error');
-      openModal();
+      if (hasAuthentication()) openModal();
     });
 }
 
-function onGoogleCredential(response) {
+async function onGoogleCredential(response) {
+  if (!response.credential) return;
   const wasAuthenticated = state.isAuthenticated;
   state.idToken = response.credential || '';
+  if (!hasAuthentication()) return;
+  try {
+    const session = await jsonpRequest('createDeviceSession', { idToken: state.idToken });
+    state.deviceSessionToken = session.sessionToken;
+    state.idToken = '';
+    try { saveDeviceSession(session); } catch (error) { /* Session remains usable in memory. */ }
+  } catch (error) {
+    // The current Google credential remains usable if session creation fails.
+  }
   state.credentialIssuedAt = Date.now();
   state.credentialRefreshRequestedAt = 0;
   els.saveButton.disabled = false;
@@ -870,7 +927,7 @@ function onGoogleCredential(response) {
   loadBootstrap().finally(() => hideOperationModal());
 }
 
-function initGoogleIdentity() {
+async function initGoogleIdentity() {
   showWelcome();
   resetForm();
   renderSummaryPickerOptions();
@@ -879,6 +936,19 @@ function initGoogleIdentity() {
   els.openCreateModalButton.disabled = true;
   els.personalShiftsButton.disabled = true;
   els.groupShiftsButton.disabled = true;
+  const savedSession = readDeviceSession();
+  if (savedSession) {
+    state.deviceSessionToken = savedSession.sessionToken;
+    showOperationModal('ripristino il tuo accesso al calendario.', 'Ripristino sessione');
+    try {
+      const restored = await loadBootstrap({ rethrow: true });
+      if (restored) { sharePersonalShiftsAuth(); return; }
+    } catch (error) {
+      if (state.deviceSessionToken) return;
+    } finally {
+      hideOperationModal();
+    }
+  }
   google.accounts.id.initialize({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
     callback: onGoogleCredential,
@@ -1004,5 +1074,8 @@ els.requestModal.addEventListener('click', (event) => {
   if (event.target === els.requestModal) {
     closeModal();
   }
+});
+window.addEventListener('storage', (event) => {
+  if (event.key === CONFIG.DEVICE_SESSION_STORAGE_KEY && !event.newValue && state.deviceSessionToken) logout('Sessione terminata su questo dispositivo.');
 });
 window.addEventListener('load', initGoogleIdentity);

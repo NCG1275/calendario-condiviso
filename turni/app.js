@@ -706,6 +706,7 @@ function resetEmbeddedSession() {
   resetGroupView();
   ++state.requestVersion;
   state.idToken = '';
+  state.deviceSessionToken = '';
   state.user = null;
   state.events = [];
   els.appView.classList.add('hidden');
@@ -726,9 +727,11 @@ window.addEventListener('message', async (event) => {
   }
   if (event.data?.type !== 'planner-shared-auth') return;
   const nextToken = String(event.data.idToken || '');
-  if (!nextToken) return;
-  const shouldLoad = nextToken !== state.idToken || !state.user;
+  const nextSession = String(event.data.sessionToken || '');
+  if (!nextToken && !nextSession) return;
+  const shouldLoad = nextToken !== state.idToken || nextSession !== state.deviceSessionToken || !state.user;
   state.idToken = nextToken;
+  state.deviceSessionToken = nextSession;
   els.loginStatus.textContent = 'Sessione condivisa. Carico i tuoi turni…';
   const loaded = shouldLoad ? await loadMonth() : true;
   if (loaded) setView(event.data.view === 'group' ? 'group' : 'personal');
@@ -840,7 +843,7 @@ if ('serviceWorker' in navigator) {
       window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.07', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.08', {
         updateViaCache: 'none',
       });
       await registration.update();
