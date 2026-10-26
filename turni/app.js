@@ -122,7 +122,7 @@ function groupShiftLabels(events) {
     const onCall = onCallKind(event);
     if (onCall) return { text: onCall === 'day' ? 'RD' : 'RN', kind: 'oncall' };
     const shift = parseShiftEvent(event);
-    return { text: shift.code + (shift.flagged ? '**' : ''), kind: shift.kind };
+    return { text: shift.code + (shift.flagged ? '**' : ''), kind: shift.kind, destination: shift.destination };
   });
 }
 
@@ -143,11 +143,12 @@ function renderGroupWeek() {
       const key = localDateKey(weekDate(offset));
       const events = (colleague.events || []).filter((event) => eventDateKey(event) === key);
       const labels = groupShiftLabels(events);
-      const text = colleague.unpublished ? 'Turni non pubblicati: calendario assente' : colleague.unavailable ? 'Non disponibile' : labels.map((label) => label.text === 'RD' ? 'Reperibilità diurna' : label.text === 'RN' ? 'Reperibilità notturna' : label.text).join(', ') || 'Nessun turno pubblicato';
+      const text = colleague.unpublished ? 'Turni non pubblicati: calendario assente' : colleague.unavailable ? 'Non disponibile' : labels.map((label) => label.text === 'RD' ? 'Reperibilità diurna' : label.text === 'RN' ? 'Reperibilità notturna' : [label.text, label.destination].filter(Boolean).join(' - ')).join(', ') || 'Nessun turno pubblicato';
+      const lines = (label) => 1 + (label.destination ? Math.ceil(label.destination.length / 7) : 0);
       const current = key === today ? ' group-today' : '';
-      html += `<span role="cell" class="group-cell${current}" aria-label="${escapeHtml(text)}" title="${escapeHtml(text)}" style="--label-count:${Math.max(1, labels.length)}">`;
+      html += `<span role="cell" class="group-cell${current}" aria-label="${escapeHtml(text)}" title="${escapeHtml(text)}" style="--label-count:${Math.max(1, labels.reduce((total, label) => total + lines(label), 0))}">`;
       html += colleague.unpublished ? '<i class="group-missing">NP</i>' : colleague.unavailable ? '<i class="group-missing">?</i>' : labels.length
-        ? labels.map((label) => `<i class="group-label ${escapeHtml(label.kind)}">${escapeHtml(label.text)}</i>`).join('')
+        ? labels.map((label) => `<i class="group-label ${escapeHtml(label.kind)}" style="grid-row:span ${lines(label)}"><b>${escapeHtml(label.text)}</b>${label.destination ? `<small class="group-destination">${escapeHtml(label.destination)}</small>` : ''}</i>`).join('')
         : '<i class="group-empty">–</i>';
       html += '</span>';
     }
@@ -813,7 +814,7 @@ if ('serviceWorker' in navigator) {
       window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.02', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.03', {
         updateViaCache: 'none',
       });
       await registration.update();

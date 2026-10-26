@@ -865,6 +865,9 @@ body.group-active { overflow: hidden; }
 .group-label.rest { background: #d4ead6; color: #32603b; }
 .group-label.oncall { background: #e3e6e9; color: #42505f; }
 .group-label { background: #f0eee6; color: #3b4b48; }
+.group-label { flex-direction: column; }
+.group-label b { font: inherit; }
+.group-destination { max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: center; font: inherit; font-weight: 600; letter-spacing: -.06em; }
 .group-empty { color: #a1afaa; }
 .group-missing { color: #aa3434; background: #fae5e5; }
 .group-today { box-shadow: inset 0 0 0 1px #5c8f86; }

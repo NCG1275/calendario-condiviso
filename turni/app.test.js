@@ -48,3 +48,9 @@ assert.equal(vm.runInContext('groupShiftLabels(groupEvents).map(label => label.t
 context.groupEvents = [event('REP NOTTE'), event('8-20 - SALA')];
 assert.equal(vm.runInContext('groupShiftLabels(groupEvents).map(label => label.text).join(",")', context), '8-20,RN');
 console.log('Group week boundaries and full time labels OK');
+context.groupEvents = [event('8-20** - EMO+GPO'), event('REP NOTTE')];
+assert.equal(vm.runInContext('groupShiftLabels(groupEvents)[0].destination', context), 'EMO+GPO');
+assert.equal(vm.runInContext('groupShiftLabels(groupEvents)[0].text', context), '8-20**');
+assert.equal(vm.runInContext('groupShiftLabels(groupEvents)[1].text', context), 'RN');
+assert.equal(vm.runInContext('groupShiftLabels(groupEvents)[1].destination', context), undefined);
+console.log('Group destinations retained without changing shift or on-call labels OK');
