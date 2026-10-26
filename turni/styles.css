@@ -862,6 +862,7 @@ body.group-active { overflow: hidden; }
 .group-cell { position: relative; isolation: isolate; display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); container-type: size; gap: 0; padding: 1px; font-size: min(9px, calc(((100cqh - 26px) / var(--colleague-count) - 3px) / 3)); }
 .group-label, .group-empty, .group-missing { min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; border-radius: 2px; font-style: normal; font-weight: 750; white-space: nowrap; font-size: inherit; line-height: 1; letter-spacing: -.04em; }
 .group-label { font-size: min(1em, calc((100cqw - 2px) / var(--characters, 1) * 1.4)); }
+.group-single, .group-empty { grid-row: 1 / -1; }
 .group-label.morning { background: #ffe7a1; color: #614a16; }
 .group-label.morning-afternoon { background: #f5c9d4; color: #703548; }
 .group-label.afternoon { background: #f9d0a1; color: #754414; }

@@ -147,6 +147,9 @@ function groupCellLayout(labels) {
 function renderGroupCellContent(labels) {
   const layout = groupCellLayout(labels);
   const line = (text, className) => `<i class="group-label ${className}" style="--characters:${Math.max(1, text.length)}">${escapeHtml(text)}</i>`;
+  if (labels.length === 1 && layout.time && !/^\d{1,2}-\d{1,2}/.test(layout.time) && !layout.destinations.length && !layout.onCall) {
+    return line(layout.time, `group-single ${layout.kind}`);
+  }
   return line(layout.time || (layout.onCall ? '' : '–'), `group-time ${layout.kind}`)
     + line(layout.destinations[0] || '', `group-destination ${layout.kind}`)
     + line(layout.destinations[1] || '', `group-destination ${layout.kind}`);
@@ -843,7 +846,7 @@ if ('serviceWorker' in navigator) {
       window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.09', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.10', {
         updateViaCache: 'none',
       });
       await registration.update();
