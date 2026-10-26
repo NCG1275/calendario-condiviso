@@ -814,7 +814,7 @@ if ('serviceWorker' in navigator) {
       window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.05', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.06', {
         updateViaCache: 'none',
       });
       await registration.update();

@@ -832,16 +832,19 @@ html.embedded .topbar { display: flex !important; padding-block: 6px; }
 html.embedded .topbar .app-mark, html.embedded .topbar .app-meta { display: none; }
 body.group-active { overflow: hidden; }
 .group-active .app-view { height: 100dvh; padding: 0 8px env(safe-area-inset-bottom); display: flex; flex-direction: column; }
-.group-active .topbar { flex: 0 0 auto; padding: calc(8px + env(safe-area-inset-top)) 2px 8px; }
+.group-active .topbar { flex: 0 0 auto; display: grid !important; grid-template-columns: auto minmax(0, 1fr) 34px; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 2px 8px; }
+.group-active .brand-lockup { min-width: 0; }
+.group-active .profile-button { width: 34px; height: 34px; }
 .group-active .topbar .app-mark, .group-active .topbar .app-meta { display: none; }
 .group-active .view-switch { gap: 3px; }
 .group-active .view-switch h1 button { font-size: 16px; padding-block: 4px; }
 .group-active .view-switch > button { font-size: 12px; padding-block: 4px; }
 .group-view { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding-bottom: 4px; }
-.week-heading { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.week-heading { display: none; min-width: 0; }
+.group-active .week-heading { display: block; }
 .week-heading .calendar-name { margin: 0; font-size: 10px; }
-.week-heading h2 { margin: 2px 0; font-size: 19px; letter-spacing: -.025em; }
-.week-heading .icon-button { width: 34px; height: 34px; min-height: 34px; }
+.week-heading h2 { margin: 2px 0; font-size: 14px; line-height: 1.15; letter-spacing: -.025em; }
+.week-nav .icon-button { width: 32px; height: 32px; min-height: 32px; }
 .week-nav { display: flex; justify-content: space-between; align-items: center; margin: 3px 0; }
 .week-nav .nav-button { width: 38px; height: 32px; min-height: 32px; }
 .week-nav .today-button { min-height: 32px; padding: 6px 14px; font-size: 11px; }
@@ -877,5 +880,5 @@ body.group-active { overflow: hidden; }
   .group-active .view-switch { gap: 3px; }
   .group-active .view-switch h1 button { font-size: 16px; }
   .group-active .view-switch > button { font-size: 11px; }
-  .group-active .week-heading h2 { font-size: 16px; }
+  .group-active .week-heading h2 { font-size: 14px; }
 }
