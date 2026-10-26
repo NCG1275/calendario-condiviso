@@ -54,3 +54,29 @@ assert.equal(vm.runInContext('groupShiftLabels(groupEvents)[0].text', context), 
 assert.equal(vm.runInContext('groupShiftLabels(groupEvents)[1].text', context), 'RN');
 assert.equal(vm.runInContext('groupShiftLabels(groupEvents)[1].destination', context), undefined);
 console.log('Group destinations retained without changing shift or on-call labels OK');
+for (const name of ['escapeHtml', 'groupCellLayout', 'renderGroupCellContent']) {
+  vm.runInContext(source.match(new RegExp('function ' + name + '\\([^]*?\\n\\}', 'm'))[0], context);
+}
+for (const call of ['REP GIORNO', 'REP NOTTE']) {
+  context.groupEvents = [event('8-20** - CH.GEN+CH.URG'), event(call)];
+  const layout = vm.runInContext('groupCellLayout(groupShiftLabels(groupEvents))', context);
+  assert.equal(layout.time, '8-20**');
+  assert.equal(Array.from(layout.destinations).join('|'), 'CH.GEN|+CH.URG');
+  assert.equal(layout.onCall, call === 'REP GIORNO' ? 'RD' : 'RN');
+  const html = vm.runInContext('renderGroupCellContent(groupShiftLabels(groupEvents))', context);
+  assert.equal((html.match(/<i /g) || []).length, 3);
+  assert.equal(html.includes('group-oncall'), false);
+}
+context.groupEvents = [event('8-14 - G'), event('14-20 - ORTO'), event('REP NOTTE')];
+const split = vm.runInContext('groupCellLayout(groupShiftLabels(groupEvents))', context);
+assert.equal(split.time, '8-14/14-20');
+assert.equal(Array.from(split.destinations).join('|'), 'G|ORTO');
+assert.equal(split.onCall, 'RN');
+console.log('Three foreground lines, double destinations with RD/RN watermark data, and split shifts OK');
+context.els.weekTitle = {};
+context.els.groupTable = { style: { setProperty() {} }, innerHTML: '' };
+context.state.colleagues = [{ name: 'Test', events: [event('8-20** - CH.GEN+CH.URG', '2026-10-26'), event('REP NOTTE', '2026-10-26')] }];
+vm.runInContext(source.match(/function renderGroupWeek\([^]*?\n\}/m)[0], context);
+vm.runInContext('renderGroupWeek()', context);
+assert.match(context.els.groupTable.innerHTML, /data-oncall="RN"/);
+assert.match(context.els.groupTable.innerHTML, /8-20\*\* - CH.GEN\+CH.URG, Reperibilità notturna/);

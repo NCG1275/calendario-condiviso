@@ -126,6 +126,32 @@ function groupShiftLabels(events) {
   });
 }
 
+function groupCellLayout(labels) {
+  const work = labels.filter((label) => label.kind !== 'oncall');
+  const places = work.map((label) => label.destination).filter(Boolean);
+  let destinations = places;
+  if (places.length === 1) {
+    const parts = places[0].split('+');
+    destinations = parts.length > 1 ? [parts[0], '+' + parts.slice(1).join('+')] : parts;
+  } else if (places.length > 2) {
+    destinations = [places[0], places.slice(1).join(' / ')];
+  }
+  return {
+    time: work.map((label) => label.text).join('/'),
+    destinations,
+    onCall: labels.filter((label) => label.kind === 'oncall').map((label) => label.text).join('/'),
+    kind: work[0]?.kind || 'other',
+  };
+}
+
+function renderGroupCellContent(labels) {
+  const layout = groupCellLayout(labels);
+  const line = (text, className) => `<i class="group-label ${className}" style="--characters:${Math.max(1, text.length)}">${escapeHtml(text)}</i>`;
+  return line(layout.time || (layout.onCall ? '' : '–'), `group-time ${layout.kind}`)
+    + line(layout.destinations[0] || '', `group-destination ${layout.kind}`)
+    + line(layout.destinations[1] || '', `group-destination ${layout.kind}`);
+}
+
 function renderGroupWeek() {
   const formatter = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' });
   els.weekTitle.textContent = `${formatter.format(weekDate(0))} – ${formatter.format(weekDate(6))} ${weekDate(6).getFullYear()}`;
@@ -143,12 +169,12 @@ function renderGroupWeek() {
       const key = localDateKey(weekDate(offset));
       const events = (colleague.events || []).filter((event) => eventDateKey(event) === key);
       const labels = groupShiftLabels(events);
+      const layout = groupCellLayout(labels);
       const text = colleague.unpublished ? 'Turni non pubblicati: calendario assente' : colleague.unavailable ? 'Non disponibile' : labels.map((label) => label.text === 'RD' ? 'Reperibilità diurna' : label.text === 'RN' ? 'Reperibilità notturna' : [label.text, label.destination].filter(Boolean).join(' - ')).join(', ') || 'Nessun turno pubblicato';
-      const lines = (label) => 1 + (label.destination ? Math.ceil(label.destination.length / 6) : 0);
       const current = key === today ? ' group-today' : '';
-      html += `<span role="cell" class="group-cell${current}" aria-label="${escapeHtml(text)}" title="${escapeHtml(text)}" style="--label-count:${Math.max(1, labels.reduce((total, label) => total + lines(label), 0))}">`;
+      html += `<span role="cell" class="group-cell ${escapeHtml(layout.kind)}${current}" aria-label="${escapeHtml(text)}" title="${escapeHtml(text)}"${layout.onCall ? ` data-oncall="${escapeHtml(layout.onCall)}" style="--call-characters:${layout.onCall.length}"` : ''}>`;
       html += colleague.unpublished ? '<i class="group-missing">NP</i>' : colleague.unavailable ? '<i class="group-missing">?</i>' : labels.length
-        ? labels.map((label) => `<i class="group-label ${escapeHtml(label.kind)}" style="grid-row:span ${lines(label)}"><b>${escapeHtml(label.text)}</b>${label.destination ? `<small class="group-destination">${escapeHtml(label.destination)}</small>` : ''}</i>`).join('')
+        ? renderGroupCellContent(labels)
         : '<i class="group-empty">–</i>';
       html += '</span>';
     }
@@ -814,7 +840,7 @@ if ('serviceWorker' in navigator) {
       window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.06', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.07', {
         updateViaCache: 'none',
       });
       await registration.update();
