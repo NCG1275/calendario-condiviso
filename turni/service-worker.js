@@ -1,4 +1,4 @@
-const CACHE_NAME = 'turni-personali-261026.03';
+const CACHE_NAME = 'turni-personali-261026.03-layout2';
 const APP_SHELL = [
   './',
   './index.html',

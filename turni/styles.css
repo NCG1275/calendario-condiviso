@@ -856,7 +856,7 @@ body.group-active { overflow: hidden; }
 .group-header span { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
 .group-header strong { font-size: 12px; }
 .group-name { display: flex; align-items: center; padding: 1px 3px; overflow-wrap: anywhere; font-size: min(11px, 2.7vw, calc((100cqh - 32px) / var(--colleague-count) - 3px)); line-height: 1.05; font-weight: 700; background: #f6f8f7; }
-.group-cell { display: grid; grid-auto-rows: minmax(0, 1fr); gap: 1px; padding: 2px 1px; }
+.group-cell { display: grid; grid-auto-rows: minmax(0, 1fr); gap: 1px; padding: 1px; }
 .group-label, .group-empty, .group-missing { min-height: 0; display: flex; align-items: center; justify-content: center; border-radius: 3px; font-style: normal; font-weight: 750; white-space: nowrap; font-size: min(11px, 2.35vw, calc((100cqh - 32px) / var(--colleague-count) / var(--label-count) - 2px)); line-height: 1; letter-spacing: -.04em; }
 .group-label.morning { background: #ffe7a1; color: #614a16; }
 .group-label.morning-afternoon { background: #f5c9d4; color: #703548; }

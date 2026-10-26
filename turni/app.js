@@ -144,7 +144,7 @@ function renderGroupWeek() {
       const events = (colleague.events || []).filter((event) => eventDateKey(event) === key);
       const labels = groupShiftLabels(events);
       const text = colleague.unpublished ? 'Turni non pubblicati: calendario assente' : colleague.unavailable ? 'Non disponibile' : labels.map((label) => label.text === 'RD' ? 'Reperibilità diurna' : label.text === 'RN' ? 'Reperibilità notturna' : [label.text, label.destination].filter(Boolean).join(' - ')).join(', ') || 'Nessun turno pubblicato';
-      const lines = (label) => 1 + (label.destination ? Math.ceil(label.destination.length / 7) : 0);
+      const lines = (label) => 1 + (label.destination ? Math.ceil(label.destination.length / 6) : 0);
       const current = key === today ? ' group-today' : '';
       html += `<span role="cell" class="group-cell${current}" aria-label="${escapeHtml(text)}" title="${escapeHtml(text)}" style="--label-count:${Math.max(1, labels.reduce((total, label) => total + lines(label), 0))}">`;
       html += colleague.unpublished ? '<i class="group-missing">NP</i>' : colleague.unavailable ? '<i class="group-missing">?</i>' : labels.length
