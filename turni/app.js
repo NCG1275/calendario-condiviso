@@ -130,7 +130,7 @@ function renderGroupWeek() {
   const formatter = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' });
   els.weekTitle.textContent = `${formatter.format(weekDate(0))} – ${formatter.format(weekDate(6))} ${weekDate(6).getFullYear()}`;
   const today = localDateKey(new Date());
-  let html = '<div class="group-row group-header" role="row"><span role="columnheader">Anestesista</span>';
+  let html = '<div class="group-row group-header" role="row"><span role="columnheader" aria-label="Medico"></span>';
   for (let offset = 0; offset < 7; offset += 1) {
     const date = weekDate(offset);
     const current = localDateKey(date) === today ? ' group-today' : '';
@@ -814,7 +814,7 @@ if ('serviceWorker' in navigator) {
       window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.04', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.05', {
         updateViaCache: 'none',
       });
       await registration.update();

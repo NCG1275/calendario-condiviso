@@ -848,7 +848,7 @@ body.group-active { overflow: hidden; }
 .group-status { margin: 3px 0 6px; font-size: 10px; line-height: 1.2; color: #627775; }
 .group-status.is-error { color: #aa3434; }
 .group-table { --colleague-count: 1; container-type: size; flex: 1 1 0; min-height: 0; display: grid; grid-template-rows: 32px repeat(var(--colleague-count), minmax(0, 1fr)); border: 1px solid #ccd7d6; border-radius: 10px; background: white; overflow: hidden; }
-.group-row { min-height: 0; display: grid; grid-template-columns: minmax(65px, 1.85fr) repeat(7, minmax(0, 1fr)); border-bottom: 1px solid #d9e1df; }
+.group-row { min-height: 0; display: grid; grid-template-columns: minmax(56px, 1.5fr) repeat(7, minmax(0, 1fr)); border-bottom: 1px solid #d9e1df; }
 .group-row:last-child { border-bottom: 0; }
 .group-row > span { min-width: 0; min-height: 0; border-right: 1px solid #e0e6e4; }
 .group-row > span:last-child { border-right: 0; }
