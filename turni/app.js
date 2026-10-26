@@ -691,7 +691,7 @@ function notifyParent(type) {
   window.parent.postMessage({ type }, window.location.origin);
 }
 
-window.addEventListener('message', (event) => {
+window.addEventListener('message', async (event) => {
   if (!EMBEDDED_MODE || event.origin !== window.location.origin || event.source !== window.parent) return;
   if (event.data?.type === 'planner-logout') {
     resetEmbeddedSession();
@@ -703,7 +703,8 @@ window.addEventListener('message', (event) => {
   const shouldLoad = nextToken !== state.idToken || !state.user;
   state.idToken = nextToken;
   els.loginStatus.textContent = 'Sessione condivisa. Carico i tuoi turni…';
-  if (shouldLoad) loadMonth().catch(() => {});
+  const loaded = shouldLoad ? await loadMonth() : true;
+  if (loaded) setView(event.data.view === 'group' ? 'group' : 'personal');
 });
 
 function initializeGoogleIdentity() {
@@ -812,7 +813,7 @@ if ('serviceWorker' in navigator) {
       window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.01', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=261026.02', {
         updateViaCache: 'none',
       });
       await registration.update();

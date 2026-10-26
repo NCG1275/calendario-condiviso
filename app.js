@@ -66,6 +66,7 @@ const els = {
   modalStatus: document.getElementById('modalStatus'),
   openCreateModalButton: document.getElementById('openCreateModalButton'),
   personalShiftsButton: document.getElementById('personalShiftsButton'),
+  groupShiftsButton: document.getElementById('groupShiftsButton'),
   personalShiftsPanel: document.getElementById('personalShiftsPanel'),
   personalShiftsFrame: document.getElementById('personalShiftsFrame'),
   closePersonalShiftsButton: document.getElementById('closePersonalShiftsButton'),
@@ -112,6 +113,7 @@ function setBusy(isBusy) {
   }
   els.openCreateModalButton.disabled = isBusy || !state.idToken;
   els.personalShiftsButton.disabled = isBusy || !state.idToken;
+  els.groupShiftsButton.disabled = isBusy || !state.idToken;
 }
 
 function setModalStatus(message) {
@@ -413,6 +415,7 @@ function logout(message) {
   els.saveButton.disabled = true;
   els.openCreateModalButton.disabled = true;
   els.personalShiftsButton.disabled = true;
+  els.groupShiftsButton.disabled = true;
   closeModal();
   hideOperationModal();
   google.accounts.id.disableAutoSelect();
@@ -434,11 +437,16 @@ function sendPersonalShiftsMessage(message) {
 
 function sharePersonalShiftsAuth() {
   if (!state.idToken) return;
-  sendPersonalShiftsMessage({ type: 'planner-shared-auth', idToken: state.idToken });
+  sendPersonalShiftsMessage({ type: 'planner-shared-auth', idToken: state.idToken, view: state.shiftsView || 'personal' });
 }
 
-function openPersonalShifts() {
+function openPersonalShifts(view = 'personal') {
   if (!state.idToken) return;
+  state.shiftsView = view === 'group' ? 'group' : 'personal';
+  const title = state.shiftsView === 'group' ? 'I turni del gruppo' : 'I miei turni';
+  document.getElementById('personalShiftsTitle').textContent = title;
+  els.personalShiftsFrame.title = title;
+  els.closePersonalShiftsButton.setAttribute('aria-label', 'Chiudi ' + title.toLowerCase());
   els.personalShiftsPanel.classList.remove('hidden');
   document.body.classList.add('personal-shifts-open');
   sharePersonalShiftsAuth();
@@ -853,6 +861,7 @@ function onGoogleCredential(response) {
   els.saveButton.disabled = false;
   els.openCreateModalButton.disabled = false;
   els.personalShiftsButton.disabled = false;
+  els.groupShiftsButton.disabled = false;
   if (wasAuthenticated) {
     sharePersonalShiftsAuth();
     return;
@@ -869,6 +878,7 @@ function initGoogleIdentity() {
   els.saveButton.disabled = true;
   els.openCreateModalButton.disabled = true;
   els.personalShiftsButton.disabled = true;
+  els.groupShiftsButton.disabled = true;
   google.accounts.id.initialize({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
     callback: onGoogleCredential,
@@ -968,7 +978,8 @@ els.openCreateModalButton.addEventListener('click', () => {
   resetForm();
   openModal();
 });
-els.personalShiftsButton.addEventListener('click', openPersonalShifts);
+els.personalShiftsButton.addEventListener('click', () => openPersonalShifts('personal'));
+els.groupShiftsButton.addEventListener('click', () => openPersonalShifts('group'));
 els.closePersonalShiftsButton.addEventListener('click', closePersonalShifts);
 els.personalShiftsPanel.addEventListener('click', (event) => {
   if (event.target === els.personalShiftsPanel) closePersonalShifts();
