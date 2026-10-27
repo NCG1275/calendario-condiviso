@@ -130,3 +130,23 @@ assert.equal(writes, 3);
 context.revokeDeviceSession_(validSession.sessionToken);
 assert.throws(() => context.getBootstrapData_('', validSession.sessionToken), /Sessione dispositivo scaduta/);
 console.log('Persistent shared-calendar sessions, revocation and ownership checks OK');
+
+for (const [email, surname] of [
+  ['cordalaura3@gmail.com', 'Corda'], ['mdesogus.76@gmail.com', 'Desogus'],
+  ['paolomattana2@gmail.com', 'Mattana'], ['bpistincu@gmail.com', 'Pistincu'],
+  ['cris.tolu76@gmail.com', 'Tolu'],
+]) {
+  const owner = context.resolveOwnerName_(email, '');
+  assert.equal(context.resolveShiftCalendarSummary_(email, owner), 'Turni ' + surname);
+}
+context.getVerifiedUser_ = () => ({email:'cordalaura3@gmail.com', name:'Laura Corda'});
+context.Calendar.CalendarList.list = () => ({items:[{id:'corda-test-calendar',summary:'Turni Corda'}]});
+context.Calendar.Events.list = id => {
+  assert.equal(id,'corda-test-calendar');
+  return {items:[{summary:'8-14 - SALA',start:{date:'2026-10-26'}}]};
+};
+const corda = context.getPersonalShifts_({start:'2026-10-26',end:'2026-11-02'},'synthetic-token','');
+assert.equal(corda.calendarName,'Turni Corda');
+assert.equal(corda.events.length,1);
+assert.throws(() => context.resolveShiftCalendarSummary_('unknown@example.test','Unknown'), /Nessun calendario/);
+console.log('All newly published doctors mapped; Corda personal shifts read the correct calendar OK');
