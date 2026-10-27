@@ -33,6 +33,7 @@ const state = {
 };
 
 const els = {
+  turnsLoading: document.getElementById('turnsLoading'),
   personalViewButton: document.getElementById('personalViewButton'),
   groupViewButton: document.getElementById('groupViewButton'),
   personalView: document.getElementById('personalView'),
@@ -192,7 +193,8 @@ async function loadGroupWeek() {
   const version = ++state.groupRequestVersion;
   state.colleagues = [];
   renderGroupWeek();
-  els.groupStatus.textContent = 'Caricamento dei turni del gruppo…';
+  els.groupStatus.textContent = '';
+  els.turnsLoading.classList.remove('hidden');
   els.groupStatus.classList.remove('is-error');
   els.refreshGroupButton.disabled = true;
   els.groupTable.setAttribute('aria-busy', 'true');
@@ -221,6 +223,7 @@ async function loadGroupWeek() {
     els.groupStatus.classList.add('is-error');
   } finally {
     if (version === state.groupRequestVersion) {
+      els.turnsLoading.classList.add('hidden');
       els.refreshGroupButton.disabled = false;
       els.groupTable.setAttribute('aria-busy', 'false');
     }
@@ -331,9 +334,10 @@ function jsonpRequest(action, params = {}) {
 }
 
 function setLoading(isLoading) {
+  els.turnsLoading.classList.toggle('hidden', !isLoading);
   els.refreshButton.disabled = isLoading;
   els.refreshButton.classList.toggle('is-loading', isLoading);
-  if (isLoading) els.syncStatus.textContent = 'Aggiornamento…';
+  if (isLoading) els.syncStatus.textContent = '';
 }
 
 function showSessionSplash(message = 'Ripristino della sessione…') {
@@ -773,6 +777,7 @@ async function initializeStandalone() {
 }
 
 function resetGroupView() {
+  els.turnsLoading.classList.add('hidden');
   ++state.groupRequestVersion;
   state.colleagues = [];
   state.view = 'personal';
@@ -846,7 +851,7 @@ if ('serviceWorker' in navigator) {
       window.setTimeout(() => window.location.reload(), 350);
     });
     try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js?v=271026.01', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=271026.02', {
         updateViaCache: 'none',
       });
       await registration.update();

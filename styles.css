@@ -1617,3 +1617,10 @@ input:focus, textarea:focus, .picker-trigger:focus { border-color: #4b8b84; box-
 .shifts-access { display: flex; gap: 8px; min-width: 0; }
 @media (max-width: 900px) { .calendar-actions { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .shifts-access .personal-shifts-button { flex: 1; width: auto; padding: 8px; gap: 5px; font-size: 12px; } }
+.operation-spinner { display: none; width: 46px; height: 46px; flex: none; border: 5px solid rgb(23 50 77 / 14%); border-top-color: #278f86; border-radius: 50%; animation: operation-spin .85s linear infinite; }
+.is-loading-operation .operation-spinner { display: block; }
+.is-loading-operation .operation-transfer { display: none; }
+.is-loading-operation .operation-card { width: 110px; min-height: 110px; justify-content: center; padding: 24px; }
+.is-loading-operation .operation-card > div { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@keyframes operation-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .operation-spinner { animation: none; } }

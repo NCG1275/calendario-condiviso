@@ -503,6 +503,7 @@ function closePersonalShifts() {
 }
 
 function showOperationModal(message, title = 'Operazione in corso') {
+  els.operationModal.classList.toggle('is-loading-operation', ['Accesso in corso', 'Ripristino sessione'].includes(title));
   closeModal();
   els.operationTitle.textContent = title;
   const fullName = String((state.user && state.user.name) || '').trim();
