@@ -22,6 +22,7 @@ const CONFIG = {
     'smarta85@hotmail.it',
     'cris.tolu76@gmail.com',
     'elvy.vazz@gmail.com',
+    'claudiocardia92@gmail.com',
   ],
   OWNER_NAME_OVERRIDES: {
     'giannicola.aru@gmail.com': 'Gian Nicola Aru',
@@ -41,8 +42,10 @@ const CONFIG = {
     'smarta85@hotmail.it': 'Marta Sanna',
     'cris.tolu76@gmail.com': 'Cristian Tolu',
     'elvy.vazz@gmail.com': 'Elvy',
+    'claudiocardia92@gmail.com': 'Claudio',
   },
   SHIFT_CALENDAR_BY_OWNER_NAME: {
+    'Claudio': 'Turni Cardia',
     'Gian Nicola Aru': 'Turni Aru',
     'Mattia Cabianca': 'Turni Cabianca',
     'Silvia Casula': 'Turni Casula',
