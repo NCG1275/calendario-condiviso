@@ -2,7 +2,7 @@ const CONFIG = {
   SHARED_CALENDAR_ID: '9d42da48ceb082c24d18a088c08edd6c0944d5e0abb0d620edcb9b6323f6d4da@group.calendar.google.com',
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
   ALLOWED_DOMAIN: '',
-  REVOKED_EMAILS: ['femasillo78@gmail.com'],
+  REVOKED_EMAILS: ['femasillo78@gmail.com', 'elvy.vazz@gmail.com'],
   GROUP_DOCTORS: ['Aru', 'Cabianca', 'Casula', 'Corda', 'Del Rio', 'Desogus', 'Mattana', 'Pili', 'Piras D', 'Piras F', 'Pistincu', 'Pitzalis', 'Puddu', 'Sanna', 'Tolu'],
   ALLOWED_EMAILS: [
     'john.ncr24@gmail.com',
@@ -21,7 +21,6 @@ const CONFIG = {
     'dpuddu68@gmail.com',
     'smarta85@hotmail.it',
     'cris.tolu76@gmail.com',
-    'elvy.vazz@gmail.com',
     'claudiocardia92@gmail.com',
   ],
   OWNER_NAME_OVERRIDES: {
