@@ -3,7 +3,7 @@ const CONFIG = {
   GOOGLE_CLIENT_ID: '879487248442-q41p31thu716ffu9qctje1pm1pdn2ulo.apps.googleusercontent.com',
   ALLOWED_DOMAIN: '',
   REVOKED_EMAILS: ['femasillo78@gmail.com', 'elvy.vazz@gmail.com'],
-  GROUP_DOCTORS: ['Aru', 'Cabianca', 'Casula', 'Corda', 'Del Rio', 'Desogus', 'Mattana', 'Pili', 'Piras D', 'Piras F', 'Pistincu', 'Pitzalis', 'Puddu', 'Sanna', 'Tolu'],
+  GROUP_DOCTORS: ['Aru', 'Cabianca', 'Cardia', 'Casula', 'Corda', 'Del Rio', 'Desogus', 'Mattana', 'Pili', 'Piras D', 'Piras F', 'Pistincu', 'Pitzalis', 'Puddu', 'Sanna', 'Tolu'],
   ALLOWED_EMAILS: [
     'john.ncr24@gmail.com',
     'giannicola.aru@gmail.com',

@@ -63,7 +63,7 @@ let calendarReads = 0;
 context.Calendar = {
   CalendarList: { list(options) {
     calendarReads += 1;
-    return options.pageToken ? { items: [{ id: 'unmapped', summary: 'Turni Del Rio' }, { id: 'missing', summary: 'Turni Corda' }] }
+    return options.pageToken ? { items: [{ id: 'unmapped', summary: 'Turni Del Rio' }, { id: 'missing', summary: 'Turni Corda' }, { id: 'cardia', summary: 'Turni Cardia' }] }
       : { items: [{ id: 'aru', summary: 'Turni Aru' }, { id: 'private', summary: 'Calendario privato' }, { id: 'revoked', summary: 'Turni Masillo' }], nextPageToken: 'next' };
   } },
   Events: { list(id, options) {
@@ -72,6 +72,7 @@ context.Calendar = {
     assert.equal(options.timeMin, '2026-10-26T00:00:00+02:00');
     assert.equal(options.timeMax, '2026-11-02T00:00:00+01:00');
     if (id === 'missing') throw new Error('Calendar unavailable');
+    if (id === 'cardia') return { items: [{ summary: '20-24 - CARDIA', start: { date: '2026-10-28' } }] };
     if (options.pageToken) return { items: [{ summary: '14-20', start: { date: '2026-10-27' } }] };
     return { items: [
       { id: 'secret-id', description: 'private', summary: '8-14** - SALA', start: { dateTime: '2026-10-26T08:00:00+01:00' } },
@@ -82,7 +83,9 @@ context.Calendar = {
 };
 const group = context.getGroupShifts_({ start: '2026-10-26', end: '2026-11-02' }, 'token', '');
 assert.equal(calendarReads, 2);
-assert.equal(group.colleagues.map(c => c.name).join(','), 'Aru,Cabianca,Casula,Corda,Del Rio,Desogus,Mattana,Pili,Piras D,Piras F,Pistincu,Pitzalis,Puddu,Sanna,Tolu');
+assert.equal(group.colleagues.map(c => c.name).join(','), 'Aru,Cabianca,Cardia,Casula,Corda,Del Rio,Desogus,Mattana,Pili,Piras D,Piras F,Pistincu,Pitzalis,Puddu,Sanna,Tolu');
+assert.equal(group.colleagues.find(c => c.name === 'Cardia').unpublished, false);
+assert.equal(group.colleagues.find(c => c.name === 'Cardia').events[0].summary, '20-24 - CARDIA');
 assert.equal(group.colleagues[0].events.length, 2);
 assert.equal(group.colleagues.find(c => c.name === 'Corda').unavailable, true);
 assert.equal(group.colleagues.find(c => c.name === 'Corda').unpublished, false);
@@ -93,7 +96,7 @@ assert.equal(JSON.stringify(group).includes('secret-id'), false);
 assert.equal(JSON.stringify(group).includes('description'), false);
 assert.throws(() => context.getGroupShifts_({ start: '2026-10-26', end: '2026-11-03' }, 'token', ''), /settimanale/);
 const validSession = context.createDeviceSession_('token');
-assert.equal(context.getGroupShifts_({ start: '2026-10-26', end: '2026-11-02' }, '', validSession.sessionToken).colleagues.length, 15);
+assert.equal(context.getGroupShifts_({ start: '2026-10-26', end: '2026-11-02' }, '', validSession.sessionToken).colleagues.length, 16);
 context.getVerifiedUser_ = () => { throw new Error('Utente non autenticato.'); };
 const readsBefore = calendarReads;
 assert.throws(() => context.getGroupShifts_({ start: '2026-10-26', end: '2026-11-02' }, '', ''), /non autenticato/);
